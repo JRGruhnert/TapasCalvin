@@ -1,0 +1,3 @@
+[submodule "calvin_env_motionplanner"]
+	path = calvin_env_motionplanner
+	url = https://github.com/shurikan0/calvin_env_motionplanner
