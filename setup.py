@@ -43,6 +43,10 @@ rlbench_requires = [
     "rlbench",
 ]
 
+calvin_requires = [
+    "calvin",
+]
+
 
 setuptools.setup(
     name="tapas_gmm",
@@ -57,6 +61,7 @@ setuptools.setup(
         "diffusion": diffusion_requires,
         "maniskill": maniskill_requires,
         "rlbench": rlbench_requires,
+        "calvin": calvin_requires,
     },
     packages=setuptools.find_packages(),
     python_requires=">=3.10",

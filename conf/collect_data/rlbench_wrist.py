@@ -12,6 +12,6 @@ config = Config(
     dataset_config=scene_dataset_config,
     env=Environment.RLBENCH,
     env_config=rlbench_env_config,
-    policy=PolicyEnum.MANUAL,
+    policy_type=PolicyEnum.MANUAL,
     policy=None,
 )
