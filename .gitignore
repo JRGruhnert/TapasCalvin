@@ -459,3 +459,6 @@ src/_tmp/
 demos
 checkpoints
 img/
+
+
+/calvin_env_motionplanner
