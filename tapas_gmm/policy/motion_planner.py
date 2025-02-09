@@ -1,34 +1,64 @@
+from enum import Enum
 import numpy as np
 import torch
 from loguru import logger
-from mani_skill2.envs.sapien_env import Action, ActionType
+from typing import List
 
 from tapas_gmm.env.environment import BaseEnvironment
+from tapas_gmm.env.calvinbench import CalvinBenchEnvironment
 from tapas_gmm.policy.models.motion_planner import MotionPlanner
-from tapas_gmm.utils.maniskill_replay import PDJointPos2EETranslator
 from tapas_gmm.utils.observation import SceneObservation
-
 # from tapas_gmm.utils.select_gpu import device
 
 zero_movement = torch.tensor([0.0] * 6)
 close_gripper = torch.tensor([-0.9])
 open_gripper = torch.tensor([0.9])
 
+class ActionType(Enum):
+    MOVE_TO = 0
+    CLOSE_GRIPPER = 1
+    OPEN_GRIPPER = 2
+    NOOP = 3
+
+
+class Action():
+    def __init__(self, action_type, goal=None, with_screw=True) -> None:
+        self.action_type = action_type
+        self.goal = goal
+        self.with_screw = with_screw
+
+class MoveToAction(Action):
+    def __init__(self, goal, with_screw=True) -> None:
+        super().__init__(ActionType.MOVE_TO, goal, with_screw)
+
+class OpenGripperAction(Action):
+    def __init__(self) -> None:
+        super().__init__(ActionType.OPEN_GRIPPER)
+
+class CloseGripperAction(Action):
+    def __init__(self) -> None:
+        super().__init__(ActionType.CLOSE_GRIPPER)
+
+class NoopAction(Action):
+    def __init__(self) -> None:
+        super().__init__(ActionType.NOOP)
+
+class MotionTask:
+    def __init__(self, solution_sequence: List[Action]) -> None:
+        self.solution_sequence: List[Action] = solution_sequence
+
+    def get_solution_sequence(self):
+        return self.solution_sequence
+    
+
 
 class MotionPlannerPolicy:
-    def __init__(self, config, env, **kwargs):
+    def __init__(self, env: CalvinBenchEnvironment, sequence: MotionTask, **kwargs):
         self.time_step = 1 / 20
-        self.with_screw = True
 
-        self.motion_planner = MotionPlanner(config, env)
-
+        self.motion_planner = MotionPlanner(env)
         self.env = env
-
-        self.twin_env = env.make_twin("pd_joint_pos")
-
-        Translator = PDJointPos2EETranslator
-
-        self.translator = Translator(self.env, self.twin_env)
+        self.task = sequence
 
         self.reset_episode(env)
 
@@ -56,12 +86,12 @@ class MotionPlannerPolicy:
         )
 
     @staticmethod
-    def _get_current_pose(obs: SceneObservation):
+    def _get_current_pose(obs: SceneObservation): # type: ignore
         proprio_obs = torch.cat((obs.joint_pos, obs.gripper_state))
 
         return proprio_obs
 
-    def _make_plan(self, obs: SceneObservation, goal: Action):
+    def _make_plan(self, obs: SceneObservation, goal: Action): # type: ignore
         """
         Returns a plan for the given goal. The plan is given as a list of
         actions.
@@ -117,7 +147,7 @@ class MotionPlannerPolicy:
             raise ValueError("Unknown action type.")
 
     @staticmethod
-    def _make_gripper_close_plan(obs: SceneObservation, repeat: int = 10):
+    def _make_gripper_close_plan(obs: SceneObservation, repeat: int = 10): # type: ignore
         """
         Returns a plan for closing the gripper while keeping the arm still.
 
@@ -140,7 +170,7 @@ class MotionPlannerPolicy:
         # return [torch.cat((obs.joint_pos[:-1], close_gripper))] * repeat
 
     @staticmethod
-    def _make_gripper_open_plan(obs: SceneObservation, repeat: int = 10):
+    def _make_gripper_open_plan(obs: SceneObservation, repeat: int = 10): # type: ignore
         """
         Returns a plan for opening the gripper while keeping the arm still.
 
@@ -163,7 +193,7 @@ class MotionPlannerPolicy:
         # return [torch.cat((obs.joint_pos[:-1], close_gripper))] * repeat
 
     @staticmethod
-    def _make_noop_plan(obs: SceneObservation, duration: int = 5):
+    def _make_noop_plan(obs: SceneObservation, duration: int = 5): # type: ignore
         """
         Returns a plan for doing nothing for a given number of timesteps.
 
@@ -190,10 +220,7 @@ class MotionPlannerPolicy:
         obs: SceneObservation,  # type: ignore
     ) -> tuple[np.ndarray, dict]:
         if self.goal_list is None:
-            self.goal_list = self.env.get_solution_sequence()
-
-            seed = self.env.get_seed()
-            self.twin_env.reset(seed=seed)
+            self.goal_list = self.task.get_solution_sequence()
 
         if not self.current_plan:
             if len(self.goal_list) == 0:
@@ -216,7 +243,12 @@ class MotionPlannerPolicy:
             # current gripper state to the corresponding gripper action
             gripper_action = self._binary_gripper_state(obs.gripper_state)
 
-            action = self.translator.translate(torch.tensor(action), gripper_action)
+            print("action: ", action)
+            #inverse kinematics
+            #debugger here:
+            breakpoint()
+            action = action
+            print("action: ", action)
         else:
             assert self.current_goal.action_type in (
                 ActionType.OPEN_GRIPPER,

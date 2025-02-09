@@ -69,7 +69,7 @@ setuptools.setup(
         "console_scripts": [
             "tapas-bc = tapas_gmm.behavior_cloning:entry_point",
             "tapas-collect = tapas_gmm.collect_data:entry_point",
-            "tapas-collect-rlbench = tapas_gmm.collect_rlbench:entry_point",
+            "tapas-collect-rlbench = tapas_gmm.collect_data_rlbench:entry_point",
             "tapas-embed = tapas_gmm.embed_trajectories:entry_point",
             "tapas-eval = tapas_gmm.evaluate:entry_point",
             "tapas-kp-encode = tapas_gmm.kp_encode_trajectories:entry_point",

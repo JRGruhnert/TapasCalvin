@@ -87,7 +87,10 @@ def build_config(
 def parse_and_build_config(
     data_load: bool = True, need_task: bool = True, extra_args: tuple = tuple()
 ) -> tuple[argparse.Namespace, DictConfig]:
+    print("parse_and_build_config")
     args = parse_args(data_load, need_task, extra_args)
+    print(args)
     config = build_config(data_load, need_task, args)
+    print(config)
 
     return args, config

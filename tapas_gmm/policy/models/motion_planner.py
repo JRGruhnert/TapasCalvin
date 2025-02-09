@@ -4,7 +4,7 @@ from loguru import logger
 
 
 class MotionPlanner:
-    def __init__(self, config, env):
+    def __init__(self, env):
         self.env = env
         self.agent = env.agent
         self.robot = env.robot
@@ -13,14 +13,14 @@ class MotionPlanner:
         joint_names = [joint.get_name() for joint in self.robot.get_active_joints()]
 
         urdf_path = self.agent._get_urdf_path()
-        srdf_path = self.agent._get_srdf_path()
+        #srdf_path = self.agent._get_srdf_path()
 
         self.move_group_idx = 10
         move_group_name = self.robot.get_links()[self.move_group_idx].get_name()
 
         self.planner = mplib.Planner(
             urdf=urdf_path,
-            srdf=srdf_path,
+            #srdf=srdf_path,
             user_link_names=link_names,
             user_joint_names=joint_names,
             move_group=move_group_name,

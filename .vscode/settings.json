@@ -1,0 +1,3 @@
+{
+  "python.analysis.extraPaths": ["./calvin_env_motionplanner"]
+}

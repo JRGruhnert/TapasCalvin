@@ -6,12 +6,10 @@ from typing import Any
 import numpy as np
 import torch
 from loguru import logger
-from pyrep.const import RenderMode
-from pyrep.errors import ConfigurationPathError, IKError
-from calvin_env_motionplanner import CalvinBenchInternalEnvironment
 
 from tapas_gmm.env import Environment
 from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
+from tapas_gmm.policy.motion_planner import MotionPlannerPolicy
 from tapas_gmm.utils.geometry_np import (
     conjugate_quat,
     homogenous_transform_from_rot_shift,
@@ -34,60 +32,30 @@ from tapas_gmm.utils.observation import (
     empty_batchsize,
 )
 
-os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.environ["COPPELIASIM_ROOT"]
 
 
-task_switch = {
-    "CloseMicrowave": CloseMicrowave,
-    "TakeLidOffSaucepan": TakeLidOffSaucepan,
-    "PhoneOnBase": PhoneOnBase,
-    "PutRubbishInBin": PutRubbishInBin,
-    "StackWine": StackWine,
-    "PickAndLift": PickAndLift,
-    "PushButton": PushButton,
-    "OpenDrawer": OpenDrawer,
-    "TurnTap": TurnTap,
-    "PushButton": PushButton,
-    "PushButtons": PushButtons,
-    "SweepToDustpan": SweepToDustpan,
-    "SlideBlockToTarget": SlideBlockToTarget,
-    "InsertOntoSquarePeg": InsertOntoSquarePeg,
-    "MeatOnGrill": MeatOnGrill,
-    "PlaceShapeInShapeSorter": PlaceShapeInShapeSorter,
-    "PutGroceriesInCupboard": PutGroceriesInCupboard,
-    "PutMoneyInSafe": PutMoneyInSafe,
-    "CloseJar": CloseJar,
-    "ReachAndDrag": ReachAndDrag,
-    "LightBulbIn": LightBulbIn,
-    "StackCups": StackCups,
-    "PlaceCups": PlaceCups,
-    "PutItemInDrawer": PutItemInDrawer,
-    "StackBlocks": StackBlocks,
-}
-
-
-world_pos_action_mode = MoveArmThenGripper(
-    arm_action_mode=EndEffectorPoseViaIK(
-        absolute_mode=False,  # False
-        frame="world",  # end effector
-    ),
-    gripper_action_mode=Discrete(),
+from calvin_env_motionplanner.calvin_env.envs.play_table_env import (
+    PlayTableSimEnv,
+    get_env_from_cfg,
 )
 
+os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.environ["COPPELIASIM_ROOT"]
 
 @dataclass(kw_only=True)
 class CalvinBenchEnvironmentConfig(BaseEnvironmentConfig):
     action_mode: Any = None
     env_type: Environment = Environment.CALVINBENCH
 
-    # RLBench changed. AMs are no longer Enum and Omega can't store classes as vals
-    planning_action_mode: bool = False
     absolute_action_mode: bool = False
     action_frame: str = "end effector"
 
+    demo_path: str | None = None
+    generate: bool = False
     postprocess_actions: bool = True
     background: str | None = None
     model_ids: tuple[str, ...] | None = None
+
+    cameras = ["front_camera", "top_camera", "side_camera"]
 
 
 class CalvinBenchEnvironment(BaseEnvironment):
@@ -96,143 +64,19 @@ class CalvinBenchEnvironment(BaseEnvironment):
 
         self.cameras = config.cameras
 
-        assert set(self.cameras).issubset(
-            {"left_shoulder", "right_shoulder", "wrist", "overhead", "front"}
-        )
+        self.launch_simulation_env()
 
-        left_shoulder_on = "left_shoulder" in self.cameras
-        right_shoulder_on = "right_shoulder" in self.cameras
-        wrist_on = "wrist" in self.cameras
-        overhead_on = "overhead" in self.cameras
-        front_on = "front" in self.cameras
 
-        render_mode = RenderMode.OPENGL
-        image_size = (self.image_height, self.image_width)
-
-        obs_config = ObservationConfig(
-            left_shoulder_camera=CameraConfig(
-                rgb=left_shoulder_on,
-                depth=left_shoulder_on,
-                mask=left_shoulder_on,
-                render_mode=render_mode,
-                depth_in_meters=True,
-                image_size=image_size,
-                point_cloud=False,
-            ),
-            right_shoulder_camera=CameraConfig(
-                rgb=right_shoulder_on,
-                depth=right_shoulder_on,
-                mask=right_shoulder_on,
-                render_mode=render_mode,
-                depth_in_meters=True,
-                image_size=image_size,
-                point_cloud=False,
-            ),
-            front_camera=CameraConfig(
-                rgb=front_on,
-                depth=front_on,
-                mask=front_on,
-                render_mode=render_mode,
-                depth_in_meters=True,
-                image_size=image_size,
-                point_cloud=False,
-            ),
-            wrist_camera=CameraConfig(
-                rgb=wrist_on,
-                depth=wrist_on,
-                mask=wrist_on,
-                render_mode=render_mode,
-                depth_in_meters=True,
-                image_size=image_size,
-                point_cloud=False,
-            ),
-            overhead_camera=CameraConfig(
-                rgb=overhead_on,
-                depth=overhead_on,
-                mask=overhead_on,
-                render_mode=render_mode,
-                depth_in_meters=True,
-                image_size=image_size,
-                point_cloud=False,
-            ),
-            joint_positions=True,
-            joint_velocities=True,
-            joint_forces=False,
-            gripper_pose=True,
-            gripper_matrix=True,
-            task_low_dim_state=True,
-        )
-
-        self.planning_action_mode = config.planning_action_mode
-
-        self.launch_simulation_env(config, obs_config)
-
-        self.setup_camera_controls(config)
-
-    @property
-    def _move_group(self) -> str:
-        """
-        For using the mplib Planner, eg for TOPP(RA) in gmm policy.
-        """
-        return "panda_hand_tcp"
-
-    @property
-    def _urdf_path(self) -> str:
-        """
-        For using the mplib Planner, eg for TOPP(RA) in gmm policy.
-        """
-        return f"{mani_skill2.PACKAGE_ASSET_DIR}/descriptions/panda_v2.urdf"
-
-    @property
-    def _srdf_path(self) -> str:
-        return f"{mani_skill2.PACKAGE_ASSET_DIR}/descriptions/panda_v2.srdf"
-
-    def launch_simulation_env(
-        self, config: CalvinBenchEnvironmentConfig, obs_config: ObservationConfig
-    ) -> None:
-        # sphere policy uses custom action mode, ABS_EE_POSE_PLAN_WORLD_FRAME
-        # for others: everything like in parent class
-        if config.action_mode is None:
-            config.action_mode = (
-                # instead of TOPPRA  EndEffectorPoseViaIK
-                EndEffectorPoseViaPlanning
-                if self.planning_action_mode
-                else EndEffectorPoseViaIK
-            )
-
-        if (
-            config.action_mode is EndEffectorPoseViaIK
-            and not config.postprocess_actions
-        ):
-            logger.warning(
-                "Using default action mode without action "
-                "postprocessing. Is that intended?"
-            )
-        action_mode = MoveArmThenGripper(
-            arm_action_mode=config.action_mode(
-                absolute_mode=self.config.absolute_action_mode,
-                frame=self.config.action_frame,
-            ),
-            gripper_action_mode=Discrete(),
-        )
-
-        self.env = CalvinBenchInternalEnvironment(
-            action_mode=action_mode,
-            task_switch=task_switch,
-            obs_config=obs_config,
-            static_positions=config.static,
-            headless=config.headless,
-        )
-
-        self.env.launch()
-
-        self.task_env: TaskEnvironment = self.env.get_task(task_switch[config.task])
+    def launch_simulation_env(self) -> None:
+        self.env = get_env_from_cfg()
+        self.env.reset()
 
     def close(self):
-        self.env.shutdown()
+        self.env.close()
 
     def _get_robot_base_pose(self) -> np.ndarray:
-        raw = self.env._robot.arm.get_pose()
+        #TODO: check if this is correct
+        raw = self.env.robot.get_base_pose()
 
         pos = raw[:3]
         quat = raw[3:]
@@ -242,39 +86,17 @@ class CalvinBenchEnvironment(BaseEnvironment):
 
         return np.concatenate([pos, quat])
 
-    def setup_camera_controls(self, config: CalvinBenchEnvironmentConfig):
-        self.camera_pose = config.camera_pose
-
-        camera_map = {
-            "left_shoulder": self.env._scene._cam_over_shoulder_left,
-            "right_shoulder": self.env._scene._cam_over_shoulder_right,
-            "wrist": self.env._scene._cam_wrist,
-            "overhead": self.env._scene._cam_overhead,
-            "front": self.env._scene._cam_front,
-        }
-
-        self.camera_map = {k: v for k, v in camera_map.items() if k in self.cameras}
-
     def reset(self):
         super().reset()
 
-        descriptions, obs = self.task_env.reset()
-
-        if self.camera_pose:
-            self.set_camera_pose(self.camera_pose)
-
+        obs = self.env.reset()
         obs = self.process_observation(obs)
-
         return obs
 
-    def reset_to_demo(self, demo: Demo):
+    def reset_to_demo(self, path: str):
         super().reset()
 
-        descriptions, obs = self.task_env.reset_to_demo(demo)
-
-        if self.camera_pose:
-            self.set_camera_pose(self.camera_pose)
-
+        obs = self.env.reset_from_storage(path)
         obs = self.process_observation(obs)
 
         return obs
@@ -285,7 +107,7 @@ class CalvinBenchEnvironment(BaseEnvironment):
         postprocess: bool = True,
         delay_gripper: bool = True,
         scale_action: bool = True,
-    ) -> tuple[SceneObservation, float, bool, dict]:
+    ) -> tuple[SceneObservation, float, bool, dict]: # type: ignore
         """
         Postprocess the action and execute it in the environment.
         Catches invalid actions and executes a zero action instead.
@@ -333,40 +155,10 @@ class CalvinBenchEnvironment(BaseEnvironment):
             logger.warning("NaN action, skipping")
             action_delayed = zero_action
 
-        # action_delayed[:3] *= 0.05
-
         logger.info(f"Action {action_delayed}")
+        obs, reward, done, info = self.env.step(action_delayed)
 
-        try:
-            with np.errstate(invalid="raise"):
-                next_obs, reward, done = self.task_env.step(action_delayed)
-        except (
-            IKError,
-            InvalidActionError,
-            FloatingPointError,
-            ConfigurationPathError,
-        ):
-            logger.info("Skipping invalid action {}.".format(action_delayed))
-
-            try:
-                with np.errstate(invalid="raise"):
-                    next_obs, reward, done = self.task_env.step(zero_action)
-            except (
-                IKError,
-                InvalidActionError,
-                FloatingPointError,
-                ConfigurationPathError,
-            ):
-                logger.info("Can't execute noop either. Just haning in there...")
-                next_obs, reward, done = None, 0, True
-        except RuntimeError as e:
-            logger.error(f"Error in stepping action: {action_delayed}")
-            logger.error(f"Raw action: {action}")
-            raise e
-
-        obs = None if next_obs is None else self.process_observation(next_obs)
-
-        info = {}
+        obs = None if obs is None else self.process_observation(obs)
 
         return obs, reward, done, info
 
@@ -407,28 +199,42 @@ class CalvinBenchEnvironment(BaseEnvironment):
 
         return np.array(state).flatten()
 
-    def process_observation(self, obs: CalvinBenchObservation) -> SceneObservation:
+    def process_observation(self, obs: dict[str, dict]) -> SceneObservation: # type: ignore
         """
         Convert the observation from the environment to a SceneObservation.
 
         Parameters
         ----------
-        obs : RLBenchObservation
-            Observation as RLBench's Observation class.
+        obs : Observation
+            The observation from the environment.
+            rgb_obs: dict[str, np.ndarray]
+                The RGB images from the cameras.
+            depth_obs: dict[str, np.ndarray]
+                The depth images from the cameras.
+            mask_obs: dict[str, np.ndarray]
 
         Returns
         -------
         SceneObservation
             The observation in common format as SceneObservation.
         """
-        camera_obs = {}
+        rgb_obs = obs["rgb_obs"]
+        depth_obs = obs["depth_obs"]
+        robot_obs = obs["robot_obs"]
+        scene_obs = obs["scene_obs"]
+        mask_obs = obs["mask_obs"]
+        extr_obs = obs["extr_obs"]
+        intr_obs = obs["intr_obs"]
+        robot_info = obs["robot_info"]
 
+
+        camera_obs = {}
         for cam in self.cameras:
-            rgb = getattr(obs, cam + "_rgb").transpose((2, 0, 1)) / 255
-            depth = getattr(obs, cam + "_depth")
-            mask = getattr(obs, cam + "_mask").astype(int)
-            extr = obs.misc[cam + "_camera_extrinsics"]
-            intr = obs.misc[cam + "_camera_intrinsics"].astype(float)
+            rgb = rgb_obs[[f"rgb_{cam}"]].transpose((2, 0, 1)) / 255
+            depth = depth_obs[[f"depth_{cam}"]]
+            mask = mask_obs[[f"mask_{cam}"]].astype(int)
+            extr = extr_obs[[f"extr_{cam}"]]
+            intr = intr_obs[[f"intr_{cam}"]].astype(float)
 
             camera_obs[cam] = SingleCamObservation(
                 **{
@@ -445,19 +251,16 @@ class CalvinBenchEnvironment(BaseEnvironment):
             {"_order": CameraOrder._create(self.cameras)} | camera_obs
         )
 
-        joint_pos = torch.Tensor(obs.joint_positions)
-        joint_vel = torch.Tensor(obs.joint_velocities)
+        joint_pos = torch.Tensor(robot_info["arm_joint_positions"])
+        joint_vel = torch.Tensor(robot_info["arm_joint_velocities"])
 
-        ee_pose = torch.Tensor(
-            np.concatenate(
-                [
-                    obs.gripper_pose[:3],
-                    quat_real_last_to_real_first(obs.gripper_pose[3:]),
-                ]
-            )
-        )
+        ee_pose = torch.Tensor([robot_info["ee_pose"]])
+
         logger.info(f"EE Pose {ee_pose}")
-        gripper_open = torch.Tensor([obs.gripper_open])
+        #rlbench float
+        gripper_open = torch.Tensor([robot_info["gripper_opening_width"]])
+
+
 
         flat_object_poses = obs.task_low_dim_state
 
@@ -492,7 +295,7 @@ class CalvinBenchEnvironment(BaseEnvironment):
 
     @staticmethod
     def _get_action(
-        current_obs: CalvinBenchObservation, next_obs: CalvinBenchObservation
+        current_obs: dict, next_obs: dict
     ) -> np.ndarray:
         gripper_action = np.array(
             [2 * next_obs.gripper_open - 1]  # map from [0, 1] to [-1, 1]
@@ -525,7 +328,7 @@ class CalvinBenchEnvironment(BaseEnvironment):
     def get_inverse_kinematics(
         self, target_pose: np.ndarray, reference_qpos: np.ndarray, max_configs: int = 20
     ) -> np.ndarray:
-        arm = self.env._robot.arm  # .copy()
+        arm = self.env._robot.arm
         arm.set_joint_positions(reference_qpos[:7], disable_dynamics=True)
         arm.set_joint_target_velocities([0] * len(arm.joints))
 
@@ -537,73 +340,4 @@ class CalvinBenchEnvironment(BaseEnvironment):
             max_configs=max_configs,  # samples this many configs, then ranks them
         )[
             0
-        ]  # return the closest one
-
-        # return arm.solve_ik_via_jacobian(
-        #     position=target_pose[:3],
-        #     quaternion=quat_real_first_to_real_last(target_pose[3:7]),
-        #     relative_to=None,
-        # )
-
-    def set_world_action_mode(self):
-        self._set_action_mode(world_pos_action_mode)
-
-    def get_forward_kinematics(self, qpos: np.ndarray) -> np.ndarray:
-        # RLBench needs the action mode to be set to world frame, otherwise the returned
-        # gripper pose is in the end effector frame.
-        # Thus, set it hear and put action mode context manager around the call.
-        self.set_world_action_mode()
-
-        self.env._robot.arm.set_joint_positions(qpos[:7], disable_dynamics=True)
-
-        pose = self.env._robot.arm.get_tip().get_pose()
-
-        return np.concatenate([pose[:3], quat_real_last_to_real_first(pose[3:])])
-
-    def _rlbench_task_reset(self):
-        self.task_env.reset()
-
-    # def _get_variation_index(self) -> int:
-    #     return self.task._variation_number
-
-    # def _set_variation_index(self, index: int) -> None:
-    #     self.task.set_variation(index)
-
-    def _get_action_mode(self) -> ActionMode:
-        return self.env._action_mode
-
-    def _set_action_mode(self, action_mode: ActionMode) -> None:
-        self.env._action_mode = action_mode
-
-    def _get_state(self) -> tuple[bytes, int]:
-        return self.task_env._task.get_state()
-
-    def _set_state(self, state: tuple[bytes, int]):
-        """
-        The task state seems to only include scene objects, not the robot pose.
-
-        Thus copied the scene reset from RLBench and replaced robot state restoration.
-        https://github.com/stepjam/RLBench/blob/7c3f425f4a0b6b5ce001ba7246354eb3c70555be/rlbench/backend/scene.py#L150
-        """
-        self.env._robot.gripper.release()
-
-        arm, gripper = self.env._scene._initial_robot_state
-        self.env._scene.pyrep.set_configuration_tree(arm)
-        self.env._scene.pyrep.set_configuration_tree(gripper)
-        self.env._scene.robot.arm.set_joint_positions(
-            self.env._scene._start_arm_joint_pos, disable_dynamics=True
-        )
-        self.env._scene.robot.arm.set_joint_target_velocities(
-            [0] * len(self.env._scene.robot.arm.joints)
-        )
-        self.env._scene.robot.gripper.set_joint_positions(
-            self.env._scene._starting_gripper_joint_pos, disable_dynamics=True
-        )
-        self.env._scene.robot.gripper.set_joint_target_velocities(
-            [0] * len(self.env._scene.robot.gripper.joints)
-        )
-
-        if self.task_env is not None and self.env._scene._has_init_task:
-            self.task_env._task.cleanup_()
-            self.task_env._task.restore_state(state)  # Setting the desired state
-        self.task_env._task.set_initial_objects_in_scene()
+        ]

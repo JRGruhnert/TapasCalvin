@@ -20,8 +20,8 @@ def import_env(config):
         from tapas_gmm.env.mani_skill import ManiSkillEnv as Env
     elif env_type is Environment.RLBENCH:
         from tapas_gmm.env.rlbench import RLBenchEnvironment as Env
-    elif env_type is Environment.CALVIN:
-        from tapas_gmm.env.calvinbench import CalvinEnv as Env
+    elif env_type is Environment.CALVINBENCH:
+        from tapas_gmm.env.calvinbench import CalvinBenchEnvironment as Env
     else:
         raise ValueError("Invalid environment {}".format(config.env))
 

@@ -2,7 +2,7 @@ from tapas_gmm.utils.misc import DataNamingConfig
 from tapas_gmm.visualize_demo import Config
 
 data_naming_config = DataNamingConfig(
-    task=None,  # If None, values are taken from data_naming_config
+    task="OpenDrawer",  # If None, values are taken from data_naming_config
     feedback_type="demos",
     data_root="data",
 )

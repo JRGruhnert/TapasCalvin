@@ -59,6 +59,8 @@ def main(config):
         as_tensor_dict=True,
     )
 
+    print(batch.keys())
+
     ee_traj = batch["ee_pose"][:, :3]
 
     first_obs = batch[0]
@@ -156,11 +158,13 @@ if __name__ == "__main__":
     extra_args = (
         {
             "name": "--encoder_name",
-            "required": True,
+            "default": None,
+            "required": False,
         },
         {
             "name": "--encoding_name",
-            "required": True,
+            "default": None,
+            "required": False,
         },
         {
             "name": "--traj",
