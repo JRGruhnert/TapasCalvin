@@ -512,6 +512,9 @@ class SceneDataset(Dataset):
         return datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
 
     def save_current_traj(self, traj_suffix: str = "") -> None:
+        if len(self._current_trajectory) == 0:
+            logger.warning("No observations in current trajectory.")
+            return
         traj_name = self.generate_trajectory_dir_name() + traj_suffix
         traj_path = self._trajectories_dir / traj_name
         traj_path.mkdir()

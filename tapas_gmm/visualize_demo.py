@@ -34,7 +34,7 @@ class Config:
     copy_selection_from: str | None = None
 
     traj_idx: int = 0
-    camera: str = "wrist"
+    camera: str = "static"
 
 
 def main(config):
@@ -175,7 +175,7 @@ if __name__ == "__main__":
         },
     )
     args, dict_config = parse_and_build_config(extra_args=extra_args)
-    dict_config = complete_config(args, dict_config)  # type: ignore
+    #dict_config = complete_config(args, dict_config)  # type: ignore
 
     config = OmegaConf.to_container(
         dict_config, resolve=True, structured_config_mode=SCMode.INSTANTIATE

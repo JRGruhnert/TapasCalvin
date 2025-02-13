@@ -1,6 +1,8 @@
 import json
 import pathlib
 
+from loguru import logger
+
 from tapas_gmm.utils.data_loading import save_image, save_tensor
 from tapas_gmm.utils.observation import (
     GENERIC_ATTRIBUTES,
@@ -78,6 +80,7 @@ class Trajectory:
 
         object_label_gt = []
 
+        logger.info(f"Saving trajectory to {directory} with {len(indeces)} frames.")
         obs_subsampled = downsample_traj_by_idx(self.observations, indeces)
 
         for cam in self.camera_names:
@@ -139,3 +142,7 @@ class Trajectory:
             json.dump(metadata, f)
 
         self.reset()
+
+
+    def __len__(self) -> int:
+        return len(self.observations)

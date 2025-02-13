@@ -1,52 +1,79 @@
 import mplib
 import numpy as np
 from loguru import logger
+import torch
 
+from tapas_gmm.env.calvinbench import CalvinTapasBridgeEnvironment
 
 class MotionPlanner:
-    def __init__(self, env):
+    def __init__(self, env: CalvinTapasBridgeEnvironment):
         self.env = env
-        self.agent = env.agent
-        self.robot = env.robot
+        self.robot_uid = self.env.calvin_env.robot.robot_uid
+        self.p = self.env.calvin_env.p
 
-        link_names = [link.get_name() for link in self.robot.get_links()]
-        joint_names = [joint.get_name() for joint in self.robot.get_active_joints()]
+        # Get link names
+        self.link_names = [self.p.getBodyInfo(self.robot_uid)[0].decode()]  # Root/base link
+        for i in range(self.p.getNumJoints(self.robot_uid)):
+            self.link_names.append(self.p.getJointInfo(self.robot_uid, i)[12].decode())
 
-        urdf_path = self.agent._get_urdf_path()
-        #srdf_path = self.agent._get_srdf_path()
+        # Get active joint names (ignore fixed joints)
+        self.joint_names = []
+        self.active_joint_indices = []
+        for i in range(self.p.getNumJoints(self.robot_uid)):
+            joint_info = self.p.getJointInfo(self.robot_uid, i)
+            joint_type = joint_info[2]  # Joint type
+            joint_name = joint_info[1].decode()
 
-        self.move_group_idx = 10
-        move_group_name = self.robot.get_links()[self.move_group_idx].get_name()
+            if joint_type in [self.p.JOINT_REVOLUTE, self.p.JOINT_PRISMATIC]:  # Movable joints
+                self.joint_names.append(joint_name)
+                if joint_type == self.p.JOINT_REVOLUTE:
+                    self.active_joint_indices.append(i)
 
+        print(f"joint_names", self.joint_names)
+        print(f"active_joint_indices", self.active_joint_indices)
+
+        self.move_group_idx = 13
+        self.move_group_name = self.link_names[self.move_group_idx]
+        print(f"move_group_name", self.move_group_name)
+        self.move_group_name = "tcp"
+
+        # Define joint velocity and acceleration limits
+        joint_vel_limits = np.ones(len(self.active_joint_indices)) * 1.0
+        joint_acc_limits = np.ones(len(self.active_joint_indices)) * 1.0
+        
+        args = ""
+        args = "_mplib"
+        urdf_path = f"calvin_env_motionplanner/data/franka_panda/panda_longer_finger{args}.urdf"
+        srdf_path = f"calvin_env_motionplanner/data/franka_panda/panda_longer_finger{args}.srdf"
+        # Initialize MPLib Planner
         self.planner = mplib.Planner(
             urdf=urdf_path,
-            #srdf=srdf_path,
-            user_link_names=link_names,
-            user_joint_names=joint_names,
-            move_group=move_group_name,
-            joint_vel_limits=np.ones(7),
-            joint_acc_limits=np.ones(7),
+            srdf=srdf_path,
+            user_link_names=self.link_names,
+            user_joint_names=self.joint_names,
+            move_group=self.move_group_name,
+            joint_vel_limits=joint_vel_limits,
+            joint_acc_limits=joint_acc_limits,
         )
-
-        self.active_joints = self.robot.get_active_joints()
 
     @staticmethod
     def _check_success(result):
         return result["status"] == "Success"
 
-    def plan_to_goal(self, current_pose, goal_pose, time_step=1 / 250, with_screw=True):
+    def plan_to_goal(self, goal_pose, current_pose, time_step=1 / 250, with_screw=True):
         success = False
         plan = {}
 
         if with_screw:
-            plan = self.planner.plan_screw(goal_pose, current_pose, time_step=time_step)
+            plan = self.planner.plan_screw(goal_pose, current_pose, time_step=time_step, verbose=True)
             success = self._check_success(plan)
 
             if not success:
                 logger.warning("Planning with screw failed. Trying again without.")
 
         if not with_screw or not success:
-            plan = self.planner.plan_qpos_to_pose(
+            # Here 9 joints problem
+            plan = self.planner.plan_pose(
                 goal_pose, current_pose, time_step=time_step
             )
             success = self._check_success(plan)

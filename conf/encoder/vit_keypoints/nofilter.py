@@ -50,7 +50,7 @@ pretraining_config = PreTrainingConfig(
 
 vit_keypoints_predictor_config = VitKeypointsPredictorConfig(
     encoder=encoder_config,
-    image_dim=(480, 640),
+    image_dim=(256, 256),
     pretraining=pretraining_config,
     debug_kp_selection=True,
     debug_kp_encoding=True,

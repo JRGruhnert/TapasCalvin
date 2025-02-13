@@ -110,6 +110,10 @@ class VitFeatureEncoder(representation_learner.RepresentationLearner):
             prep = self.extractor.preprocess(camera_obs)
             descr = self.extractor.extract_descriptors(prep).squeeze(0)
 
+        print(f"Descriptor shape before reshape: {descr.shape}")
+        print(f"Height: {H}, Width: {W}")
+        print(f"Descriptor shape after reshape: {descr.shape}")
+
         descr = descr.reshape(1, self.H_descr, self.W_descr, descr.shape[-1])
         descr = channel_back2front_batch(descr)
 

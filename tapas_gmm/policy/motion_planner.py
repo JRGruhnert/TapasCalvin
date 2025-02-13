@@ -1,11 +1,17 @@
 from enum import Enum
 import numpy as np
+import pybullet as p
 import torch
 from loguru import logger
 from typing import List
+from scipy.spatial.transform import Rotation as R
+import pinocchio as pin
+from scipy.spatial.transform import Rotation as R
+
+
 
 from tapas_gmm.env.environment import BaseEnvironment
-from tapas_gmm.env.calvinbench import CalvinBenchEnvironment
+from tapas_gmm.env.calvinbench import CalvinTapasBridgeEnvironment
 from tapas_gmm.policy.models.motion_planner import MotionPlanner
 from tapas_gmm.utils.observation import SceneObservation
 # from tapas_gmm.utils.select_gpu import device
@@ -25,6 +31,7 @@ class Action():
     def __init__(self, action_type, goal=None, with_screw=True) -> None:
         self.action_type = action_type
         self.goal = goal
+        self.taskId: str = "block_red"
         self.with_screw = with_screw
 
 class MoveToAction(Action):
@@ -43,22 +50,28 @@ class NoopAction(Action):
     def __init__(self) -> None:
         super().__init__(ActionType.NOOP)
 
-class MotionTask:
+class ActionSequence:
     def __init__(self, solution_sequence: List[Action]) -> None:
         self.solution_sequence: List[Action] = solution_sequence
 
-    def get_solution_sequence(self):
-        return self.solution_sequence
+    def __len__(self):
+        return len(self.solution_sequence)
+    
+    def __iter__(self):
+        return iter(self.solution_sequence)
+    
+    def pop(self, index):
+        return self.solution_sequence.pop(index)
     
 
 
 class MotionPlannerPolicy:
-    def __init__(self, env: CalvinBenchEnvironment, sequence: MotionTask, **kwargs):
+    def __init__(self, env: CalvinTapasBridgeEnvironment, sequence: ActionSequence, **kwargs):
         self.time_step = 1 / 20
 
         self.motion_planner = MotionPlanner(env)
         self.env = env
-        self.task = sequence
+        self.sequence = sequence
 
         self.reset_episode(env)
 
@@ -86,9 +99,10 @@ class MotionPlannerPolicy:
         )
 
     @staticmethod
-    def _get_current_pose(obs: SceneObservation): # type: ignore
-        proprio_obs = torch.cat((obs.joint_pos, obs.gripper_state))
-
+    def _get_current_joint_pos(obs: SceneObservation): # type: ignore
+        # TODO: check if this is the correct way to get the current pose
+        proprio_obs = obs.joint_pos
+        print(f"Current Joint Pos: {len(proprio_obs)}")
         return proprio_obs
 
     def _make_plan(self, obs: SceneObservation, goal: Action): # type: ignore
@@ -124,15 +138,13 @@ class MotionPlannerPolicy:
         """
         if goal.action_type is ActionType.MOVE_TO:
             plan = self.motion_planner.plan_to_goal(
-                self._get_current_pose(obs).numpy(),
                 goal.goal,
+                self._get_current_joint_pos(obs).numpy(),
                 time_step=self.time_step,
                 with_screw=goal.with_screw,
             )
 
-            actions = plan["position"]
-
-            return actions
+            return self._convert_plan_to_euler(plan)
 
         elif goal.action_type is ActionType.OPEN_GRIPPER:
             return self._make_gripper_open_plan(obs)
@@ -141,7 +153,7 @@ class MotionPlannerPolicy:
             return self._make_gripper_close_plan(obs)
 
         elif goal.action_type is ActionType.NOOP:
-            return self._make_noop_plan(obs, duration=goal.goal)
+            return self._make_noop_plan(obs)
 
         else:
             raise ValueError("Unknown action type.")
@@ -220,18 +232,18 @@ class MotionPlannerPolicy:
         obs: SceneObservation,  # type: ignore
     ) -> tuple[np.ndarray, dict]:
         if self.goal_list is None:
-            self.goal_list = self.task.get_solution_sequence()
-
+            self.goal_list = self.sequence
+        
+        info = {}
         if not self.current_plan:
             if len(self.goal_list) == 0:
                 logger.info("End of plan. Waiting for env to settle.")
-                gripper_action = self._binary_gripper_state(obs.gripper_state)
-                self.current_plan = [torch.cat((zero_movement, gripper_action))]
+                info["done"] = True
+                return None, True
             else:
                 self.current_goal = self.goal_list.pop(0)
                 self.current_plan = self._make_plan(obs, self.current_goal)
 
-        info = {}
 
         action = self.current_plan.pop(0)
 
@@ -242,13 +254,10 @@ class MotionPlannerPolicy:
             # action spaces are normalized to [-1, 1] in Maniskill, so map the
             # current gripper state to the corresponding gripper action
             gripper_action = self._binary_gripper_state(obs.gripper_state)
+            #action = self.joint_to_ee_pose(action, self.robot_uid, ee_link_index)
+            action = torch.cat((torch.tensor(action), gripper_action))
 
-            print("action: ", action)
-            #inverse kinematics
-            #debugger here:
-            breakpoint()
-            action = action
-            print("action: ", action)
+
         else:
             assert self.current_goal.action_type in (
                 ActionType.OPEN_GRIPPER,
@@ -257,10 +266,38 @@ class MotionPlannerPolicy:
             )
 
         action = action.numpy()
-
-        return action, info
+        return action, False
 
     def reset_episode(self, env: BaseEnvironment):
         self.goal_list = None
         self.current_goal = None
         self.current_plan = []
+
+    def _convert_plan_to_euler(self, plan):
+        euler_plan = []
+
+        for joint_pos in plan["position"]:  # Plan contains joint positions, NOT EE poses
+            joint_pos = np.array(joint_pos)  # Ensure it's a NumPy array
+
+            # Perform forward kinematics
+            pin.forwardKinematics(self.motion_planner.model, self.motion_planner.data, joint_pos)
+
+            # Get the EE frame index (change "ee_link_name" to your actual EE link name)
+            ee_id = self.motion_planner.model.getFrameId("ee_link_name")  
+
+            # Extract EE transformation (SE(3) pose)
+            ee_pose = self.motion_planner.data.oMf[ee_id]
+            position = ee_pose.translation  # Extract position (x, y, z)
+            rotation_matrix = ee_pose.rotation  # Extract rotation matrix (3x3)
+
+            # Convert rotation matrix to Euler angles
+            rotation = R.from_matrix(rotation_matrix)
+            euler_angles = rotation.as_euler('xyz', degrees=False)  # Convert to roll, pitch, yaw
+
+            # Combine position and Euler angles
+            euler_pose = np.concatenate((position, euler_angles))
+            euler_plan.append(euler_pose)
+
+        return euler_plan
+
+    

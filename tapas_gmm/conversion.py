@@ -122,7 +122,12 @@ def calvin_to_tapas_representation(c_obs, c_action) -> list[SceneObservation]: #
       A list containing one SceneObservation instance (batched).
     """
     # --- Process robot state ---
-    robot_obs = c_obs['robot_obs']
+    if c_obs is None:
+        return None
+    robot_obs = c_obs.get('robot_obs')
+    if robot_obs is None:
+        return None
+    
     # Extract TCP position (first 3 numbers) and TCP orientation (next 4 numbers)
     tcp_pos = np.array(robot_obs[:3])
     tcp_orn = np.array(robot_obs[3:7])  # assumed to be a quaternion (qx, qy, qz, qw)

@@ -8,14 +8,15 @@ from tapas_gmm.utils.observation import MaskTypes, ObservationConfig
 
 encoder_naming_config = DataNamingConfig(
     task=None,  # If None, values are taken from data_naming_config
-    feedback_type="demos",
+    feedback_type="test",
     data_root=None,
 )
 
 observation_config = ObservationConfig(
-    cameras=("wrist",),
+    cameras=("static", "gripper"),
     image_crop=None,
-    image_dim=(480, 640),
+    #image_dim=(255, 255),
+    image_dim=(256, 256),
     disk_read_embedding=False,
     disk_read_keypoints=False,
 )

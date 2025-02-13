@@ -21,7 +21,7 @@ def import_env(config):
     elif env_type is Environment.RLBENCH:
         from tapas_gmm.env.rlbench import RLBenchEnvironment as Env
     elif env_type is Environment.CALVINBENCH:
-        from tapas_gmm.env.calvinbench import CalvinBenchEnvironment as Env
+        from tapas_gmm.env.calvinbench import CalvinTapasBridgeEnvironment as Env
     else:
         raise ValueError("Invalid environment {}".format(config.env))
 
