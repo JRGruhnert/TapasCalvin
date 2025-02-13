@@ -89,5 +89,11 @@ class MotionPlanner:
         plan["velocity"] = [v for v in plan["velocity"]]
         plan["acceleration"] = [a for a in plan["acceleration"]]
         plan["time"] = [t for t in plan["time"]]
+        plan["ee_pose"] = [p for p in plan["position"]]
 
         return plan
+    
+    def joint_to_ee(self, joint_positions):
+        ee_state = self.p.getLinkState(self.robot_uid, self.move_group_idx, computeLinkVelocity=True)
+        ee_pose = ee_state[0] + ee_state[1]
+        return ee_pose

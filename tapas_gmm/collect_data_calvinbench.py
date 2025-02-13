@@ -126,16 +126,17 @@ def main(config: Config = Config()) -> None:
                     action, done = policy.predict(obs)
                     logger.info(f"Action: {action}")
                     logger.info(f"block_red: {task_pose}")
+                    # Gettting the next observation
+                    next_obs, _, _, _ = env.step(action)
                     if not done:
-                        if obs is not None:
-                            obs.action = torch.Tensor(action)
-                            obs.feedback = torch.Tensor([1])
+                        if next_obs is not None:
+                            next_obs.action = torch.Tensor(env._get_action(obs, next_obs))
+                            next_obs.feedback = torch.Tensor([1])
                             replay_memory.add_observation(obs)
-                        # Gettting the next observation
-                        obs, _, _, _ = env.step(action)
 
                         timesteps += 1
                         tbar.update(1)
+                        obs = next_obs
 
                     if done:
                         logger.info("Saving trajectory.")

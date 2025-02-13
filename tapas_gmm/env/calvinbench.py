@@ -125,14 +125,6 @@ class CalvinTapasBridgeEnvironment(BaseEnvironment):
             )
         else:
         """
-        # NOTE: Quaternion in RLBench is real-last.
-        gripper = 0.0 if np.isnan(action[-1]) else action[-1]
-        zero_action = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, gripper]
-
-        if np.isnan(action).any():
-            logger.warning("NaN action, skipping")
-            action = zero_action
-
         obs, reward, done, info = self.calvin_env.step(action)
 
         obs = None if obs is None else self.process_observation(obs)
