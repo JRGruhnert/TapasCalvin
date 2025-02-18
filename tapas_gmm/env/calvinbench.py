@@ -114,7 +114,7 @@ class CalvinTapasBridgeEnvironment(BaseEnvironment):
         RuntimeError
             If raised by the environment.
         """
-        assert len(action) == 7, f"Action has wrong length: {len(action)}" 
+        assert len(action) == 7 or len(action) == 10, f"Action has wrong length: {len(action)}" 
         """
         if postprocess:
             action_delayed = self.postprocess_action(
@@ -126,6 +126,7 @@ class CalvinTapasBridgeEnvironment(BaseEnvironment):
         else:
         """
         obs, reward, done, info = self.calvin_env.step(action)
+        self.calvin_env.render()
 
         obs = None if obs is None else self.process_observation(obs)
 
@@ -233,7 +234,7 @@ class CalvinTapasBridgeEnvironment(BaseEnvironment):
         joint_pos = torch.Tensor(robot_info["arm_joint_positions"])
         joint_vel = torch.Tensor(robot_info["arm_joint_velocities"])
         ee_pose = torch.Tensor(robot_info["ee_pose"])
-        gripper_open = torch.Tensor([robot_info["gripper_opening_width"]])
+        gripper_state = torch.Tensor([robot_info["gripper_opening_state"]])
 
         object_poses = self._get_obj_poses()
         object_poses = dict_to_tensordict(
@@ -241,32 +242,33 @@ class CalvinTapasBridgeEnvironment(BaseEnvironment):
         )
 
         obs = SceneObservation(
-            action=None,
+            action=torch.cat([ee_pose, gripper_state]),
             cameras=multicam_obs,
             ee_pose=ee_pose,
             object_poses=object_poses,
             joint_pos=joint_pos,
             joint_vel=joint_vel,
-            gripper_state=gripper_open,
+            gripper_state=gripper_state,
             batch_size=empty_batchsize,
+            feedback=torch.Tensor([1]),
         )
 
         return obs
 
     @staticmethod
     def _get_action(
-        current_obs: dict, next_obs: dict
+        current_obs: SceneObservation, next_obs: SceneObservation # type: ignore
     ) -> np.ndarray:
         gripper_action = np.array(
-            [2 * next_obs.gripper_open - 1]  # map from [0, 1] to [-1, 1]
+            [2 * next_obs.gripper_state - 1]  # map from [0, 1] to [-1, 1]
         )
 
-        curr_b = current_obs.gripper_pose[:3]
-        curr_q = quat_real_last_to_real_first(current_obs.gripper_pose[3:])
+        curr_b = current_obs.ee_pose[:3]
+        curr_q = quat_real_last_to_real_first(current_obs.ee_pose[3:])
         curr_A = quaternion_to_matrix(curr_q)
 
-        next_b = next_obs.gripper_pose[:3]
-        next_q = quat_real_last_to_real_first(next_obs.gripper_pose[3:])
+        next_b = next_obs.ee_pose[:3]
+        next_q = quat_real_last_to_real_first(next_obs.ee_pose[3:])
         next_A = quaternion_to_matrix(next_q)
         next_hom = homogenous_transform_from_rot_shift(next_A, next_b)
 

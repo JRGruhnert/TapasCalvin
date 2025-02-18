@@ -1,8 +1,11 @@
+from typing import Tuple
 import mplib
 import numpy as np
 from loguru import logger
 import torch
+from mplib.pymp import Pose
 
+from calvin_env.robot.robot import Robot
 from tapas_gmm.env.calvinbench import CalvinTapasBridgeEnvironment
 
 class MotionPlanner:
@@ -29,13 +32,14 @@ class MotionPlanner:
                 if joint_type == self.p.JOINT_REVOLUTE:
                     self.active_joint_indices.append(i)
 
-        print(f"joint_names", self.joint_names)
-        print(f"active_joint_indices", self.active_joint_indices)
+        #print(f"joint_names", self.joint_names)
+        #print(f"active_joint_indices", self.active_joint_indices)
 
         self.move_group_idx = 13
         self.move_group_name = self.link_names[self.move_group_idx]
-        print(f"move_group_name", self.move_group_name)
         self.move_group_name = "tcp"
+        #print(f"move_group_name", self.move_group_name)
+        self.move_group_idx = self.link_names.index(self.move_group_name)
 
         # Define joint velocity and acceleration limits
         joint_vel_limits = np.ones(len(self.active_joint_indices)) * 1.0
@@ -55,17 +59,20 @@ class MotionPlanner:
             joint_vel_limits=joint_vel_limits,
             joint_acc_limits=joint_acc_limits,
         )
+        print(self.planner.pinocchio_model)
+        self.planner.set_base_pose(Pose(tuple(self.env.calvin_env.robot.base_position), tuple(self.env.calvin_env.robot.base_orientation)))
+
 
     @staticmethod
     def _check_success(result):
         return result["status"] == "Success"
 
-    def plan_to_goal(self, goal_pose, current_pose, time_step=1 / 250, with_screw=True):
+    def plan_to_goal(self, goal_pose, current_qpos, time_step=1 / 250, with_screw=True):
         success = False
         plan = {}
 
         if with_screw:
-            plan = self.planner.plan_screw(goal_pose, current_pose, time_step=time_step, verbose=True)
+            plan = self.planner.plan_screw(goal_pose, current_qpos, time_step=time_step, verbose=True)
             success = self._check_success(plan)
 
             if not success:
@@ -73,9 +80,14 @@ class MotionPlanner:
 
         if not with_screw or not success:
             # Here 9 joints problem
+            print(f"current_pose", current_qpos)
+            #TODO: plan_qpos and make kinematics here
+            #current_qpos = current_qpos[:7]
+            self.robot: Robot = self.env.calvin_env.robot
             plan = self.planner.plan_pose(
-                goal_pose, current_pose, time_step=time_step
+                goal_pose, current_qpos,planning_time=10,  verbose=True, time_step=time_step,mask=[True,True,True,True,True,True,True,False,False]
             )
+            print(f"succes state", plan["status"])
             success = self._check_success(plan)
 
         if not success:
@@ -93,7 +105,7 @@ class MotionPlanner:
 
         return plan
     
-    def joint_to_ee(self, joint_positions):
+    def joint_to_ee(self, ):
         ee_state = self.p.getLinkState(self.robot_uid, self.move_group_idx, computeLinkVelocity=True)
         ee_pose = ee_state[0] + ee_state[1]
         return ee_pose

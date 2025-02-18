@@ -10,6 +10,8 @@ from loguru import logger
 from omegaconf import MISSING, DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
+from tapas_gmm.env.calvinbench import CalvinTapasBridgeEnvironment, CalvinTapasBridgeEnvironmentConfig
+from tapas_gmm.policy.manual import ManualPolicy
 import tapas_gmm.utils.logging  # noqa
 from tapas_gmm.dataset.scene import SceneDataset, SceneDatasetConfig
 from tapas_gmm.env import Environment, import_env
@@ -174,3 +176,4 @@ def entry_point():
 
 if __name__ == "__main__":
     entry_point()
+

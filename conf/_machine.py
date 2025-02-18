@@ -3,7 +3,7 @@ from omegaconf import MISSING
 from tapas_gmm.utils.misc import DataNamingConfig
 
 data_naming_config = DataNamingConfig(
-    feedback_type=MISSING, task=MISSING, data_root="data"
+    feedback_type="demo", task=MISSING, data_root="data"
 )
 
 

@@ -31,10 +31,10 @@ class KeyboardObserver:
             on_press=self.set_direction, on_release=self.reset_direction
         )
         self.key_mapping = {
-            "a": (1, 1),  # left
-            "d": (1, -1),  # right
-            "s": (0, 1),  # backward
-            "w": (0, -1),  # forward
+            "a": (0, -1),  # left
+            "d": (0, 1),  # right
+            "s": (1, -1),  # backward
+            "w": (1, 1),  # forward
             "q": (2, 1),  # down
             "e": (2, -1),  # up
             "j": (3, -1),  # look left

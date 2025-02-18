@@ -16,7 +16,7 @@ from tapas_gmm.policy.models.motion_planner import MotionPlanner
 from tapas_gmm.utils.observation import SceneObservation
 # from tapas_gmm.utils.select_gpu import device
 
-zero_movement = torch.tensor([0.0] * 6)
+zero_movement = torch.tensor([0.0] * 9)
 close_gripper = torch.tensor([-0.9])
 open_gripper = torch.tensor([0.9])
 
@@ -102,7 +102,7 @@ class MotionPlannerPolicy:
     def _get_current_joint_pos(obs: SceneObservation): # type: ignore
         # TODO: check if this is the correct way to get the current pose
         proprio_obs = obs.joint_pos
-        print(f"Current Joint Pos: {len(proprio_obs)}")
+        print(f"Proprio Joint Pos: {len(proprio_obs)}")
         return proprio_obs
 
     def _make_plan(self, obs: SceneObservation, goal: Action): # type: ignore
@@ -137,16 +137,26 @@ class MotionPlannerPolicy:
             _description_
         """
         if goal.action_type is ActionType.MOVE_TO:
+            print(f"Goal2: {goal.goal}") 
             plan = self.motion_planner.plan_to_goal(
                 goal.goal,
                 self._get_current_joint_pos(obs).numpy(),
                 time_step=self.time_step,
                 with_screw=goal.with_screw,
             )
+            print(f"Plan: {plan}")
+            #current_gripper = MotionPlannerPolicy._binary_gripper_state(obs.gripper_state)
+
+            #plan["position"] = [np.concatenate((p, current_gripper)) for p in plan["position"]]
+            #return [torch.cat((plan, current_gripper))]
+            #print(f"Plan: {plan['position']}")
 
             return self._convert_plan_to_euler(plan)
 
         elif goal.action_type is ActionType.OPEN_GRIPPER:
+            print("Open Gripper")
+            print(f"Current Gripper State: {obs.gripper_state}")
+            print(f"Obs Joint Pos: {obs.joint_pos}")
             return self._make_gripper_open_plan(obs)
 
         elif goal.action_type is ActionType.CLOSE_GRIPPER:
@@ -177,9 +187,9 @@ class MotionPlannerPolicy:
         list[torch.Tensor]
             Plan for closing the gripper as EE Delta Pose and gripper action.
         """
-        return [torch.cat((zero_movement, close_gripper))] * repeat
+        #return [torch.cat((zero_movement, close_gripper))] * repeat
         # this line gives the identical plan but as joint positions
-        # return [torch.cat((obs.joint_pos[:-1], close_gripper))] * repeat
+        return [torch.cat((obs.joint_pos, close_gripper))] * repeat
 
     @staticmethod
     def _make_gripper_open_plan(obs: SceneObservation, repeat: int = 10): # type: ignore
@@ -200,9 +210,9 @@ class MotionPlannerPolicy:
         list[torch.Tensor]
             Plan for opening the gripper as EE Delta Pose and gripper action.
         """
-        return [torch.cat((zero_movement, open_gripper))] * repeat
+        #return [torch.cat((zero_movement, open_gripper))] * repeat
         # this line gives the identical plan but as joint positions
-        # return [torch.cat((obs.joint_pos[:-1], close_gripper))] * repeat
+        return [torch.cat((obs.joint_pos, open_gripper))] * repeat
 
     @staticmethod
     def _make_noop_plan(obs: SceneObservation, duration: int = 5): # type: ignore
@@ -231,22 +241,21 @@ class MotionPlannerPolicy:
         self,
         obs: SceneObservation,  # type: ignore
     ) -> tuple[np.ndarray, dict]:
-        if self.goal_list is None:
-            self.goal_list = self.sequence
+        if self.sequence_list is None:
+            self.sequence_list = self.sequence
         
         info = {}
         if not self.current_plan:
-            if len(self.goal_list) == 0:
+            if len(self.sequence_list) == 0:
                 logger.info("End of plan. Waiting for env to settle.")
                 info["done"] = True
                 return None, True
             else:
-                self.current_goal = self.goal_list.pop(0)
+                self.current_goal = self.sequence_list.pop(0)
                 self.current_plan = self._make_plan(obs, self.current_goal)
 
 
         action = self.current_plan.pop(0)
-
         assert self.current_goal is not None
 
         # Need to translate the goal from joint pos to EE delta pose online
@@ -256,6 +265,7 @@ class MotionPlannerPolicy:
             gripper_action = self._binary_gripper_state(obs.gripper_state)
             #action = self.joint_to_ee_pose(action, self.robot_uid, ee_link_index)
             action = torch.cat((torch.tensor(action), gripper_action))
+            print(f"MoveTo Action: {action}")
 
 
         else:
@@ -269,13 +279,14 @@ class MotionPlannerPolicy:
         return action, False
 
     def reset_episode(self, env: BaseEnvironment):
-        self.goal_list = None
+        self.sequence_list = None
         self.current_goal = None
         self.current_plan = []
 
     def _convert_plan_to_euler(self, plan):
         euler_plan = []
 
+        '''
         for joint_pos in plan["position"]:  # Plan contains joint positions, NOT EE poses
             joint_pos = np.array(joint_pos)  # Ensure it's a NumPy array
 
@@ -297,7 +308,8 @@ class MotionPlannerPolicy:
             # Combine position and Euler angles
             euler_pose = np.concatenate((position, euler_angles))
             euler_plan.append(euler_pose)
-
-        return euler_plan
-
+            '''
+        #return euler_plan
+        print (f"Shape of plan: {len(plan['position'])}")
+        return plan["position"]
     

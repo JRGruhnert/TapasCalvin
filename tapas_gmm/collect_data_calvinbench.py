@@ -12,6 +12,7 @@ from tqdm.auto import tqdm
 from tapas_gmm.env.calvinbench import CalvinTapasBridgeEnvironmentConfig, CalvinTapasBridgeEnvironment
 
 from conversion import calvin_to_tapas_representation
+from tapas_gmm.policy.manual import ManualPolicy
 from tapas_gmm.policy.motion_planner import Action, CloseGripperAction, MotionPlannerPolicy, ActionSequence, MoveToAction, OpenGripperAction
 from tapas_gmm.dataset.scene import SceneDataset, SceneDatasetConfig
 from tapas_gmm.utils.misc import (
@@ -20,15 +21,17 @@ from tapas_gmm.utils.misc import (
     get_full_task_name,
     loop_sleep,
 )
+
+from tapas_gmm.utils.keyboard_observer import KeyboardObserver
 from tapas_gmm.utils.observation import SceneObservation
 
 # from tapas_gmm.utils.random import configure_seeds
 @dataclass
 class Task:
-    task_name: str
-    task_sequence: ActionSequence
-    horizon: int
-    feedback_type: str
+    task_name: str = "MoveRedBlock"
+    task_sequence: ActionSequence = ActionSequence([OpenGripperAction(), MoveToAction(goal = Pose((0,0,0),(0,0,0,0))), CloseGripperAction(), OpenGripperAction(), CloseGripperAction()])
+    horizon: int = 500
+    feedback_type: str = "demo"
 
 @dataclass
 class TestTask(Task):
@@ -38,22 +41,19 @@ class TestTask(Task):
     feedback_type: str = "test"
 
 class Test2Task(Task):
-    task_name: str = "Test2"
+    task_name: str = "MoveRedBlock"
     task_sequence: ActionSequence = ActionSequence([OpenGripperAction(), MoveToAction(goal = Pose((0,0,0),(0,0,0,0))), CloseGripperAction(), OpenGripperAction(), CloseGripperAction()])
     horizon: int = 100
-    feedback_type: str = "test2"
+    feedback_type: str = "demo"
 
 @dataclass
 class Config:
-    task: Task = Test2Task
+    task: Task = Task
     data_naming: DataNamingConfig = DataNamingConfig(feedback_type=task.feedback_type, task=task.task_name, data_root="data")
     dataset_config: SceneDatasetConfig = SceneDatasetConfig(data_root="data", camera_names=["gripper", "static"], image_size=(256, 256))
 
     env_config: CalvinTapasBridgeEnvironmentConfig = CalvinTapasBridgeEnvironmentConfig(
-    camera_pose={
-        "base": (0.2, 0.0, 0.2, 0, 0.194, 0.0, -0.981),
-        # "overhead": (0.2, 0.0, 0.2, 7.7486e-07, -0.194001, 7.7486e-07, 0.981001),
-    },
+    camera_pose={},
     image_size=(256, 256),
     static=False,
     headless=False,
@@ -73,6 +73,8 @@ class Config:
 def main(config: Config = Config()) -> None:
     env = CalvinTapasBridgeEnvironment(config.env_config)
     policy = MotionPlannerPolicy(env=env, sequence=config.task.task_sequence) # type: ignore
+    keyboard_obs = KeyboardObserver()
+    policy = ManualPolicy(config, env, keyboard_obs)
     assert config.data_naming.data_root is not None
 
     save_path = pathlib.Path(config.data_naming.data_root) / config.task.task_name
@@ -93,16 +95,23 @@ def main(config: Config = Config()) -> None:
     obs, info = env.reset()
 
     # Basically find the specific task in the task sequence and set the goal to the task pose
-    for action in policy.sequence:
-        if isinstance(action, MoveToAction):
-            taskId = action.taskId
-            scene_info = info["scene_info"]
-            movable_objects = scene_info["movable_objects"]
-            object_pos = movable_objects[taskId]["current_pos"]
-            object_orn = movable_objects[taskId]["current_orn"]
-            task_pose = Pose(object_pos, object_orn)
-            print(f"Task Pose: {task_pose}")
-            action.goal = task_pose
+    if isinstance(policy, MotionPlannerPolicy):
+        for action in policy.sequence:
+            if isinstance(action, MoveToAction):
+                taskId = action.taskId
+                scene_info = info["scene_info"]
+                movable_objects = scene_info["movable_objects"]
+                object_pos = movable_objects[taskId]["current_pos"]
+                object_orn = movable_objects[taskId]["current_orn"]
+                object_pos_list = list(object_pos)
+                # Modify the desired element of the object position
+                object_pos_list[2] += 0.5
+                object_pos = tuple(object_pos_list)
+                #object_pos = tuple(env.calvin_env.robot.base_position)
+                object_orn = (0,0,0,1)
+                task_pose = Pose(object_pos, object_orn)
+                print(f"Task Pose: {task_pose}")
+                action.goal = task_pose
 
     time.sleep(5)
     logger.info("Go!")
@@ -120,23 +129,21 @@ def main(config: Config = Config()) -> None:
                 while episodes_count < config.n_episodes:
                     ebar.set_description("Running episode")
                     start_time = time.time()
-
                     logger.info(f"Episode {episodes_count + 1}")
+
                     #logger.info(f"Observation: {obs}")
+                    print(f"Observation: {obs.action}")
+                    print(f"Observation: {obs.ee_pose}")
                     action, done = policy.predict(obs)
-                    logger.info(f"Action: {action}")
-                    logger.info(f"block_red: {task_pose}")
+                    print(f"Action: {action}")
                     # Gettting the next observation
-                    next_obs, _, _, _ = env.step(action)
                     if not done:
-                        if next_obs is not None:
-                            next_obs.action = torch.Tensor(env._get_action(obs, next_obs))
-                            next_obs.feedback = torch.Tensor([1])
+                        if obs is not None:
                             replay_memory.add_observation(obs)
 
                         timesteps += 1
                         tbar.update(1)
-                        obs = next_obs
+                        obs, _, _, _ = env.step(action)
 
                     if done:
                         logger.info("Saving trajectory.")
