@@ -146,7 +146,7 @@ class BaseEnvironment(ABC):
         self.gripper_open = 0.9
         self.gripper_deque = deque([0.9] * self.queue_length, maxlen=self.queue_length)
 
-    def step(self, action: np.ndarray) -> tuple[SceneObservation, float, bool, dict]:
+    def step(self, action: np.ndarray) -> tuple[SceneObservation, float, bool, dict]:  # type: ignore
         """
         Postprocess the action and execute it in the environment.
         Simple wrapper around _step, that provides the kwargs for
@@ -177,7 +177,7 @@ class BaseEnvironment(ABC):
         postprocess: bool = True,
         delay_gripper: bool = True,
         scale_action: bool = True,
-    ) -> tuple[SceneObservation, float, bool, dict]:
+    ) -> tuple[SceneObservation, float, bool, dict]:  # type: ignore
         """
         Postprocess the action and execute it in the environment.
         """
@@ -258,14 +258,14 @@ class BaseEnvironment(ABC):
 
         # print("scaled", delta_position, delta_rot_axis_angle)
 
-        delta_rot_quat = axis_angle_to_quaternion(delta_rot_axis_angle)
+        # delta_rot_quat = axis_angle_to_quaternion(delta_rot_axis_angle)
 
-        delta_rot_env = self.postprocess_quat_action(delta_rot_quat)
+        # delta_rot_env = self.postprocess_quat_action(delta_rot_quat)
 
         if delay_gripper:
             gripper = [self.delay_gripper(gripper)]
 
-        return np.concatenate((delta_position, delta_rot_env, gripper))
+        return np.concatenate((delta_position, delta_rot_axis_angle, gripper))
 
     def postprocess_quat_to_quat(self, quat: np.ndarray) -> np.ndarray:
         """

@@ -21,8 +21,8 @@ class KeyboardObserver:
                 "c": partial(self.set_gripper, -0.9),  # close
                 "v": partial(self.set_gripper, 0.9),  # open
                 "f": partial(self.set_gripper, None),  # gripper free
-                "x": partial(self.reset_episode, True),
-                "y": partial(self.reset_episode, False),
+                "y": partial(self.reset_episode, True),
+                "x": partial(self.reset_episode, False),
             }
         )
         self.hotkeys.start()
@@ -85,6 +85,9 @@ class KeyboardObserver:
 
     def has_gripper_update(self):
         return self.get_gripper() is not None
+
+    def is_reset(self):
+        return self.reset_button
 
     def get_ee_action(self):
         return self.direction * 0.9

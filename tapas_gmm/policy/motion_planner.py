@@ -11,7 +11,7 @@ from scipy.spatial.transform import Rotation as R
 
 
 from tapas_gmm.env.environment import BaseEnvironment
-from tapas_gmm.env.calvinbench import CalvinTapasBridgeEnvironment
+from tapas_gmm.env.calvinbench import CalvinEnvironment
 from tapas_gmm.policy.models.motion_planner import MotionPlanner
 from tapas_gmm.utils.observation import SceneObservation
 # from tapas_gmm.utils.select_gpu import device
@@ -66,7 +66,7 @@ class ActionSequence:
 
 
 class MotionPlannerPolicy:
-    def __init__(self, env: CalvinTapasBridgeEnvironment, sequence: ActionSequence, **kwargs):
+    def __init__(self, env: CalvinEnvironment, sequence: ActionSequence, **kwargs):
         self.time_step = 1 / 20
 
         self.motion_planner = MotionPlanner(env)

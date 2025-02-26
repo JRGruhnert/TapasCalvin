@@ -1,8 +1,8 @@
 from omegaconf import MISSING
 
-from tapas_gmm.env.calvinbench import CalvinTapasBridgeEnvironmentConfig
+from tapas_gmm.env.calvinbench import CalvinEnvironmentConfig
 
-calvin_tapas_env_config = CalvinTapasBridgeEnvironmentConfig(
+calvin_tapas_env_config = CalvinEnvironmentConfig(
     task=MISSING,
     cameras=("static", "gripper"),
     camera_pose={},

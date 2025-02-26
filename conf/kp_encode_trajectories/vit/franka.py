@@ -1,3 +1,4 @@
+from omegaconf import MISSING
 from conf._machine import data_naming_config
 from conf.encoder.vit_keypoints.nofilter import vit_keypoints_predictor_config
 from tapas_gmm.dataset.bc import BCDataConfig
@@ -8,12 +9,12 @@ from tapas_gmm.utils.observation import MaskTypes, ObservationConfig
 
 encoder_naming_config = DataNamingConfig(
     task=None,  # If None, values are taken from data_naming_config
-    feedback_type="test",
+    feedback_type="demos",
     data_root=None,
 )
 
 observation_config = ObservationConfig(
-    cameras=("static", "gripper"),
+    cameras=("gripper",),
     image_crop=None,
     #image_dim=(255, 255),
     image_dim=(256, 256),

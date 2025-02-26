@@ -6,10 +6,10 @@ import torch
 from mplib.pymp import Pose
 
 from calvin_env.robot.robot import Robot
-from tapas_gmm.env.calvinbench import CalvinTapasBridgeEnvironment
+from tapas_gmm.env.calvinbench import CalvinEnvironment
 
 class MotionPlanner:
-    def __init__(self, env: CalvinTapasBridgeEnvironment):
+    def __init__(self, env: CalvinEnvironment):
         self.env = env
         self.robot_uid = self.env.calvin_env.robot.robot_uid
         self.p = self.env.calvin_env.p

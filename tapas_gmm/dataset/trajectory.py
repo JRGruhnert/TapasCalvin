@@ -67,7 +67,7 @@ class Trajectory:
         """
         if self.subsample_by_difference:
             indeces = get_idx_by_pose_difference_threshold(
-                [o.cameras["wrist"].extr for o in self.observations],
+                [o.cameras["gripper"].extr for o in self.observations],
                 self.traj_config.LINEAR_DISTANCE_THRESHOLD,
                 self.traj_config.ANGLE_DISTANCE_THRESHOLD,
             )

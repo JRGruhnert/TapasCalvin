@@ -1085,7 +1085,7 @@ class SceneDataset(Dataset):
 
     def sample_data_point_with_object_labels(
         self,
-        cam: str = "wrist",
+        cam: str = "gripper",
         traj_idx: int | None = None,
         img_idx: int | None = None,
         get_mask: bool = True,
@@ -1115,7 +1115,7 @@ class SceneDataset(Dataset):
 
     def sample_data_point_with_ground_truth(
         self,
-        cam: str = "wrist",
+        cam: str = "gripper",
         traj_idx: int | None = None,
         img_idx: int | None = None,
         get_mask: bool = True,
@@ -1230,7 +1230,7 @@ class SceneDataset(Dataset):
         dist_threshold: float = 0.2,
         angle_threshold: float = 20,
         num_attempts: int = 10,
-        cam: str = "wrist",
+        cam: str = "gripper",
     ) -> int | None:
         """
         Try to get an image with a different pose to the one passed in.
@@ -1270,7 +1270,7 @@ class SceneDataset(Dataset):
         labels: Iterable[int],
         mask_type: MaskTypes,
         num_attempts: int = 100,
-        cam: str = "wrist",
+        cam: str = "gripper",
     ) -> int | None:
         """
         Try to get an image of a MO scene where only one object is visible.
@@ -1311,7 +1311,7 @@ class SceneDataset(Dataset):
         self,
         traj_idx: int,
         fragment_idx: int | None = None,
-        cams: tuple[str, ...] = ("wrist",),
+        cams: tuple[str, ...] = ("gripper",),
         mask_type: MaskTypes | None = None,
         sample_freq: int | None = None,
         fragment_length: int = -1,

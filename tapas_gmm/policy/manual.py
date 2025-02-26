@@ -22,7 +22,15 @@ class ManualPolicy:
         if self.keyboard_obs.has_joints_cor() or self.keyboard_obs.has_gripper_update():
             action = correct_action(self.keyboard_obs, action)
             self.gripper_open = action[-1]
-        return action, {}
+        done = False
+        success = False
+        if self.keyboard_obs.is_reset():
+            print("Resetting episode")
+            success = self.keyboard_obs.success
+            self.keyboard_obs.reset()
+            done = True
+
+        return action, done, success
 
     def reset_episode(self, env: BaseEnvironment | None = None):
         # TODO: add this to all other policies as well and use it to store

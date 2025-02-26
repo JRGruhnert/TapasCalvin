@@ -24,7 +24,6 @@ from tapas_gmm.utils.geometry_np import (
 )
 from tapas_gmm.utils.observation import (
     CameraOrder,
-    ObservationConfig,
     SceneObservation,
     SingleCamObservation,
     dict_to_tensordict,
@@ -32,34 +31,41 @@ from tapas_gmm.utils.observation import (
 )
 
 
-from calvin_env.envs.custom_env import (
-    CalvinSimEnv,
+from calvin_env.envs.calvin_env import (
+    CalvinObservation,
+    CalvinEnv,
     get_env_from_cfg,
 )
 
+task_switch = {
+    "PickRedCube": None,
+}
+
 
 @dataclass(kw_only=True)
-class CalvinTapasBridgeEnvironmentConfig(BaseEnvironmentConfig):
-    action_mode: Any = None
+class CalvinEnvironmentConfig(BaseEnvironmentConfig):
+    action_mode: Any = None  # TODO evaluate if this is needed
     env_type: Environment = Environment.CALVINBENCH
 
-    absolute_action_mode: bool = False
-    action_frame: str = "end effector"
+    planning_action_mode: bool = False  # TODO evaluate if this is needed
+    absolute_action_mode: bool = False  # TODO evaluate if this is needed
+    action_frame: str = "end effector"  # TODO evaluate if this is needed
 
-    demo_path: str | None = None
-    generate: bool = False
-    postprocess_actions: bool = True
-    background: str | None = None
-    model_ids: tuple[str, ...] | None = None
+    postprocess_actions: bool = True  # TODO evaluate if this is needed
+    background: str | None = None  # TODO evaluate if this is needed
+    model_ids: tuple[str, ...] | None = None  # TODO evaluate if this is needed
     cameras: tuple[str, ...] = ("static", "gripper")
 
-class CalvinTapasBridgeEnvironment(BaseEnvironment):
-    def __init__(self, config: CalvinTapasBridgeEnvironmentConfig, **kwargs):
+
+class CalvinEnvironment(BaseEnvironment):
+    def __init__(self, config: CalvinEnvironmentConfig, **kwargs):
         super().__init__(config)
 
         self.cameras = config.cameras
 
-        self.calvin_env: CalvinSimEnv = get_env_from_cfg()
+        self.calvin_env: CalvinEnv = (
+            get_env_from_cfg()
+        )  # Give the config to the env so that i can connect both config systems and remove the pain
         if self.calvin_env is None:
             raise RuntimeError("Could not create environment.")
         self.calvin_env.reset()
@@ -86,7 +92,7 @@ class CalvinTapasBridgeEnvironment(BaseEnvironment):
         postprocess: bool = True,
         delay_gripper: bool = True,
         scale_action: bool = True,
-    ) -> tuple[SceneObservation, float, bool, dict]: # type: ignore
+    ) -> tuple[SceneObservation, float, bool, dict]:  # type: ignore
         """
         Postprocess the action and execute it in the environment.
         Catches invalid actions and executes a zero action instead.
@@ -114,113 +120,56 @@ class CalvinTapasBridgeEnvironment(BaseEnvironment):
         RuntimeError
             If raised by the environment.
         """
-        assert len(action) == 7 or len(action) == 10, f"Action has wrong length: {len(action)}" 
-        """
+        assert len(action) == 7, f"Action has wrong length: {len(action)}"
+
         if postprocess:
             action_delayed = self.postprocess_action(
                 action,
                 scale_action=scale_action,
                 delay_gripper=delay_gripper,
-                prediction_is_quat=prediction_is_quat,
+                prediction_is_quat=False,
+                prediction_is_euler=True,
             )
         else:
-        """
-        obs, reward, done, info = self.calvin_env.step(action)
+            action_delayed = action
+        print(f"Here")
+        obs, _, _, _ = self.calvin_env.step(action_delayed)
+        print(f"Here2")
         self.calvin_env.render()
+        print(f"Here3")
 
         obs = None if obs is None else self.process_observation(obs)
+        print(f"Here4")
+        return obs
 
-        return obs, reward, done, info
-
-    def get_camera_pose(self) -> dict[str, np.ndarray]:
-        return {name: cam.get_pose() for name, cam in self.camera_map.items()}
-
-    def set_camera_pose(self, pos_dict: dict[str, np.ndarray]) -> None:
-        for camera_name, pos in pos_dict.items():
-            if camera_name in self.camera_map:
-                camera = self.camera_map[camera_name]
-                camera.set_pose(pos)
-
-    def _get_obj_poses(self) -> np.ndarray:
-        """
-        Low dim state of the task can contain more than just object poses, eg.
-        force sensor readings, joint positions, etc., which makes it hard to parse.
-
-        This is a fallback method to get the object poses from the task state.
-        """
-        info = self.calvin_env.get_info()
-        scene_info = info["scene_info"]
-        fixed_objects = scene_info["fixed_objects"]
-        movable_objects = scene_info["movable_objects"]
-        #print(f"Fixed objects: {fixed_objects}")
-        #print(f"Movable objects: {movable_objects}")
-
-        state = []
-        '''
-        for obj, objtype in self.task_env._task._initial_objs_in_scene:
-            if not obj.still_exists():
-                # It has been deleted
-                empty_len = 7
-                # if objtype == ObjectType.JOINT:
-                #     empty_len += 1
-                # elif objtype == ObjectType.FORCE_SENSOR:
-                #     empty_len += 6
-                state.extend(np.zeros((empty_len,)).tolist())
-            else:
-                state.extend(np.array(obj.get_pose()))
-                # if obj.get_type() == ObjectType.JOINT:
-                #     state.extend([Joint(obj.get_handle()).get_joint_position()])
-                # elif obj.get_type() == ObjectType.FORCE_SENSOR:
-                #     forces, torques = ForceSensor(obj.get_handle()).read()
-                #     state.extend(forces + torques)
-                '''
-        return np.array(state).flatten()
-
-    def process_observation(self, obs: dict[str, dict]) -> SceneObservation: # type: ignore
+    def process_observation(self, obs: CalvinObservation) -> SceneObservation:  # type: ignore
         """
         Convert the observation from the environment to a SceneObservation.
 
         Parameters
         ----------
-        obs : Observation
-            The observation from the environment.
-            rgb_obs: dict[str, np.ndarray]
-                The RGB images from the cameras.
-            depth_obs: dict[str, np.ndarray]
-                The depth images from the cameras.
-            mask_obs: dict[str, np.ndarray]
+        obs : CalvinObservation
+            Observation as Calvins's Observation class.
 
         Returns
         -------
         SceneObservation
             The observation in common format as SceneObservation.
         """
-        rgb_obs = obs["rgb_obs"]
-        depth_obs = obs["depth_obs"]
-        robot_obs = obs["robot_obs"]
-        scene_obs = obs["scene_obs"]
-        mask_obs = obs["mask_obs"]
-        extr_obs = obs["extr_obs"]
-        intr_obs = obs["intr_obs"]
-        robot_info = obs["robot_info"]
-
-        if len(rgb_obs) == 0:
-            logger.warning("RGB observation is None.")
-            return None
-
         camera_obs = {}
+
         for cam in self.cameras:
-            rgb = rgb_obs.get(f"rgb_{cam}").transpose((2, 0, 1)) / 255 # Normalize to [0, 1]
-            depth = depth_obs.get(f"depth_{cam}")
-            mask = None#mask_obs.get(f"mask_{cam}").astype(int)
-            extr = extr_obs.get(f"extr_{cam}")
-            intr = intr_obs.get(f"intr_{cam}").astype(float)
+            rgb = getattr(obs, cam + "_rgb").transpose((2, 0, 1)) / 255
+            depth = getattr(obs, cam + "_depth")
+            mask = getattr(obs, cam + "_mask").astype(int)
+            extr = obs.misc[cam + "_camera_extrinsics"]
+            intr = obs.misc[cam + "_camera_intrinsics"]
 
             camera_obs[cam] = SingleCamObservation(
                 **{
                     "rgb": torch.Tensor(rgb),
                     "depth": torch.Tensor(depth),
-                    "mask": None,#torch.Tensor(mask).to(torch.uint8),
+                    "mask": torch.Tensor(mask).to(torch.uint8),
                     "extr": torch.Tensor(extr),
                     "intr": torch.Tensor(intr),
                 },
@@ -231,33 +180,55 @@ class CalvinTapasBridgeEnvironment(BaseEnvironment):
             {"_order": CameraOrder._create(self.cameras)} | camera_obs
         )
 
-        joint_pos = torch.Tensor(robot_info["arm_joint_positions"])
-        joint_vel = torch.Tensor(robot_info["arm_joint_velocities"])
-        ee_pose = torch.Tensor(robot_info["ee_pose"])
-        gripper_state = torch.Tensor([robot_info["gripper_opening_state"]])
+        joint_pos = torch.Tensor(obs.joint_positions)
+        joint_vel = torch.Tensor(obs.joint_velocities)
 
-        object_poses = self._get_obj_poses()
+        ee_pose = torch.Tensor(obs.gripper_pose)
+        """
+        ee_pose = torch.Tensor(
+            np.concatenate(
+                [
+                    obs.gripper_pose[:3],
+                    obs.gripper_pose[3:],
+                ]
+            )
+        )
+        """
+        logger.info(f"EE Pose original {obs.gripper_pose}")
+        logger.info(f"EE Pose {ee_pose}")
+        gripper_open = torch.Tensor([obs.gripper_open])
+
+        flat_object_poses = obs.task_low_dim_state
+        """
+        n_objs = int(len(flat_object_poses) // 7)  # poses are 7 dim and stacked
+
+        object_poses = tuple(
+            np.concatenate((pose[:3], quat_real_last_to_real_first(pose[3:])))
+            for pose in np.split(flat_object_poses, n_objs)
+        )
+
         object_poses = dict_to_tensordict(
             {f"obj{i:03d}": torch.Tensor(pose) for i, pose in enumerate(object_poses)}
         )
-
+        """
+        print(f"Flat Object Poses: {flat_object_poses}")
+        # object_poses = torch.Tensor(flat_object_poses)
         obs = SceneObservation(
-            action=torch.cat([ee_pose, gripper_state]),
+            action=None,
             cameras=multicam_obs,
             ee_pose=ee_pose,
-            object_poses=object_poses,
+            object_poses=flat_object_poses,
             joint_pos=joint_pos,
             joint_vel=joint_vel,
-            gripper_state=gripper_state,
+            gripper_state=gripper_open,
             batch_size=empty_batchsize,
-            feedback=torch.Tensor([1]),
         )
 
         return obs
 
     @staticmethod
     def _get_action(
-        current_obs: SceneObservation, next_obs: SceneObservation # type: ignore
+        current_obs: SceneObservation, next_obs: SceneObservation  # type: ignore
     ) -> np.ndarray:
         gripper_action = np.array(
             [2 * next_obs.gripper_state - 1]  # map from [0, 1] to [-1, 1]
@@ -283,23 +254,3 @@ class CalvinTapasBridgeEnvironment(BaseEnvironment):
         pos_delta = pred_local[:3, 3]
 
         return np.concatenate([pos_delta, rot_delta, gripper_action])
-
-    def postprocess_quat_action(self, quaternion: np.ndarray) -> np.ndarray:
-        return quat_real_first_to_real_last(quaternion)
-
-    def get_inverse_kinematics(
-        self, target_pose: np.ndarray, reference_qpos: np.ndarray, max_configs: int = 20
-    ) -> np.ndarray:
-        arm = self.calvin_env._robot.arm
-        arm.set_joint_positions(reference_qpos[:7], disable_dynamics=True)
-        arm.set_joint_target_velocities([0] * len(arm.joints))
-
-        return arm.solve_ik_via_sampling(
-            position=target_pose[:3],
-            quaternion=quat_real_first_to_real_last(target_pose[3:7]),
-            relative_to=None,
-            ignore_collisions=True,
-            max_configs=max_configs,  # samples this many configs, then ranks them
-        )[
-            0
-        ]
