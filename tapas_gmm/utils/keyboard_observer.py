@@ -35,14 +35,14 @@ class KeyboardObserver:
             "d": (0, 1),  # right
             "s": (1, -1),  # backward
             "w": (1, 1),  # forward
-            "q": (2, 1),  # down
-            "e": (2, -1),  # up
+            "q": (2, 1),  # up
+            "e": (2, -1),  # down
             "j": (3, -1),  # look left
             "l": (3, 1),  # look right
             "i": (4, -1),  # look up
             "k": (4, 1),  # look down
-            "u": (5, -1),  # rotate left
-            "o": (5, 1),  # rotate right
+            "o": (5, -1),  # rotate right
+            "u": (5, 1),  # rotate left
         }
         self.listener.start()
         # self.listener.join()

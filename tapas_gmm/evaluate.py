@@ -7,6 +7,7 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
+from tapas_gmm.env.calvinbench import CalvinEnvironment
 import tapas_gmm.utils.logging  # noqa
 import wandb
 from tapas_gmm.env import Environment, import_env
@@ -151,7 +152,7 @@ def run_simulation(
 
 
 def run_episode(
-    env: BaseEnvironment,
+    env: CalvinEnvironment,
     keyboard_obs: KeyboardObserver | None,
     policy: Policy,
     horizon: int | None,
@@ -163,8 +164,8 @@ def run_episode(
     hold_until_step: int | None,
 ) -> tuple[float, int]:
     episode_reward = 0
-    done = False
-    obs = env.reset()
+    # done = False
+    obs, _, done, _ = env.reset()
 
     if keyboard_obs is not None:
         keyboard_obs.reset()
@@ -282,7 +283,7 @@ def process_step(
         # TODO: make this work with simulated envs. Either step through the traj
         # here or enable the envs to step through the traj themselves and aggregate
         # the rewards.
-        next_obs, reward, done, env_info = env.step(action)
+        next_obs, reward, done, env_info = env.step(action, info=info)
 
         if type(action) is RobotTrajectory:
             action = None  # Only pass the trajectory once, let the env step through it

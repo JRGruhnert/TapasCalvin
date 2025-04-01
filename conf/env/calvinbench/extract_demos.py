@@ -4,7 +4,7 @@ from tapas_gmm.env.calvinbench import CalvinEnvironmentConfig
 
 calvin_tapas_env_config = CalvinEnvironmentConfig(
     task=MISSING,
-    cameras=("static", "gripper"),
+    cameras=("front", "wrist"),
     camera_pose={},
     image_size=(256, 256),
     static=False,

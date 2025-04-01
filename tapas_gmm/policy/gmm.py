@@ -224,6 +224,9 @@ class GMMPolicy(Policy):
             else:
                 prediction = self._prediction_batch.step()
                 info["done"] = False
+
+            print(f"EE Pose: {obs.ee_pose.numpy()}")
+            print(f"Prediction.ee: {prediction.ee}")
             action = (
                 self._postprocess_prediction(obs.ee_pose.numpy(), prediction.ee)
                 if self.config.postprocess_prediction
@@ -241,9 +244,12 @@ class GMMPolicy(Policy):
             )
             info["done"] = False
 
+        print(f"Action in prediction: {action}")
+
         if self.config.binary_gripper_action:
             action[-1] = self._binary_gripper_action(action[-1])
 
+        info["segment_id"] = self.model._online_active_segment
         return action, info
 
     def _get_frame_trans(self, obs):
@@ -352,6 +358,7 @@ class GMMPolicy(Policy):
                 always_step=True,
                 postprocess=False,
             )
+            print(f"Prediction top: {pred}")
             prediction_raw.append(pred)
             prediction_tan.append(extra["mu_tangent"])
             inputs.append(inp)
@@ -458,10 +465,12 @@ class GMMPolicy(Policy):
             frame_trans=frame_trans,
             frame_quats=frame_quats,
             local_marginals=self._local_marginals,
+            per_segment=True,  # TODO chnaged that
         )
-
+        print(f"Prediction: {prediction}")
         if postprocess:
             action = self._postprocess_prediction(ee_pose, prediction)
+            print(f"Action: {action}")
         else:
             action = prediction
 
@@ -550,17 +559,17 @@ class GMMPolicy(Policy):
         if self._model_contains_gripper_action:
             gripper_action = prediction[-1:]
             ee_prediction = prediction[:-1]
+            print(f"Gripper action: {gripper_action}")
+            print(f"EE prediction: {ee_prediction}")
         else:
             gripper_action = -np.ones((1))
             ee_prediction = prediction
-
         state_dim = 7 if self._model_contains_rotation else 3
         action_dim = (
             9
             if self._model_factorizes_action
             else 7 if self._model_contains_rotation else 3
         )
-
         # Split EE part into state and action if needed
         if self._model_is_txdx and self._time_based:
             # TXDX model, ie contains time, state and action. Can use either x or dx.
@@ -573,11 +582,11 @@ class GMMPolicy(Policy):
                     else slice(0, state_dim)
                 )
             ]
-
         else:
+            print(f"action_dim: {action_dim}, state_dim: {state_dim}")
             ee_dim = action_dim if self._prediction_is_delta_pose else state_dim
+            print(f"ee_dim: {ee_dim}, ee_prediction.shape: {ee_prediction.shape}")
             assert ee_prediction.shape == (ee_dim,)
-
         if self._prediction_is_delta_pose:
             if self._model_factorizes_action:
                 # Prediction is factorized -> reassemble delta pose
@@ -610,15 +619,11 @@ class GMMPolicy(Policy):
                 pos_delta, rot_delta = self._delta_frame_transform(
                     ee_pose, pos_delta, rot_delta
                 )
-
         else:  # prediction is absolute pose -> get finite difference
             pos_delta, rot_delta = self._pose_to_pose_delta(ee_pose, ee_prediction)
-
         if not self._model_contains_rotation:
             rot_delta = zero_quat
-
         ee_action = np.concatenate([pos_delta, rot_delta])
-
         return np.concatenate([ee_action, gripper_action])
 
     def _delta_frame_transform(

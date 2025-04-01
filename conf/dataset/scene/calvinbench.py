@@ -4,7 +4,7 @@ from tapas_gmm.dataset.scene import SceneDatasetConfig
 
 scene_dataset_config = SceneDatasetConfig(
     data_root=MISSING,
-    camera_names=("gripper", "static"),
+    camera_names=("wrist", "front"),
     image_size=(256, 256),
     image_crop=None,
     subsample_by_difference=False,

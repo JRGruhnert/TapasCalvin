@@ -12,8 +12,9 @@ encoder_naming_config = DataNamingConfig(
 )
 
 observation_config = ObservationConfig(
-    cameras=("base",),
+    cameras=("wrist",),
     image_crop=None,
+    image_dim=(256, 256),
     disk_read_embedding=False,
     disk_read_keypoints=False,
 )

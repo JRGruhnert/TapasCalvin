@@ -409,7 +409,7 @@ class ManiSkillEnv(BaseEnvironment):
     def close(self):
         self.gym_env.close()
 
-    def process_observation(self, obs: dict) -> SceneObservation:
+    def process_observation(self, obs: dict) -> SceneObservation:  # type: ignore
         """
         Convert the observation dict from ManiSkill to a SceneObservation.
 

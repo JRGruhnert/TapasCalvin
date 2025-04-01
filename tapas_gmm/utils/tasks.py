@@ -14,7 +14,7 @@ task_horizons = defaultdict(lambda: 300, task_horizons)
 
 
 def get_task_horizon(config: BaseEnvironmentConfig) -> int | None:
-    if config.env is Environment.PANDA:
+    if config.env_type is Environment.PANDA:
         return None
     else:
         return task_horizons[config.task]

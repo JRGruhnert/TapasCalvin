@@ -36,37 +36,9 @@ from tapas_gmm.utils.observation import SceneObservation
 # from tapas_gmm.utils.random import configure_seeds
 @dataclass
 class Task:
-    task_name: str = "PickRedBlock2"
-    task_sequence: ActionSequence = ActionSequence(
-        [
-            OpenGripperAction(),
-            MoveToAction(goal=Pose((0, 0, 0), (0, 0, 0, 0))),
-            CloseGripperAction(),
-            OpenGripperAction(),
-            CloseGripperAction(),
-        ]
-    )
+    task_name: str = "PressButton"
     horizon: int = 500
     feedback_type: str = "demos"
-
-
-@dataclass
-class TestTask(Task):
-    task_name: str = "Test"
-    task_sequence: ActionSequence = ActionSequence(
-        [
-            OpenGripperAction(),
-            CloseGripperAction(),
-            OpenGripperAction(),
-            CloseGripperAction(),
-        ]
-    )
-    horizon: int = 50
-    feedback_type: str = "test"
-
-
-class Test2Task(Task):
-    task_name: str = "MoveRedBlock"
     task_sequence: ActionSequence = ActionSequence(
         [
             OpenGripperAction(),
@@ -76,8 +48,6 @@ class Test2Task(Task):
             CloseGripperAction(),
         ]
     )
-    horizon: int = 100
-    feedback_type: str = "demos"
 
 
 @dataclass
@@ -87,7 +57,7 @@ class Config:
         feedback_type=task.feedback_type, task=task.task_name, data_root="data"
     )
     dataset_config: SceneDatasetConfig = SceneDatasetConfig(
-        data_root="data", camera_names=["gripper", "static"], image_size=(256, 256)
+        data_root="data", camera_names=["wrist", "front"], image_size=(256, 256)
     )
 
     env_config: CalvinEnvironmentConfig = CalvinEnvironmentConfig(
@@ -130,14 +100,14 @@ def main(config: Config = Config()) -> None:
     )
 
     env.reset()  # extra reset to correct set up of camera poses in first obs
-    obs, info = env.reset()
+    obs, _, done_policy, _ = env.reset()
 
     # Basically find the specific task in the task sequence and set the goal to the task pose
     if isinstance(policy, MotionPlannerPolicy):
         for action in policy.sequence:
             if isinstance(action, MoveToAction):
                 taskId = action.taskId
-                scene_info = info["scene_info"]
+                scene_info = done_policy["scene_info"]
                 movable_objects = scene_info["movable_objects"]
                 object_pos = movable_objects[taskId]["current_pos"]
                 object_orn = movable_objects[taskId]["current_orn"]
@@ -168,8 +138,14 @@ def main(config: Config = Config()) -> None:
                     ebar.set_description("Running episode")
                     start_time = time.time()
 
-                    action, info, success = policy.predict(obs)
-                    next_obs, _, done, _ = env.step(action)
+                    action, done, success = policy.predict(obs)
+                    try:
+                        next_obs, _, _, _ = env.step(action)
+                    except RuntimeError as e:
+                        logger.error(f"Raw action: {action}")
+                        logger.error(f"Error: {e}")
+                        raise e
+
                     obs.action = torch.Tensor(action)
                     obs.feedback = torch.Tensor([1])
                     replay_memory.add_observation(obs)
@@ -178,12 +154,12 @@ def main(config: Config = Config()) -> None:
                     timesteps += 1
                     tbar.update(1)
 
-                    if done or keyboard_obs.success:
+                    if done and success:
                         # logger.info("Saving trajectory.")
                         ebar.set_description("Saving trajectory")
                         replay_memory.save_current_traj()
 
-                        obs = env.reset()
+                        obs, _, done, _ = env.reset()
                         keyboard_obs.reset()
                         policy.reset_episode(env)
 
@@ -193,14 +169,12 @@ def main(config: Config = Config()) -> None:
                         timesteps = 0
                         tbar.reset()
 
-                        done = False
-
-                    elif keyboard_obs.reset_button or timesteps >= horizon:
+                    elif done and not success or timesteps >= horizon:
                         # logger.info("Resetting without saving traj.")
                         ebar.set_description("Resetting without saving traj")
                         replay_memory.reset_current_traj()
 
-                        obs = env.reset()
+                        obs, _, _, _ = env.reset()
                         keyboard_obs.reset()
                         policy.reset_episode(env)
 

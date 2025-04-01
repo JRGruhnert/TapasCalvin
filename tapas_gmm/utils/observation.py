@@ -97,6 +97,7 @@ SCENE_ATTRIBUTES = MappingProxyType(
     {
         "feedback": "feedback",
         "object_poses": "object_poses",
+        "object_states": "object_states",
     }
 )
 

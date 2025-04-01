@@ -829,6 +829,7 @@ class SceneDataset(Dataset):
         get_action: bool = False,
         get_feedback: bool = False,
         get_object_poses: bool = False,
+        get_object_states: bool = False,
         get_proprio_obs: bool = False,
         get_gripper_pose: bool = False,
         get_object_pose: bool = False,
@@ -877,6 +878,8 @@ class SceneDataset(Dataset):
             Get the feedback received, by default False
         get_object_poses : bool, optional
             Get the ground-truth object poses, by default False
+        get_object_states : bool, optional
+            Get the object states, by default False
         get_proprio_obs : bool, optional
             Get the robot proprioception values, ie joint angles,
             by default False
@@ -940,6 +943,7 @@ class SceneDataset(Dataset):
             get_gripper_pose,
             get_proprio_obs,
             get_object_poses,
+            get_object_states,
         )
         gen_attr = ("action", "feedback", "ee_pose", "proprio_obs", "object_poses")
         for arg, attr in zip(gen_args, gen_attr):
@@ -989,6 +993,7 @@ class SceneDataset(Dataset):
             get_feedback=False,
             get_gripper_pose=True,
             get_object_poses=True,
+            get_object_states=False,
             get_proprio_obs=False,
             get_wrist_pose=False,
         )
@@ -1011,6 +1016,7 @@ class SceneDataset(Dataset):
                 get_feedback=False,
                 get_gripper_pose=True,
                 get_object_poses=True,
+                get_object_states=False,
                 get_proprio_obs=False,
                 get_wrist_pose=False,
             )
@@ -1085,7 +1091,7 @@ class SceneDataset(Dataset):
 
     def sample_data_point_with_object_labels(
         self,
-        cam: str = "gripper",
+        cam: str = "wrist",
         traj_idx: int | None = None,
         img_idx: int | None = None,
         get_mask: bool = True,
@@ -1115,7 +1121,7 @@ class SceneDataset(Dataset):
 
     def sample_data_point_with_ground_truth(
         self,
-        cam: str = "gripper",
+        cam: str = "wrist",
         traj_idx: int | None = None,
         img_idx: int | None = None,
         get_mask: bool = True,
@@ -1138,6 +1144,7 @@ class SceneDataset(Dataset):
             get_feedback=True,
             get_gripper_pose=True,
             get_object_poses=True,
+            get_object_states=True,
             get_proprio_obs=False,
             get_wrist_pose=False,
         )
@@ -1230,7 +1237,7 @@ class SceneDataset(Dataset):
         dist_threshold: float = 0.2,
         angle_threshold: float = 20,
         num_attempts: int = 10,
-        cam: str = "gripper",
+        cam: str = "wrist",
     ) -> int | None:
         """
         Try to get an image with a different pose to the one passed in.
@@ -1270,7 +1277,7 @@ class SceneDataset(Dataset):
         labels: Iterable[int],
         mask_type: MaskTypes,
         num_attempts: int = 100,
-        cam: str = "gripper",
+        cam: str = "wrist",
     ) -> int | None:
         """
         Try to get an image of a MO scene where only one object is visible.
@@ -1311,7 +1318,7 @@ class SceneDataset(Dataset):
         self,
         traj_idx: int,
         fragment_idx: int | None = None,
-        cams: tuple[str, ...] = ("gripper",),
+        cams: tuple[str, ...] = ("wrist",),
         mask_type: MaskTypes | None = None,
         sample_freq: int | None = None,
         fragment_length: int = -1,

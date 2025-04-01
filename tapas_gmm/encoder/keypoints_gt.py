@@ -78,11 +78,11 @@ class GTKeypointsPredictor(keypoints.KeypointsPredictor):
         kp_config = config.encoder_config
         assert type(kp_config) is GTKeypointsPredictorConfig
 
+        representation_learner.RepresentationLearner.__init__(self, config=config)
+
         encoder_config = kp_config.encoder
         self.config = encoder_config
         self.pretrain_config = kp_config.pretraining
-
-        representation_learner.RepresentationLearner.__init__(self, config=config)
 
         self.n_keypoints = self.get_no_keypoints()
 

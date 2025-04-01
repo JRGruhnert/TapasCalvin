@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from loguru import logger
 
+from calvin_env.envs.master_tasks.task import PressButton
 from tapas_gmm.env import Environment
 from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
 from tapas_gmm.utils.geometry_np import (
@@ -37,10 +38,6 @@ from calvin_env.envs.calvin_env import (
     get_env_from_cfg,
 )
 
-task_switch = {
-    "PickRedCube": None,
-}
-
 
 @dataclass(kw_only=True)
 class CalvinEnvironmentConfig(BaseEnvironmentConfig):
@@ -54,7 +51,7 @@ class CalvinEnvironmentConfig(BaseEnvironmentConfig):
     postprocess_actions: bool = True  # TODO evaluate if this is needed
     background: str | None = None  # TODO evaluate if this is needed
     model_ids: tuple[str, ...] | None = None  # TODO evaluate if this is needed
-    cameras: tuple[str, ...] = ("static", "gripper")
+    cameras: tuple[str, ...] = ("front", "wrist")
 
 
 class CalvinEnvironment(BaseEnvironment):
@@ -63,8 +60,8 @@ class CalvinEnvironment(BaseEnvironment):
 
         self.cameras = config.cameras
 
-        self.calvin_env: CalvinEnv = (
-            get_env_from_cfg()
+        self.calvin_env: CalvinEnv = get_env_from_cfg(
+            config.task
         )  # Give the config to the env so that i can connect both config systems and remove the pain
         if self.calvin_env is None:
             raise RuntimeError("Could not create environment.")
@@ -74,9 +71,9 @@ class CalvinEnvironment(BaseEnvironment):
         self.calvin_env.close()
 
     def reset(self):
-        obs, info = self.calvin_env.reset()
+        obs, reward, done, info = self.calvin_env.reset()
         obs = self.process_observation(obs)
-        return obs, info
+        return obs, reward, done, info
 
     def reset_to_demo(self, path: str):
         super().reset()
@@ -92,6 +89,7 @@ class CalvinEnvironment(BaseEnvironment):
         postprocess: bool = True,
         delay_gripper: bool = True,
         scale_action: bool = True,
+        policy_info: dict = None,
     ) -> tuple[SceneObservation, float, bool, dict]:  # type: ignore
         """
         Postprocess the action and execute it in the environment.
@@ -120,27 +118,31 @@ class CalvinEnvironment(BaseEnvironment):
         RuntimeError
             If raised by the environment.
         """
-        assert len(action) == 7, f"Action has wrong length: {len(action)}"
+        prediction_is_quat = action.shape[0] == 8
 
         if postprocess:
             action_delayed = self.postprocess_action(
                 action,
                 scale_action=scale_action,
                 delay_gripper=delay_gripper,
-                prediction_is_quat=False,
-                prediction_is_euler=True,
+                prediction_is_quat=prediction_is_quat,
             )
         else:
             action_delayed = action
-        print(f"Here")
-        obs, _, _, _ = self.calvin_env.step(action_delayed)
-        print(f"Here2")
-        self.calvin_env.render()
-        print(f"Here3")
 
-        obs = None if obs is None else self.process_observation(obs)
-        print(f"Here4")
-        return obs
+        gripper = 0.0 if np.isnan(action_delayed[-1]) else action_delayed[-1]
+        zero_action = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, gripper]
+
+        if np.isnan(action_delayed).any():
+            logger.warning("NaN action, skipping")
+            action_delayed = zero_action
+
+        logger.info(f"Action: {action_delayed}")
+
+        calvin_obs, reward, done, info = self.calvin_env.step(action_delayed)
+        obs = None if calvin_obs is None else self.process_observation(calvin_obs)
+        self.calvin_env.render(calvin_obs, policy_info)
+        return obs, reward, done, info
 
     def process_observation(self, obs: CalvinObservation) -> SceneObservation:  # type: ignore
         """
@@ -184,46 +186,48 @@ class CalvinEnvironment(BaseEnvironment):
         joint_vel = torch.Tensor(obs.joint_velocities)
 
         ee_pose = torch.Tensor(obs.gripper_pose)
-        """
-        ee_pose = torch.Tensor(
-            np.concatenate(
-                [
-                    obs.gripper_pose[:3],
-                    obs.gripper_pose[3:],
-                ]
-            )
-        )
-        """
-        logger.info(f"EE Pose original {obs.gripper_pose}")
-        logger.info(f"EE Pose {ee_pose}")
-        gripper_open = torch.Tensor([obs.gripper_open])
+        gripper_state = torch.Tensor([obs.gripper_state])
+        # dim_states = 6  # TODO Temporarily hardcoded
+        # n_objs = int(len(flat_obj_states) // dim_states)  # poses are 6 dim and stacked
 
-        flat_object_poses = obs.task_low_dim_state
-        """
-        n_objs = int(len(flat_object_poses) // 7)  # poses are 7 dim and stacked
+        # if len(flat_obj_states) % dim_states != 0:
+        #    logger.warning("Object states have wrong length.")
 
-        object_poses = tuple(
-            np.concatenate((pose[:3], quat_real_last_to_real_first(pose[3:])))
-            for pose in np.split(flat_object_poses, n_objs)
-        )
+        # object_poses = tuple(
+        #    np.array(pose) for pose in np.split(flat_obj_states, n_objs)
+        # )
+
+        object_pose_len = 7
+        object_poses_list = obs.low_dim_object_poses.reshape(-1, object_pose_len)
 
         object_poses = dict_to_tensordict(
-            {f"obj{i:03d}": torch.Tensor(pose) for i, pose in enumerate(object_poses)}
+            {
+                f"obj{i:03d}": torch.Tensor(pose)
+                for i, pose in enumerate(object_poses_list)
+            },
         )
-        """
-        print(f"Flat Object Poses: {flat_object_poses}")
-        # object_poses = torch.Tensor(flat_object_poses)
+
+        object_state_len = 1
+        object_states_list = obs.low_dim_object_states.reshape(-1, object_state_len)
+
+        object_states = dict_to_tensordict(
+            {
+                f"obj{i:03d}": torch.Tensor(state)
+                for i, state in enumerate(object_states_list)
+            },
+        )
+
         obs = SceneObservation(
             action=None,
             cameras=multicam_obs,
             ee_pose=ee_pose,
-            object_poses=flat_object_poses,
+            object_poses=object_poses,
+            object_states=object_states,
             joint_pos=joint_pos,
             joint_vel=joint_vel,
-            gripper_state=gripper_open,
+            gripper_state=gripper_state,
             batch_size=empty_batchsize,
         )
-
         return obs
 
     @staticmethod
@@ -233,7 +237,6 @@ class CalvinEnvironment(BaseEnvironment):
         gripper_action = np.array(
             [2 * next_obs.gripper_state - 1]  # map from [0, 1] to [-1, 1]
         )
-
         curr_b = current_obs.ee_pose[:3]
         curr_q = quat_real_last_to_real_first(current_obs.ee_pose[3:])
         curr_A = quaternion_to_matrix(curr_q)
@@ -254,3 +257,30 @@ class CalvinEnvironment(BaseEnvironment):
         pos_delta = pred_local[:3, 3]
 
         return np.concatenate([pos_delta, rot_delta, gripper_action])
+
+    def get_inverse_kinematics(
+        self, target_pose: np.ndarray, reference_qpos: np.ndarray, max_configs: int = 20
+    ) -> np.ndarray:
+        self.calvin_env.robot.mixed_ik.ik_fast.get_ik_solution(
+            target_pose[:3], target_pose[3:]
+        )
+
+        arm = self.env._robot.arm  # .copy()
+        arm.set_joint_positions(reference_qpos[:7], disable_dynamics=True)
+        arm.set_joint_target_velocities([0] * len(arm.joints))
+
+        return arm.solve_ik_via_sampling(
+            position=target_pose[:3],
+            quaternion=quat_real_first_to_real_last(target_pose[3:7]),
+            relative_to=None,
+            ignore_collisions=True,
+            max_configs=max_configs,  # samples this many configs, then ranks them
+        )[
+            0
+        ]  # return the closest one
+
+        # return arm.solve_ik_via_jacobian(
+        #     position=target_pose[:3],
+        #     quaternion=quat_real_first_to_real_last(target_pose[3:7]),
+        #     relative_to=None,
+        # )

@@ -2540,6 +2540,10 @@ class TPGMM:
                 first_step=self._online_first_step,
             )
         else:
+            print(
+                f"Reconstruction strategy {strategy} not implemented. "
+                "Using GMR instead."
+            )
             raise NotImplementedError
 
         self._online_first_step = False
@@ -2675,7 +2679,7 @@ class AutoTPGMM(TPGMM):
         )
 
     @cached_property
-    def _used_frames(self) -> int:
+    def _used_frames(self) -> np.ndarray:
         assert self.segment_frames is not None
 
         return np.unique(np.concatenate([np.array(f) for f in self.segment_frames]))
@@ -3637,7 +3641,6 @@ class AutoTPGMM(TPGMM):
         assert self._fix_frames is not None
 
         per_segment = per_segment or len(self.segment_gmms) == 1
-
         if frame_trans is not None:  # intial time step or change in frame position
             assert frame_quats is not None and local_marginals is not None
 
@@ -3651,7 +3654,6 @@ class AutoTPGMM(TPGMM):
                 heal_time_variance=heal_time_variance,
                 time_based=time_based,
             )
-
             if not per_segment:
                 if self.fitting_stage == FittingStage.EM_HMM:
                     transition_probs = self.calculate_segment_transition_probabilities(
@@ -4098,6 +4100,10 @@ class AutoTPGMM(TPGMM):
 
         if reconstruction_is_per_segment:
             joint_models = joint_models[0]
+
+        for i, j in enumerate(marginals):
+            print(f"Marginal {i} with {len(j)} components, ")
+            print("used frames:", self._used_frames)
 
         marginals = tuple(
             tuple(traj[f] for f in self._used_frames) for traj in marginals

@@ -7,7 +7,7 @@ from omegaconf import MISSING, OmegaConf
 from torch.utils.data import Dataset
 
 from tapas_gmm.utils.logging import log_constructor
-from tapas_gmm.utils.observation import MaskTypes, SingleCamObservation, collate
+from tapas_gmm.utils.observation import MaskTypes, SceneObservation, collate
 
 
 @dataclass
@@ -286,7 +286,7 @@ class BCDataset(Dataset):
 
     def sample_data_point_with_ground_truth(
         self, cam="wrist", traj_idx=None, img_idx=None
-    ) -> SingleCamObservation:
+    ) -> SceneObservation:
         obs = self.scene_data.sample_observation(
             traj_idx=traj_idx,
             img_idx=img_idx,

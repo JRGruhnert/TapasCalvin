@@ -65,6 +65,8 @@ frame_colors = tuple(
         "tab:cyan",
         "tab:pink",
         "tab:gray",
+        "tab:orange",
+        "tab:blue",
     )
 )
 
@@ -977,7 +979,7 @@ def plot_gmm_frames_time_based(
 
         patches += [
             (Line2D([0], [0], color=c, lw=4)) for c, f in zip(frame_colors, frame_names)
-        ] + [(Line2D([0], [0], color=joint_color, lw=4))]
+        ] + [Line2D([0], [0], color=joint_color, lw=4)]
         labels += list(frame_names) + ["joint"]
         fig.legend(patches, labels, loc="outside lower center", ncol=len(patches))
 
