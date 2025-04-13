@@ -120,6 +120,7 @@ class CalvinEnvironment(BaseEnvironment):
         """
         prediction_is_quat = action.shape[0] == 8
 
+        logger.info(f"Calvin Step before: {action}")
         if postprocess:
             action_delayed = self.postprocess_action(
                 action,
@@ -137,7 +138,7 @@ class CalvinEnvironment(BaseEnvironment):
             logger.warning("NaN action, skipping")
             action_delayed = zero_action
 
-        logger.info(f"Action: {action_delayed}")
+        logger.info(f"Calvin Step after: {action_delayed}")
 
         calvin_obs, reward, done, info = self.calvin_env.step(action_delayed)
         obs = None if calvin_obs is None else self.process_observation(calvin_obs)

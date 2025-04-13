@@ -26,7 +26,7 @@ from tapas_gmm.utils.keyboard_observer import (
 from tapas_gmm.utils.misc import DataNamingConfig, policy_checkpoint_name
 from tapas_gmm.utils.observation import SceneObservation, random_obs_dropout
 from tapas_gmm.utils.random import configure_seeds
-from tapas_gmm.utils.robot_trajectory import RobotTrajectory
+from tapas_gmm.utils.robot_trajectory import RobotTrajectory, TrajectoryPoint
 from tapas_gmm.utils.select_gpu import device
 from tapas_gmm.utils.tasks import get_task_horizon
 from tapas_gmm.viz.live_keypoint import LiveKeypoints
@@ -248,6 +248,7 @@ def process_step(
 
     action, info = policy.predict(obs)
 
+    logger.info("Action from Policy: {}", action)
     if hold_until_step is not None and step_no < hold_until_step:
         action = np.nan * np.ones_like(action)
 
@@ -278,15 +279,20 @@ def process_step(
     for _ in tqdm(range(repeat_action)):
         if keypoint_viz is not None:
             keypoint_viz.update_from_info(info, obs)
-
-        # NOTE: made diffusion policy return a robot trajectory now as well.
-        # TODO: make this work with simulated envs. Either step through the traj
-        # here or enable the envs to step through the traj themselves and aggregate
-        # the rewards.
-        next_obs, reward, done, env_info = env.step(action, info=info)
-
+            keypoint_viz.run()
+            # NOTE: made diffusion policy return a robot trajectory now as well.
+            # TODO: make this work with simulated envs. Either step through the traj
+            # here or enable the envs to step through the traj themselves and aggregate
+            # the rewards.
+        ee_action = action
+        next_obs, reward, done, env_info = env.step(action=ee_action, info=info)
         if type(action) is RobotTrajectory:
-            action = None  # Only pass the trajectory once, let the env step through it
+            single_action: TrajectoryPoint = action.step()
+            # Tod from TrajectoryPoint to numpy array
+
+            ee_action = single_action.ee
+            # ee_action = np.concatenate((single_action.ee, single_action.gripper))
+            next_obs, reward, done, env_info = env.step(action=ee_action, info=info)
 
         # if len(action.shape) == 1:
         #     next_obs, reward, done, env_info = env.step(action)

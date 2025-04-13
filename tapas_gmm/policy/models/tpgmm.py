@@ -4101,10 +4101,6 @@ class AutoTPGMM(TPGMM):
         if reconstruction_is_per_segment:
             joint_models = joint_models[0]
 
-        for i, j in enumerate(marginals):
-            print(f"Marginal {i} with {len(j)} components, ")
-            print("used frames:", self._used_frames)
-
         marginals = tuple(
             tuple(traj[f] for f in self._used_frames) for traj in marginals
         )

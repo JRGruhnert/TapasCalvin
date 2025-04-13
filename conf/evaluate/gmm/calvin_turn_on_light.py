@@ -11,8 +11,8 @@ eval = EvalConfig(
     n_episodes=200,
     seed=1,
     obs_dropout=None,
-    viz=False,
-    kp_per_channel_viz=False,
+    viz=True,
+    kp_per_channel_viz=True,
     show_channels=None,
 )
 
@@ -32,8 +32,10 @@ policy_config = GMMPolicyConfig(
     dbg_prediction=True,
     # the kinematics model in RLBench is just to unreliable -> leads to mistakes
     topp_in_t_models=False,
-    batch_predict_in_t_models=False,
+    batch_predict_in_t_models=True,
     force_overwrite_checkpoint_config=True,  # TODO:  otherwise it doesnt work
+    postprocess_prediction=True,
+    return_full_batch=False,  # Prediction is still batch but the policy returns only one element
 )
 
 

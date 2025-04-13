@@ -14,13 +14,13 @@ from tapas_gmm.policy.models.tpgmm import (
 )
 
 tpgmm_config = TPGMMConfig(
-    n_components=10,
+    n_components=20,
     model_type=ModelType.HMM,
     use_riemann=True,
     add_time_component=True,
     add_action_component=False,
     position_only=False,
-    add_gripper_action=False,
+    add_gripper_action=True,
     reg_shrink=1e-2,
     reg_diag=2e-4,
     reg_diag_gripper=2e-2,
@@ -38,9 +38,9 @@ tpgmm_config = TPGMMConfig(
 frame_selection_config = FrameSelectionConfig(
     init_strategy=InitStrategy.TIME_BASED,
     fitting_actions=(FittingStage.INIT,),
-    rel_score_threshold=0.5,
+    rel_score_threshold=0.75,
     use_bic=False,
-    drop_redundant_frames=False,
+    drop_redundant_frames=True,
 )
 
 demos_segmentation_config = DemoSegmentationConfig(
@@ -51,8 +51,8 @@ demos_segmentation_config = DemoSegmentationConfig(
     repeat_final_step=0,
     repeat_first_step=0,
     components_prop_to_len=True,
-    min_n_components=2,
-    max_idx_distance=6,
+    min_n_components=1,
+    max_idx_distance=4,
 )
 
 cascade_config = CascadeConfig(

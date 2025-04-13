@@ -204,7 +204,7 @@ class GMMPolicy(Policy):
 
                 if self.config.return_full_batch:
                     info["done"] = True
-
+                    logger.warning("Returning full batch, not just the first step.")
                     if self.config.binary_gripper_action:
                         self._prediction_batch.gripper = self._binary_gripper_action(
                             self._prediction_batch.gripper
@@ -224,14 +224,19 @@ class GMMPolicy(Policy):
             else:
                 prediction = self._prediction_batch.step()
                 info["done"] = False
-
-            print(f"EE Pose: {obs.ee_pose.numpy()}")
-            print(f"Prediction.ee: {prediction.ee}")
+            logger.info(f"Prediction ee: {prediction.ee}")
+            logger.info(f"Observation ee: {obs.ee_pose.numpy()}")
             action = (
-                self._postprocess_prediction(obs.ee_pose.numpy(), prediction.ee)
+                self._postprocess_prediction(
+                    obs.ee_pose.numpy(),
+                    np.concatenate(
+                        (prediction.ee, np.array(prediction.gripper)), axis=0
+                    ),
+                )
                 if self.config.postprocess_prediction
                 else prediction
             )
+            logger.info(f"Prediction action: {action}")
 
             self._last_prediction = prediction
 
@@ -241,10 +246,9 @@ class GMMPolicy(Policy):
                 frame_trans=frame_trans,
                 frame_quats=frame_quats,
                 postprocess=self.config.postprocess_prediction,
+                per_segment=True,
             )
             info["done"] = False
-
-        print(f"Action in prediction: {action}")
 
         if self.config.binary_gripper_action:
             action[-1] = self._binary_gripper_action(action[-1])
@@ -355,10 +359,11 @@ class GMMPolicy(Policy):
                 obs=obs,
                 frame_trans=frame_trans if first_step else None,
                 frame_quats=frame_quats if first_step else None,
-                always_step=True,
+                always_step=False,
                 postprocess=False,
+                per_segment=False,
             )
-            print(f"Prediction top: {pred}")
+
             prediction_raw.append(pred)
             prediction_tan.append(extra["mu_tangent"])
             inputs.append(inp)
@@ -383,7 +388,12 @@ class GMMPolicy(Policy):
             full_rec = np.concatenate(
                 (np.stack(inputs), np.stack(prediction_tan)), axis=1
             )
-            frame_origs = np.concatenate((frame_trans[:, :3, 3], frame_quats), axis=1)
+
+            frame_quats_single = frame_quats  # [..., 0]  # Now shape is (F, 4)
+            frame_origs = np.concatenate(
+                (frame_trans[:, :3, 3], frame_quats_single), axis=1
+            )
+
             self.model.plot_reconstructions(
                 marginals=[self.model._online_trans_margs_joint],
                 joint_models=[self.model._online_hmm_cascade],
@@ -449,6 +459,7 @@ class GMMPolicy(Policy):
         frame_quats: np.ndarray | None,
         always_step: bool = False,
         postprocess: bool = True,
+        per_segment: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
         """
         Predict the next action and step the time if needed.
@@ -465,12 +476,10 @@ class GMMPolicy(Policy):
             frame_trans=frame_trans,
             frame_quats=frame_quats,
             local_marginals=self._local_marginals,
-            per_segment=True,  # TODO chnaged that
+            per_segment=per_segment,  # TODO chnaged that
         )
-        print(f"Prediction: {prediction}")
         if postprocess:
             action = self._postprocess_prediction(ee_pose, prediction)
-            print(f"Action: {action}")
         else:
             action = prediction
 
@@ -559,8 +568,6 @@ class GMMPolicy(Policy):
         if self._model_contains_gripper_action:
             gripper_action = prediction[-1:]
             ee_prediction = prediction[:-1]
-            print(f"Gripper action: {gripper_action}")
-            print(f"EE prediction: {ee_prediction}")
         else:
             gripper_action = -np.ones((1))
             ee_prediction = prediction
@@ -583,10 +590,9 @@ class GMMPolicy(Policy):
                 )
             ]
         else:
-            print(f"action_dim: {action_dim}, state_dim: {state_dim}")
             ee_dim = action_dim if self._prediction_is_delta_pose else state_dim
-            print(f"ee_dim: {ee_dim}, ee_prediction.shape: {ee_prediction.shape}")
             assert ee_prediction.shape == (ee_dim,)
+
         if self._prediction_is_delta_pose:
             if self._model_factorizes_action:
                 # Prediction is factorized -> reassemble delta pose
@@ -644,7 +650,6 @@ class GMMPolicy(Policy):
         act2ee = world2ee @ act2world
 
         pos_local = act2ee[:3, 3]
-
         rot_local = quaternion_pose_diff(ee_pose[3:], rot_delta)
         # rot_local = quaternion_from_matrix(act2ee[:3, :3])
 
