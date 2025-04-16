@@ -50,14 +50,12 @@ class KeyboardObserver:
 
     def set_label(self, value):
         self.label = value
-        logger.info("label set to: ", value)
 
     def get_label(self):
         return self.label
 
     def set_gripper(self, value):
         self.gripper_open = value
-        logger.info("gripper set to: ", value)
 
     def get_gripper(self):
         return self.gripper_open
