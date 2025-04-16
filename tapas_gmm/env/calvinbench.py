@@ -23,14 +23,6 @@ from tapas_gmm.utils.geometry_np import (
     quaternion_to_axis_angle,
     quaternion_to_matrix,
 )
-from tapas_gmm.utils.observation import (
-    CameraOrder,
-    SceneObservation,
-    SingleCamObservation,
-    dict_to_tensordict,
-    empty_batchsize,
-)
-
 
 from calvin_env.envs.calvin_env import (
     CalvinObservation,
@@ -70,18 +62,14 @@ class CalvinEnvironment(BaseEnvironment):
     def close(self):
         self.calvin_env.close()
 
-    def reset(self):
-        obs, reward, done, info = self.calvin_env.reset()
-        obs = self.process_observation(obs)
-        return obs, reward, done, info
+    def reset(self) -> tuple[CalvinObservation, float, bool, dict]:
+        return self.calvin_env.reset()
 
-    def reset_to_demo(self, path: str):
-        super().reset()
+    def reset_to_demo(self, path: str) -> CalvinObservation:
+        raise NotImplementedError("Not implemented yet")
 
-        obs = self.calvin_env.reset_from_storage(path)
-        obs = self.process_observation(obs)
-
-        return obs
+    def update_prediction_marker(self, points: list):
+        self.calvin_env.update_prediction_marker(points)
 
     def _step(
         self,
@@ -90,7 +78,8 @@ class CalvinEnvironment(BaseEnvironment):
         delay_gripper: bool = True,
         scale_action: bool = True,
         policy_info: dict = None,
-    ) -> tuple[SceneObservation, float, bool, dict]:  # type: ignore
+        rel: bool = False,
+    ) -> tuple[CalvinObservation, float, bool, dict]:  # type: ignore
         """
         Postprocess the action and execute it in the environment.
         Catches invalid actions and executes a zero action instead.
@@ -120,7 +109,6 @@ class CalvinEnvironment(BaseEnvironment):
         """
         prediction_is_quat = action.shape[0] == 8
 
-        logger.info(f"Calvin Step before: {action}")
         if postprocess:
             action_delayed = self.postprocess_action(
                 action,
@@ -138,102 +126,13 @@ class CalvinEnvironment(BaseEnvironment):
             logger.warning("NaN action, skipping")
             action_delayed = zero_action
 
-        logger.info(f"Calvin Step after: {action_delayed}")
-
-        calvin_obs, reward, done, info = self.calvin_env.step(action_delayed)
-        obs = None if calvin_obs is None else self.process_observation(calvin_obs)
-        self.calvin_env.render(calvin_obs, policy_info)
+        obs, reward, done, info = self.calvin_env.step(action_delayed, rel)
+        self.calvin_env.render(obs, policy_info)
         return obs, reward, done, info
-
-    def process_observation(self, obs: CalvinObservation) -> SceneObservation:  # type: ignore
-        """
-        Convert the observation from the environment to a SceneObservation.
-
-        Parameters
-        ----------
-        obs : CalvinObservation
-            Observation as Calvins's Observation class.
-
-        Returns
-        -------
-        SceneObservation
-            The observation in common format as SceneObservation.
-        """
-        camera_obs = {}
-
-        for cam in self.cameras:
-            rgb = getattr(obs, cam + "_rgb").transpose((2, 0, 1)) / 255
-            depth = getattr(obs, cam + "_depth")
-            mask = getattr(obs, cam + "_mask").astype(int)
-            extr = obs.misc[cam + "_camera_extrinsics"]
-            intr = obs.misc[cam + "_camera_intrinsics"]
-
-            camera_obs[cam] = SingleCamObservation(
-                **{
-                    "rgb": torch.Tensor(rgb),
-                    "depth": torch.Tensor(depth),
-                    "mask": torch.Tensor(mask).to(torch.uint8),
-                    "extr": torch.Tensor(extr),
-                    "intr": torch.Tensor(intr),
-                },
-                batch_size=empty_batchsize,
-            )
-
-        multicam_obs = dict_to_tensordict(
-            {"_order": CameraOrder._create(self.cameras)} | camera_obs
-        )
-
-        joint_pos = torch.Tensor(obs.joint_positions)
-        joint_vel = torch.Tensor(obs.joint_velocities)
-
-        ee_pose = torch.Tensor(obs.gripper_pose)
-        gripper_state = torch.Tensor([obs.gripper_state])
-        # dim_states = 6  # TODO Temporarily hardcoded
-        # n_objs = int(len(flat_obj_states) // dim_states)  # poses are 6 dim and stacked
-
-        # if len(flat_obj_states) % dim_states != 0:
-        #    logger.warning("Object states have wrong length.")
-
-        # object_poses = tuple(
-        #    np.array(pose) for pose in np.split(flat_obj_states, n_objs)
-        # )
-
-        object_pose_len = 7
-        object_poses_list = obs.low_dim_object_poses.reshape(-1, object_pose_len)
-
-        object_poses = dict_to_tensordict(
-            {
-                f"obj{i:03d}": torch.Tensor(pose)
-                for i, pose in enumerate(object_poses_list)
-            },
-        )
-
-        object_state_len = 1
-        object_states_list = obs.low_dim_object_states.reshape(-1, object_state_len)
-
-        object_states = dict_to_tensordict(
-            {
-                f"obj{i:03d}": torch.Tensor(state)
-                for i, state in enumerate(object_states_list)
-            },
-        )
-
-        obs = SceneObservation(
-            action=None,
-            cameras=multicam_obs,
-            ee_pose=ee_pose,
-            object_poses=object_poses,
-            object_states=object_states,
-            joint_pos=joint_pos,
-            joint_vel=joint_vel,
-            gripper_state=gripper_state,
-            batch_size=empty_batchsize,
-        )
-        return obs
 
     @staticmethod
     def _get_action(
-        current_obs: SceneObservation, next_obs: SceneObservation  # type: ignore
+        current_obs: CalvinObservation, next_obs: CalvinObservation  # type: ignore
     ) -> np.ndarray:
         gripper_action = np.array(
             [2 * next_obs.gripper_state - 1]  # map from [0, 1] to [-1, 1]

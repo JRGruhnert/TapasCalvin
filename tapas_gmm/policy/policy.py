@@ -12,6 +12,7 @@ from tapas_gmm.dataset.bc import BCDataset
 from tapas_gmm.env.environment import BaseEnvironment
 from tapas_gmm.utils.logging import log_constructor
 from tapas_gmm.utils.observation import SceneObservation
+from tapas_gmm.utils.robot_trajectory import RobotTrajectory
 from tapas_gmm.utils.select_gpu import device  # , normalize_quaternion
 
 
@@ -70,7 +71,7 @@ class Policy(nn.Module):
     def predict(
         self,
         obs: SceneObservation,  # type: ignore
-    ) -> tuple[np.ndarray, dict]:
+    ) -> tuple[np.ndarray | RobotTrajectory, dict]:
         raise NotImplementedError
 
     # def get_viz_encoder_callback(self) -> Callable:

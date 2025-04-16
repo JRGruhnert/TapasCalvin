@@ -1,3 +1,4 @@
+from loguru import logger
 import numpy as np
 
 from tapas_gmm.env.environment import BaseEnvironment
@@ -15,13 +16,18 @@ class ManualPolicy:
         pass  # nothing to load
 
     def predict(
-        self,
-        obs: SceneObservation,  # type: ignore
+        self, obs: SceneObservation, rel: bool = False  # type: ignore
     ) -> tuple[np.ndarray, dict]:
         action = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, self.gripper_open])
         if self.keyboard_obs.has_joints_cor() or self.keyboard_obs.has_gripper_update():
             action = correct_action(self.keyboard_obs, action)
             self.gripper_open = action[-1]
+
+        if not rel:
+            logger.debug("EE pose: ", obs.ee_pose)
+            logger.debug("Action: ", action)
+            action = obs.ee_pose + action
+
         done = False
         success = False
         if self.keyboard_obs.is_reset():

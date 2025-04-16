@@ -12,5 +12,5 @@ calvinbench_env_config = CalvinEnvironmentConfig(
     scale_action=False,
     delay_gripper=False,
     gripper_plot=False,
-    postprocess_actions=True,
+    postprocess_actions=False,
 )

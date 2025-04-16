@@ -146,7 +146,7 @@ class BaseEnvironment(ABC):
         self.gripper_open = 0.9
         self.gripper_deque = deque([0.9] * self.queue_length, maxlen=self.queue_length)
 
-    def step(self, action: np.ndarray, info: dict) -> tuple[SceneObservation, float, bool, dict]:  # type: ignore
+    def step(self, action: np.ndarray, info: dict = None, rel: bool = False) -> tuple[SceneObservation, float, bool, dict]:  # type: ignore
         """
         Postprocess the action and execute it in the environment.
         Simple wrapper around _step, that provides the kwargs for
@@ -169,6 +169,7 @@ class BaseEnvironment(ABC):
             delay_gripper=self.do_delay_gripper,
             scale_action=self.do_scale_action,
             policy_info=info,
+            rel=rel,
         )
 
     @abstractmethod

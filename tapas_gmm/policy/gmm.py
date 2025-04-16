@@ -224,8 +224,7 @@ class GMMPolicy(Policy):
             else:
                 prediction = self._prediction_batch.step()
                 info["done"] = False
-            logger.info(f"Prediction ee: {prediction.ee}")
-            logger.info(f"Observation ee: {obs.ee_pose.numpy()}")
+
             action = (
                 self._postprocess_prediction(
                     obs.ee_pose.numpy(),
@@ -236,8 +235,6 @@ class GMMPolicy(Policy):
                 if self.config.postprocess_prediction
                 else prediction
             )
-            logger.info(f"Prediction action: {action}")
-
             self._last_prediction = prediction
 
         else:
@@ -425,7 +422,6 @@ class GMMPolicy(Policy):
             #     assert np.allclose(
             #         initial_qpos, self._env._arm_controller.articulation.get_qpos()
             #     )
-            logger.info(f"Initial ee pose: {obs.ee_pose.numpy()}")
 
             # TODO: make use of RobotTrajectory class to pass the trajectory
             topp_traj, topp_info = self._topp(
@@ -515,12 +511,6 @@ class GMMPolicy(Policy):
             else:
                 quat_lag = None
                 quat_change = None
-
-            logger.info(
-                f"Pos lag: {pos_lag}, quat lag: {quat_lag}, "
-                + f"pos change {pos_change}, quat change {quat_change}",
-                filter=False,
-            )
         else:
             pos_lag = None
 

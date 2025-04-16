@@ -2,7 +2,6 @@ import argparse
 import pathlib
 import time
 from dataclasses import dataclass
-from typing import Any, List
 from mplib.pymp import Pose
 import numpy as np
 import torch
@@ -11,8 +10,7 @@ from tqdm.auto import tqdm
 
 from tapas_gmm.env.calvinbench import CalvinEnvironmentConfig, CalvinEnvironment
 
-from conversion import calvin_to_tapas_representation
-from tapas_gmm.policy.manual import ManualPolicy
+from tapas_gmm.policy.manual_calvin import ManualCalvinPolicy
 from tapas_gmm.policy.motion_planner import (
     Action,
     CloseGripperAction,
@@ -36,7 +34,7 @@ from tapas_gmm.utils.observation import SceneObservation
 # from tapas_gmm.utils.random import configure_seeds
 @dataclass
 class Task:
-    task_name: str = "PressButton"
+    task_name: str = "PressButtonNew"
     horizon: int = 500
     feedback_type: str = "demos"
     task_sequence: ActionSequence = ActionSequence(
@@ -68,7 +66,7 @@ class Config:
         scale_action=False,
         delay_gripper=False,
         gripper_plot=False,
-        postprocess_actions=True,
+        postprocess_actions=False,
         task=task.task_name,
         cameras=["wrist", "front"],
     )
@@ -82,7 +80,7 @@ def main(config: Config = Config()) -> None:
     env = CalvinEnvironment(config.env_config)
     # policy = MotionPlannerPolicy(env=env, sequence=config.task.task_sequence)  # type: ignore
     keyboard_obs = KeyboardObserver()
-    policy = ManualPolicy(config, env, keyboard_obs)
+    policy = ManualCalvinPolicy(config, env, keyboard_obs)
     assert config.data_naming.data_root is not None
 
     save_path = pathlib.Path(config.data_naming.data_root) / config.task.task_name
@@ -138,9 +136,10 @@ def main(config: Config = Config()) -> None:
                     ebar.set_description("Running episode")
                     start_time = time.time()
 
-                    action, done, success = policy.predict(obs)
+                    action, done, success = policy.predict(obs)  # Action is relative
+
                     try:
-                        next_obs, _, _, _ = env.step(action)
+                        next_obs, _, _, _ = env.step(action, rel=True)
                     except RuntimeError as e:
                         logger.error(f"Raw action: {action}")
                         logger.error(f"Error: {e}")

@@ -219,7 +219,7 @@ def process_step(
     repeat_action: int,
     keypoint_viz: LiveKeypoints | None,
     fragment_len: int,
-    env: BaseEnvironment,
+    env: CalvinEnvironment,
     keyboard_obs: KeyboardObserver | None,
     horizon: int | None,
     step_no: int,
@@ -248,12 +248,13 @@ def process_step(
 
     action, info = policy.predict(obs)
 
-    logger.info("Action from Policy: {}", action)
     if hold_until_step is not None and step_no < hold_until_step:
         action = np.nan * np.ones_like(action)
 
     step_reward = 0
     done = False
+
+    points: list = []
 
     if type(action) is RobotTrajectory:
         # NOTE: hack-y: abusing the repeat_action to step through the trajectory
@@ -271,6 +272,11 @@ def process_step(
         # Eg if we have a time RobotTrajectory already, we can use the timing
         # of the steps to synchronize the loop with the robot by waiting in
         # this loop until the next step is due.
+        for i, point in enumerate(action.points):
+            if point.ee is not None:
+                points.append(point.ee)
+
+        env.update_prediction_marker(points)
 
     assert repeat_action > 0
 
@@ -279,20 +285,23 @@ def process_step(
     for _ in tqdm(range(repeat_action)):
         if keypoint_viz is not None:
             keypoint_viz.update_from_info(info, obs)
-            keypoint_viz.run()
+            # keypoint_viz.run()
             # NOTE: made diffusion policy return a robot trajectory now as well.
             # TODO: make this work with simulated envs. Either step through the traj
             # here or enable the envs to step through the traj themselves and aggregate
             # the rewards.
         ee_action = action
-        next_obs, reward, done, env_info = env.step(action=ee_action, info=info)
+        # next_obs, reward, done, env_info = env.step(action=ee_action, info=info, points=)
         if type(action) is RobotTrajectory:
             single_action: TrajectoryPoint = action.step()
             # Tod from TrajectoryPoint to numpy array
 
-            ee_action = single_action.ee
-            # ee_action = np.concatenate((single_action.ee, single_action.gripper))
-            next_obs, reward, done, env_info = env.step(action=ee_action, info=info)
+            ee_action = np.concatenate((single_action.ee, single_action.gripper))
+        logger.debug("EE action: {}", ee_action)
+        next_obs, reward, done, env_info = env.step(
+            action=ee_action,
+            info=info,
+        )
 
         # if len(action.shape) == 1:
         #     next_obs, reward, done, env_info = env.step(action)
@@ -358,7 +367,6 @@ def main(config: Config):
 
     env = Env(
         config.env,
-        viz_encoder_callback=policy.obs_encoder.get_viz_encoder_callback(),
     )  # type: ignore
 
     keypoint_viz = LiveKeypoints.setup_from_conf(config, policy)
