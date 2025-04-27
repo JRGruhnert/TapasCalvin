@@ -1,5 +1,7 @@
 import numpy as np
 
+from tapas_gmm.utils.keyboard_observer import KeyboardObserver
+
 
 def human_feedback(keyboard_obs, action, feedback_type):
     if feedback_type == "evaluative":
@@ -38,7 +40,7 @@ def human_feedback(keyboard_obs, action, feedback_type):
     return action, feedback
 
 
-def correct_action(keyboard_obs, action, full_control=True):
+def correct_action(keyboard_obs: KeyboardObserver, action, full_control=True):
     if full_control:
         action[:-1] = keyboard_obs.get_ee_action()
     elif keyboard_obs.has_joints_cor():

@@ -5,7 +5,7 @@ class Environment(Enum):
     PANDA = "panda"
     MANISKILL = "maniskill"
     RLBENCH = "rlbench"
-    CALVINBENCH = "calvinbench"
+    CALVIN = "calvin"
 
 
 def get_env(env_str):
@@ -20,8 +20,8 @@ def import_env(config):
         from tapas_gmm.env.mani_skill import ManiSkillEnv as Env
     elif env_type is Environment.RLBENCH:
         from tapas_gmm.env.rlbench import RLBenchEnvironment as Env
-    elif env_type is Environment.CALVINBENCH:
-        from tapas_gmm.env.calvinbench import CalvinEnvironment as Env
+    elif env_type is Environment.CALVIN:
+        from tapas_gmm.env.calvin import Calvin as Env
     else:
         raise ValueError("Invalid environment {}".format(config.env))
 

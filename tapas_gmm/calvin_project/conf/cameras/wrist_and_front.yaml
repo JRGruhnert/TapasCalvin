@@ -1,0 +1,3 @@
+defaults:
+  - cameras@wrist: wrist
+  - cameras@front: front

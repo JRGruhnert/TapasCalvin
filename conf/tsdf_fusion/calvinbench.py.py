@@ -4,5 +4,5 @@ from tapas_gmm.tsdf_fusion import Config
 
 config = Config(
     data_naming=data_naming_config,
-    env=Environment.CALVINBENCH,
+    env=Environment.CALVIN,
 )

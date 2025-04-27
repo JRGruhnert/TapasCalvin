@@ -12,6 +12,7 @@ from tapas_gmm.utils.geometry_np import (
     axis_angle_to_quaternion,
     euler_angles_to_axis_angle,
     quaternion_to_axis_angle,
+    quat_real_first_to_real_last,
 )
 from tapas_gmm.utils.observation import SceneObservation
 from tapas_gmm.utils.robot_trajectory import RobotTrajectory
@@ -252,7 +253,7 @@ class BaseEnvironment(ABC):
         else:
             delta_rot_axis_angle = delta_rot
 
-        # print(prediction_is_quat, prediction_is_euler, delta_rot_axis_angle)
+        print(prediction_is_quat, prediction_is_euler, delta_rot_axis_angle)
 
         if scale_action:
             delta_position = delta_position * trans_scale
@@ -260,14 +261,17 @@ class BaseEnvironment(ABC):
 
         # print("scaled", delta_position, delta_rot_axis_angle)
 
-        # delta_rot_quat = axis_angle_to_quaternion(delta_rot_axis_angle)
-
-        # delta_rot_env = self.postprocess_quat_action(delta_rot_quat)
+        delta_rot_quat = quat_real_first_to_real_last(
+            axis_angle_to_quaternion(delta_rot_axis_angle)
+        )
+        logger.warning(
+            f"Postprocess action: {delta_position}, {delta_rot_quat}, {gripper}"
+        )
 
         if delay_gripper:
             gripper = [self.delay_gripper(gripper)]
 
-        return np.concatenate((delta_position, delta_rot_axis_angle, gripper))
+        return np.concatenate((delta_position, delta_rot_quat, gripper))
 
     def postprocess_quat_to_quat(self, quat: np.ndarray) -> np.ndarray:
         """

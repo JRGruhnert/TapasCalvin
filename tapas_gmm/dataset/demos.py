@@ -161,7 +161,7 @@ def configurable_rotate_frames(
 
 
 def get_frames_from_obs(
-    obs: SceneObservation,
+    obs: SceneObservation,  # type: ignore
     frames_from_keypoints: bool,
     add_init_ee_pose_as_frame: bool,
     add_world_frame: bool,

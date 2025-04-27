@@ -100,7 +100,7 @@ def main(config: Config) -> None:
                 obs = env.process_observation(raw_obs)
 
                 next_obs = traj[i + 1] if i + 1 < len(traj) else raw_obs
-                obs.action = torch.Tensor(env._get_action(raw_obs, next_obs))
+                obs.action = torch.Tensor(env.compute_ee_delta(raw_obs, next_obs))
                 obs.feedback = torch.Tensor([1])
 
                 replay_memory.add_observation(obs)

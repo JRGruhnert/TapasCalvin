@@ -1,0 +1,6 @@
+motion_planner:
+  _target_: calvin_env.io_utils.motion_planner.PandaArmMotionPlanningSolver
+  debug: false
+  vis: false
+  base_pose: ${env.robot_base_pose} # or however you extract the base pose from the env config
+  additional_param: value

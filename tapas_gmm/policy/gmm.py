@@ -174,7 +174,7 @@ class GMMPolicy(Policy):
         self._last_prediction = None
         self._last_pose = None
 
-    def get_frames(self, obs: SceneObservation) -> tuple[np.ndarray, np.ndarray]:
+    def get_frames(self, obs: SceneObservation) -> tuple[np.ndarray, np.ndarray]:  # type: ignore
         return get_frames_from_obs(
             obs=obs,
             frames_from_keypoints=self.frames_from_keypoints,
@@ -224,16 +224,11 @@ class GMMPolicy(Policy):
             else:
                 prediction = self._prediction_batch.step()
                 info["done"] = False
-
+            logger.debug(f"Prediction: {prediction}")
             action = (
-                self._postprocess_prediction(
-                    obs.ee_pose.numpy(),
-                    np.concatenate(
-                        (prediction.ee, np.array(prediction.gripper)), axis=0
-                    ),
-                )
+                self._postprocess_prediction(obs.ee_pose.numpy(), prediction.ee)
                 if self.config.postprocess_prediction
-                else prediction
+                else np.concatenate((prediction.ee, prediction.gripper))
             )
             self._last_prediction = prediction
 
@@ -243,14 +238,14 @@ class GMMPolicy(Policy):
                 frame_trans=frame_trans,
                 frame_quats=frame_quats,
                 postprocess=self.config.postprocess_prediction,
-                per_segment=True,
             )
             info["done"] = False
 
         if self.config.binary_gripper_action:
             action[-1] = self._binary_gripper_action(action[-1])
 
-        info["segment_id"] = self.model._online_active_segment
+        info["segmenbt"] = self.model._online_active_segment
+        logger.debug(f"GMM Prediction: {action}")
         return action, info
 
     def _get_frame_trans(self, obs):
@@ -309,7 +304,7 @@ class GMMPolicy(Policy):
             normalized_state < closed_threshold, close_gripper, open_gripper
         )
 
-    def _make_noop_plan(self, obs: SceneObservation, duration: int = 5):
+    def _make_noop_plan(self, obs: SceneObservation, duration: int = 5):  # type: ignore
         """
         Returns a plan for doing nothing for a given number of timesteps.
 
@@ -333,7 +328,7 @@ class GMMPolicy(Policy):
 
     def _create_prediction_batch(
         self,
-        obs: SceneObservation,
+        obs: SceneObservation,  # type: ignore
         frame_trans: np.ndarray | None,
         frame_quats: np.ndarray | None,
     ) -> RobotTrajectory:
@@ -367,8 +362,6 @@ class GMMPolicy(Policy):
 
             first_step = False
 
-        logger.info(f"Predicted {len(prediction_raw)} steps in batch.")
-
         if self.config.invert_prediction_batch:
             prediction_raw = prediction_raw[::-1]
 
@@ -376,6 +369,7 @@ class GMMPolicy(Policy):
         raw_traj = RobotTrajectory.from_np(
             ee=stacked_pred[:, :7], gripper=stacked_pred[:, 7:]
         )
+        # TODO: Here comes the error from. prediction predicts robot trajectory
 
         # if self.config.invert_prediction_batch:
         #     raw_traj = raw_traj.invert()
@@ -450,7 +444,7 @@ class GMMPolicy(Policy):
 
     def _predict_and_step(
         self,
-        obs: SceneObservation,
+        obs: SceneObservation,  # type: ignore
         frame_trans: np.ndarray | None,
         frame_quats: np.ndarray | None,
         always_step: bool = False,
@@ -465,15 +459,15 @@ class GMMPolicy(Policy):
 
         ee_pose = obs.ee_pose.numpy()
         input_data = np.clip(self._t_curr, 0, 1) if self._time_based else ee_pose
-
         prediction, extra = self.model.online_predict(
             input_data=input_data,
             time_based=self._time_based,
             frame_trans=frame_trans,
             frame_quats=frame_quats,
             local_marginals=self._local_marginals,
-            per_segment=per_segment,  # TODO chnaged that
+            per_segment=True,
         )
+
         if postprocess:
             action = self._postprocess_prediction(ee_pose, prediction)
         else:
@@ -483,7 +477,6 @@ class GMMPolicy(Policy):
 
         self._last_prediction = prediction
         self._last_pose = ee_pose
-
         return input_data, action, extra
 
     def _manage_time_step(self, ee_pose: np.ndarray, always_step: bool = False) -> None:
@@ -554,6 +547,8 @@ class GMMPolicy(Policy):
         Convert to pose delta.
         Should skip this step in batch mode.
         """
+        logger.debug(f"Postprocess prediction: {prediction}")
+        logger.debug(f"EE pose frame: {ee_pose}")
         # Split gripper and EE part
         if self._model_contains_gripper_action:
             gripper_action = prediction[-1:]
@@ -569,6 +564,7 @@ class GMMPolicy(Policy):
         )
         # Split EE part into state and action if needed
         if self._model_is_txdx and self._time_based:
+            print("Prediction is TXDX model.")
             # TXDX model, ie contains time, state and action. Can use either x or dx.
             assert ee_prediction.shape == (state_dim + action_dim,)
 
@@ -580,10 +576,12 @@ class GMMPolicy(Policy):
                 )
             ]
         else:
+            print("Prediction is not TXDX model.")
             ee_dim = action_dim if self._prediction_is_delta_pose else state_dim
             assert ee_prediction.shape == (ee_dim,)
 
         if self._prediction_is_delta_pose:
+            print("Prediction is delta pose.")
             if self._model_factorizes_action:
                 # Prediction is factorized -> reassemble delta pose
                 pos_dir, rot_dir, pos_mag, rot_mag = np.split(ee_prediction, (3, 6, 7))
@@ -616,6 +614,7 @@ class GMMPolicy(Policy):
                     ee_pose, pos_delta, rot_delta
                 )
         else:  # prediction is absolute pose -> get finite difference
+            print("Prediction is absolute pose.")
             pos_delta, rot_delta = self._pose_to_pose_delta(ee_pose, ee_prediction)
         if not self._model_contains_rotation:
             rot_delta = zero_quat
@@ -835,7 +834,7 @@ class GMMPolicy(Policy):
                     qpos = self._env.get_inverse_kinematics(target_pose, ref_q)
                     # qpos = sapien_scene.get_inverse_kinematics(target_pose, ref_q)
                     assert len(qpos.shape) == 1
-                    # logger.info(f"Found IK solution for target pose {target_pose}")
+                    logger.info(f"Found IK solution for target pose {target_pose}")
                 except Exception as e:
                     logger.warning(
                         f"Failed to find IK solution for target pose {target_pose}"

@@ -212,7 +212,7 @@ class RLBenchEnvironment(BaseEnvironment):
         """
         For using the mplib Planner, eg for TOPP(RA) in gmm policy.
         """
-        return "panda_hand_tcp"cond
+        return "panda_hand_tcp"
 
     @property
     def _urdf_path(self) -> str:

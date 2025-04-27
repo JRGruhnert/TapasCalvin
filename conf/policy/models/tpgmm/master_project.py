@@ -1,6 +1,4 @@
 from tapas_gmm.policy.models.tpgmm import (
-    TPGMM,
-    AutoTPGMM,
     AutoTPGMMConfig,
     CascadeConfig,
     DemoSegmentationConfig,
@@ -10,7 +8,6 @@ from tapas_gmm.policy.models.tpgmm import (
     ModelType,
     ReconstructionStrategy,
     TPGMMConfig,
-    _xdx_to_tangent,
 )
 
 tpgmm_config = TPGMMConfig(
@@ -35,12 +32,13 @@ tpgmm_config = TPGMMConfig(
     heal_time_variance=False,
 )
 
+
 frame_selection_config = FrameSelectionConfig(
     init_strategy=InitStrategy.TIME_BASED,
     fitting_actions=(FittingStage.INIT,),
-    rel_score_threshold=0.75,
+    rel_score_threshold=0.5,
     use_bic=False,
-    drop_redundant_frames=True,
+    drop_redundant_frames=False,
 )
 
 demos_segmentation_config = DemoSegmentationConfig(
@@ -48,11 +46,8 @@ demos_segmentation_config = DemoSegmentationConfig(
     distance_based=False,
     velocity_based=True,
     velocity_threshold=0.01,
-    repeat_final_step=0,
-    repeat_first_step=0,
     components_prop_to_len=True,
-    min_n_components=1,
-    max_idx_distance=4,
+    min_end_distance=2,
 )
 
 cascade_config = CascadeConfig(

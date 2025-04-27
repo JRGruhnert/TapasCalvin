@@ -7,7 +7,7 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
-from tapas_gmm.env.calvinbench import CalvinEnvironment
+from tapas_gmm.env.calvin import Calvin
 import tapas_gmm.utils.logging  # noqa
 import wandb
 from tapas_gmm.env import Environment, import_env
@@ -152,7 +152,7 @@ def run_simulation(
 
 
 def run_episode(
-    env: CalvinEnvironment,
+    env: Calvin,
     keyboard_obs: KeyboardObserver | None,
     policy: Policy,
     horizon: int | None,
@@ -165,7 +165,7 @@ def run_episode(
 ) -> tuple[float, int]:
     episode_reward = 0
     # done = False
-    obs, _, done, _ = env.reset()
+    obs, reward, done, _ = env.reset()
 
     if keyboard_obs is not None:
         keyboard_obs.reset()
@@ -177,8 +177,8 @@ def run_episode(
 
     pbar = tqdm(total=horizon or 1000)
     while True:
-        action, step_reward, obs, done = process_step(
-            obs=obs,
+        action, reward, obs, done = process_step(
+            obs=obs.to_rlbench_format(action, reward),
             obs_dropout=obs_dropout,
             policy=policy,
             action=action,
@@ -193,10 +193,10 @@ def run_episode(
             hold_until_step=hold_until_step,
         )
 
-        if step_reward > 0:
-            logger.info("Got step reward: {}", step_reward)
+        if reward > 0:
+            logger.info("Got step reward: {}", reward)
 
-        episode_reward += step_reward
+        episode_reward += reward
 
         if done:
             logger.info("Episode done.")
@@ -219,7 +219,7 @@ def process_step(
     repeat_action: int,
     keypoint_viz: LiveKeypoints | None,
     fragment_len: int,
-    env: CalvinEnvironment,
+    env: Calvin,
     keyboard_obs: KeyboardObserver | None,
     horizon: int | None,
     step_no: int,
@@ -295,14 +295,13 @@ def process_step(
         if type(action) is RobotTrajectory:
             single_action: TrajectoryPoint = action.step()
             # Tod from TrajectoryPoint to numpy array
-
             ee_action = np.concatenate((single_action.ee, single_action.gripper))
+
         logger.debug("EE action: {}", ee_action)
         next_obs, reward, done, env_info = env.step(
             action=ee_action,
             info=info,
         )
-
         # if len(action.shape) == 1:
         #     next_obs, reward, done, env_info = env.step(action)
         # elif len(action.shape) == 2:
@@ -344,7 +343,7 @@ def process_step(
         if done:
             break
 
-    return action, step_reward, obs, done
+    return ee_action, step_reward, obs, done
 
 
 def main(config: Config):
