@@ -297,7 +297,6 @@ def process_step(
             # Tod from TrajectoryPoint to numpy array
             ee_action = np.concatenate((single_action.ee, single_action.gripper))
 
-        logger.debug("EE action: {}", ee_action)
         next_obs, reward, done, env_info = env.step(
             action=ee_action,
             info=info,

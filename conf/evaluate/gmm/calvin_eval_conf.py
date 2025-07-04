@@ -38,7 +38,7 @@ policy_config = GMMPolicyConfig(
     # ---- Changing often ----
     postprocess_prediction=False,  # TODO:  abs quaternions if False else delta quaternions
     return_full_batch=True,
-    batch_predict_in_t_models=False,  # Change if visualization is needed
+    batch_predict_in_t_models=True,  # Change if visualization is needed
 )
 
 
@@ -49,3 +49,11 @@ config = Config(
     data_naming=data_naming_config,
     policy_type="gmm",
 )
+
+
+def get_eval_config(task_name: str) -> Config:
+    """
+    Get the evaluation configuration for a specific task.
+    """
+    config.data_naming.task = task_name
+    return config

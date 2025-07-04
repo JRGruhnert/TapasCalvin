@@ -6,7 +6,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 from loguru import logger
-from torch.distributions.normal import Normal
 
 from tapas_gmm.dataset.bc import BCDataset
 from tapas_gmm.env.environment import BaseEnvironment

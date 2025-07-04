@@ -1,8 +1,0 @@
-_target_: tapas_gmm.calvin_project.calvin.camera.gripper_camera.GripperCamera
-name: wrist
-fov: 60
-aspect: 1
-nearval: 0.01 # near_clipping_plane
-farval: 10 #far_clipping_plane
-width: 256
-height: 256

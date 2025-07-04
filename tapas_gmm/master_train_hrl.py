@@ -1,172 +1,196 @@
-from tapas_gmm.env import calvin
-from env.environment import BaseEnvironment
-import gym
+from datetime import datetime
+import os
+from typing import Dict
+from loguru import logger
 import numpy as np
-from policy.gmm import GMMPolicy
-import torch
-import torch.nn as nn
-import torch.optim as optim
 
-
-class BasePolicy:
-    def generate_sequence(self, state):
-        raise NotImplementedError
-
-    def update(self, reward, state, done):
-        pass
-
-
-class RandomPolicy(BasePolicy):
-    def __init__(self, action_space):
-        self.action_space = action_space
-
-    def generate_sequence(self, state):
-        return self.action_space.sample()
-
-
-class DQNPolicy(BasePolicy, nn.Module):
-    def __init__(self, state_size, action_size):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(state_size, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, action_size),
-        )
-        self.optimizer = optim.Adam(self.parameters(), lr=0.001)
-        self.action_size = action_size
-        self.replay_buffer = []
-        self.batch_size = 32
-        self.gamma = 0.99
-
-    def forward(self, x):
-        return self.net(x)
-
-    def generate_sequence(self, state, epsilon=0.1):
-        if np.random.random() < epsilon:
-            return np.random.randint(self.action_size)
-        else:
-            state = torch.FloatTensor(state)
-            with torch.no_grad():
-                q_values = self(state)
-            return torch.argmax(q_values).item()
-
-    def update(self, experiences):
-        self.replay_buffer.extend(experiences)
-
-        if len(self.replay_buffer) < self.batch_size:
-            return
-
-        batch = np.random.choice(
-            len(self.replay_buffer), self.batch_size, replace=False
-        )
-        batch = [self.replay_buffer[i] for i in batch]
-
-        states, actions, rewards, next_states, dones = zip(*batch)
-
-        states = torch.FloatTensor(states)
-        actions = torch.LongTensor(actions)
-        rewards = torch.FloatTensor(rewards)
-        next_states = torch.FloatTensor(next_states)
-        dones = torch.FloatTensor(dones)
-
-        current_q = self(states).gather(1, actions.unsqueeze(1))
-        with torch.no_grad():
-            next_q = self(next_states).max(1)[0]
-            target_q = rewards + (1 - dones) * self.gamma * next_q
-
-        loss = nn.MSELoss()(current_q.squeeze(), target_q)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-
-class RLAgent:
-    def __init__(self, policy: BasePolicy):
-        self.policy: BasePolicy = policy
-
-    def act(self, state) -> list[GMMPolicy]:
-        return self.policy.generate_sequence(state)
-
-    def update(self, reward: float, state, done: bool):
-        self.policy.update(reward, state, done)
-
-
-def sample_goal_state(env: BaseEnvironment):
-    # Sample a goal state from the environment
-    # This is a placeholder function. You should implement your own logic.
-    return env.sample_goal_state()
-
-
-class BaseRewardMode:
-    def __init__(self, env: BaseEnvironment):
-        self.env = env
-
-    def get_reward(self, state, action, next_state):
-        # Placeholder for reward calculation
-        return 0.0
+from tapas_gmm.master_project.master_converter import P_C_NodeConverter
+from tapas_gmm.master_project.master_data_def import ActionSpace, StateSpace, StateType
+from tapas_gmm.master_project.master_helper import HRLHelper
+from tapas_gmm.master_project.master_sample import (
+    sample_post_condition,
+    sample_pre_condition,
+)
+from tapas_gmm.master_project.master_agent import GNNAgent, PPOAgent, Agent
+from tapas_gmm.master_project.master_observation import HRLPolicyObservation
+from tapas_gmm.env.calvin import Calvin
 
 
 def train_agent(
-    agent: RLAgent,
-    env: BaseEnvironment,
-    reward_strategy: BaseRewardMode,
-    num_episodes=1000,
+    is_baseline: bool = True,
+    pre_con_check: bool = False,
+    num_episodes: int = 1000,
+    batch_size: int = 50,
+    horizon: int = 8,
+    saving_frequence: int = 100,
+    action_space: ActionSpace = ActionSpace.STATIC,
+    state_space: StateSpace = StateSpace.DYNAMIC,
+    selection_threshold: float = 0.25,
 ):
-    rewards = []
-    avg_rewards = []
+    # Initialize the environment and agent
+    env = Calvin(eval=True)
+    dummy_obs, _, _, _ = env.reset()
 
-    for episode in range(num_episodes):  # Training loop
-        goal_state = sample_goal_state(env)
-        state = env.reset()
-        ep_done = False
-        total_reward = 0
+    agent: Agent = None
+    if is_baseline:
+        agent = PPOAgent(
+            action_space=action_space,
+            state_space=state_space,
+            goal=HRLPolicyObservation(dummy_obs),
+            threshold=selection_threshold,
+        )
+        agent_name = "baseline"
+    else:
+        agent = GNNAgent(
+            action_space=action_space,
+            state_space=state_space,
+            goal=HRLPolicyObservation(dummy_obs),
+            threshold=selection_threshold,
+        )
+        agent_name = "gnn"
 
-        while not ep_done:  # Episode loop
-            # Generate a sequence of models
-            sq_prediction = agent.act(state)
+    directory = "results/training/" + agent_name + "/"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
-            # Takes first model in the sequence (for simplicity)
-            # In a real scenario, you might want to use all models in the sequence
-            # But we want to repredict the sequence after the first model of the sequence is used
-            # to have a tighter feedback loop
-            model = sq_prediction[0]
+    checkpoint_path = directory + "Model_ep{}_as{}_ss{}_bs{}.pth".format(
+        num_episodes, action_space.name, state_space.name, batch_size
+    )
+    print("Checkpoint will be saved at: " + checkpoint_path)
 
-            done = False
+    # track total training time
+    start_time = datetime.now().replace(microsecond=0)
+    print("Started training at (GMT) : ", start_time)
 
-            while not done:  # Model loop
-                # Predict the next action using the model
-                prediction = model.predict(state)
-                # Execute the action in the environment
-                next_state, reward, done, info = env.step(prediction)
-                # Update the total reward
-                total_reward += reward
-                # Update the model with the new state
-                state = next_state
+    # Starting values
+    running_reward = 0
+    running_episodes = 0
+    time_step = 0
+    episode = 0
 
-            ep_reward = reward_strategy.get_reward(state, sq_prediction, next_state)
-            agent.update(ep_reward, state, done)
+    while time_step <= num_episodes:
+        # Starting Conditions
+        print("Sampling Precondition")
+        scene_starting_obs = sample_pre_condition(
+            dummy_obs.scene_obs, state_space=StateSpace.SMALL
+        )
 
-        rewards.append(total_reward)
-        avg_rewards.append(np.mean(rewards[-100:]))
+        print("Sampling Goalcondition")
+        # Goal Conditions
+        scene_goal_obs = sample_post_condition(
+            scene_starting_obs, state_space=StateSpace.SMALL
+        )
 
-        if episode % 50 == 0:
-            print(
-                f"Episode {episode:4d} | Reward: {total_reward:4.1f} | Avg: {avg_rewards[-1]:4.1f}"
-            )
+        # Reset environment twice to get CalvinObservation (maybe make it more elegant)
+        calvin_goal_obs, _, _, _ = env.reset(scene_goal_obs)
+        hrl_goal_obs = HRLPolicyObservation(calvin_goal_obs)
+        calvin_obs, _, _, _ = env.reset(scene_starting_obs)
+        hrl_obs = HRLPolicyObservation(calvin_obs)
 
-    # Save the model
-    # agent.policy.save_model("model.pth")
+        viz_dict: Dict[str, float] = {
+            key.name: value  # Prefix all keys with "new_"
+            for key, value in hrl_goal_obs.scalar_states.items()
+        }
+        agent.reset(hrl_goal_obs)
+        ep_reward = 0
 
-    return rewards, avg_rewards
+        for episode_step in range(horizon):  # Training loop
+            # Retrieve policy from agent
+            task_id = agent.act(hrl_obs)
+            # Helper to convert index to Task enum (stores task specific informations)
+            selected_task = HRLHelper.retrieve_task(task_id)
+
+            # Decides wether selected policy has a good starting position
+            # based of preconditions and current observation
+            skip = False
+            if pre_con_check:
+                con_eval = P_C_NodeConverter(selected_task)
+                score = con_eval.node_features(hrl_obs, True)
+                if np.any(score > selection_threshold):
+                    step_reward = -10.0
+                    ep_done = False
+                    skip = True
+
+            if not skip:
+                # Loads Tapas Policy for that Task (batch predict config)
+                policy = HRLHelper.load_policy(selected_task)
+                policy.reset_episode(env)
+
+                # This is a hack for changing the ee_pose to the origin for reversed models
+                # It does nothing for standard models
+                hrl_obs = HRLHelper.convert_observation(selected_task, hrl_obs)
+
+                # Batch prediction for the given observation
+                prediction, _ = policy.predict(hrl_obs.tapas_format)
+
+                for action in prediction:
+                    ee_action = np.concatenate((action.ee, action.gripper))
+                    calvin_obs, _, _, _ = env.step(ee_action, viz_dict)
+
+                new_hrl_obs = HRLPolicyObservation(calvin_obs)
+                step_reward, ep_done = agent.get_reward_step(hrl_obs, new_hrl_obs)
+
+                hrl_obs = new_hrl_obs
+            time_step += 1
+            ep_reward += step_reward
+
+            if time_step % batch_size == 0:
+                print("Batch ready!")
+                agent.update()
+
+            # save model weights
+            if time_step % saving_frequence == 0:
+                agent.save(checkpoint_path)
+                # print average reward till last episode
+                print_avg_reward = running_reward / running_episodes
+                print_avg_reward = round(print_avg_reward, 2)
+
+                print(
+                    "--------------------------------------------------------------------------------------------"
+                )
+                print("model saved")
+                print(
+                    "Elapsed Time  : ",
+                    datetime.now().replace(microsecond=0) - start_time,
+                )
+                print(
+                    "Episode : {} \t\t Timestep : {} \t\t Average Reward : {}".format(
+                        episode, time_step, print_avg_reward
+                    )
+                )
+
+                print(
+                    "--------------------------------------------------------------------------------------------"
+                )
+                running_reward = 0
+                running_episodes = 0
+
+            # If episode is done break and start new episode
+            if ep_done:
+                break
+
+        running_reward += ep_reward
+        running_episodes += 1
+        episode += 1
+
+    env.close()
+
+    # print total training time
+    print(
+        "============================================================================================"
+    )
+    end_time = datetime.now().replace(microsecond=0)
+    print("Started training at (GMT) : ", start_time)
+    print("Finished training at (GMT) : ", end_time)
+    print("Total training time  : ", end_time - start_time)
+    print(
+        "============================================================================================"
+    )
+
+
+def entry_point():
+    train_agent(num_episodes=500)
 
 
 if __name__ == "__main__":
-    # Example usage with agent concept preserved
-    env = None
-
-    # Train random agent
-    print("Training Random Agent:")
-    random_agent = RLAgent(RandomPolicy(env.action_space))
-    train_agent(random_agent, num_episodes=500)
+    entry_point()

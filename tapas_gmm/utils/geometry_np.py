@@ -80,8 +80,7 @@ def compute_angle_between_quaternions(q, r):
     :return: angle between the quaternions, in radians
     :rtype:
     """
-
-    theta = 2 * np.arccos(2 * np.dot(q, r) ** 2 - 1)
+    theta = 2 * np.arccos(np.clip(2 * np.dot(q, r) ** 2 - 1, -1, 1))
     return theta
 
 

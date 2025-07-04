@@ -931,7 +931,6 @@ class TPGMM:
             )
             for j in range(n_frames)
         )
-
         return per_frame_marginals
 
     def patch_frame_transforms(
@@ -2521,7 +2520,6 @@ class TPGMM:
         # intial time step or change in frame position
         if frame_trans is not None:
             assert frame_quats is not None and local_marginals is not None
-
             self._online_joint_model, _ = self.make_joint_model(
                 frame_trans=frame_trans,
                 frame_quats=frame_quats,
@@ -3639,11 +3637,9 @@ class AutoTPGMM(TPGMM):
                 "in a separate thread to prevent lags, or pause the execution)."
             )
         assert self._fix_frames is not None
-
         per_segment = per_segment or len(self.segment_gmms) == 1
         if frame_trans is not None:  # intial time step or change in frame position
             assert frame_quats is not None and local_marginals is not None
-
             (
                 self._online_joint_models,
                 self._online_trans_margs_joint,
@@ -3780,7 +3776,6 @@ class AutoTPGMM(TPGMM):
             raise NotImplementedError("No state-based segment-wise prediction.")
 
         idx = self._online_active_segment
-
         if strategy is ReconstructionStrategy.GMR:
             prediction, extras = self.segment_gmms[idx]._online_gmr(
                 input_data=input_data,

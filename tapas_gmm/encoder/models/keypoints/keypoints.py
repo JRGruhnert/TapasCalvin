@@ -2,7 +2,7 @@ from enum import Enum
 
 from loguru import logger
 from torch import nn
-from torchvision import transforms
+import torchvision as transforms
 
 from tapas_gmm.encoder.models.keypoints import networks
 

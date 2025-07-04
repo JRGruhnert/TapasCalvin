@@ -224,7 +224,6 @@ class GMMPolicy(Policy):
             else:
                 prediction = self._prediction_batch.step()
                 info["done"] = False
-            logger.debug(f"Prediction: {prediction}")
             action = (
                 self._postprocess_prediction(obs.ee_pose.numpy(), prediction.ee)
                 if self.config.postprocess_prediction
@@ -244,8 +243,7 @@ class GMMPolicy(Policy):
         if self.config.binary_gripper_action:
             action[-1] = self._binary_gripper_action(action[-1])
 
-        info["segmenbt"] = self.model._online_active_segment
-        logger.debug(f"GMM Prediction: {action}")
+        info["segment"] = self.model._online_active_segment
         return action, info
 
     def _get_frame_trans(self, obs):
@@ -343,7 +341,6 @@ class GMMPolicy(Policy):
         prediction_raw = []
         prediction_tan = []
         first_step = True
-
         while self._t_curr <= self.config.batch_t_max:
             # TODO: needs to return a TrajectoryPoint too, so that in RobotTrajectory.from_np
             # we can assign the gripper state properly as well.
@@ -547,8 +544,6 @@ class GMMPolicy(Policy):
         Convert to pose delta.
         Should skip this step in batch mode.
         """
-        logger.debug(f"Postprocess prediction: {prediction}")
-        logger.debug(f"EE pose frame: {ee_pose}")
         # Split gripper and EE part
         if self._model_contains_gripper_action:
             gripper_action = prediction[-1:]

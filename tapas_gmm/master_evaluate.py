@@ -8,12 +8,22 @@ from omegaconf import DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
 from tapas_gmm.env.calvin import Calvin
+from tapas_gmm.master_project.master_sample import (
+    _get_gaussians_from_model,
+    sample_pre_condition,
+)
 from tapas_gmm.policy.gmm import GMMPolicy
-import tapas_gmm.utils.logging  # noqa
+from tapas_gmm.master_project.master_converter import (
+    FeatureConverter,
+    P_C_GaussianConverter,
+    P_C_Converter,
+    P_C_NodeConverter,
+    P_C_ScalarConverter,
+)
 import wandb
-from tapas_gmm.env import Environment, import_env
 from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
 from tapas_gmm.policy import import_policy
+from tapas_gmm.master_project.master_observation import HRLPolicyObservation
 from tapas_gmm.policy.policy import Policy, PolicyConfig
 from tapas_gmm.utils.argparse import parse_and_build_config
 from tapas_gmm.utils.config import value_not_set
@@ -22,7 +32,7 @@ from tapas_gmm.utils.keyboard_observer import (
     KeyboardObserver,
     wait_for_environment_reset,
 )
-from tapas_gmm.calvin_project.calvin.envs.calvin_env import (
+from calvin_env.envs.observation import (
     CalvinObservation,
 )
 
@@ -33,7 +43,10 @@ from tapas_gmm.utils.random import configure_seeds
 from tapas_gmm.utils.robot_trajectory import RobotTrajectory, TrajectoryPoint
 from tapas_gmm.utils.select_gpu import device
 from tapas_gmm.utils.tasks import get_task_horizon
+from tapas_gmm.viz.gmm import HMM
 from tapas_gmm.viz.live_keypoint import LiveKeypoints
+from typing import Dict, Any
+
 
 init_griper_state = 0.9 * torch.ones(1, device=device)
 
@@ -102,7 +115,8 @@ def run_simulation(
     episodes_count = 0
 
     # time.sleep(10)
-
+    result = _get_gaussians_from_model(policy.model)
+    print(result)
     # env.reset()  # extra reset to ensure proper camera placement in RLBench
 
     try:
@@ -170,10 +184,11 @@ def run_episode(
 
     episode_reward = 0
 
-    obs, reward, done, _ = env.reset()
-
-    obs = obs.to_rlbench_format()
-
+    calvin_obs, reward, done, _ = env.reset()
+    obs, reward, done, _ = env.reset(
+        sample_pre_condition(calvin_obs.scene_obs, True), static=True
+    )
+    obs = HRLPolicyObservation(calvin_obs).tapas_format
     if keyboard_obs is not None:
         keyboard_obs.reset()
 
@@ -256,6 +271,7 @@ def process_step(
 
     step_reward = 0
     done = False
+    env_info = {}
 
     points: list = []
 
@@ -280,7 +296,6 @@ def process_step(
             if point.ee is not None:
                 points.append(point.ee)
         points.append(obs.ee_pose)
-        points.append
         env.update_prediction_marker(points)
 
     assert repeat_action > 0
@@ -306,18 +321,18 @@ def process_step(
             # There is somwhere an offset wrong in the trajectory
             # Check out quaternions what i changed from original
             points.append(obs.ee_pose)
-            points.append
-            #    logger.warning("Point Start: {}", point)
-            # logger.warning("EE Start: {}", obs.ee_pose)
 
             single_action: TrajectoryPoint = action.step()
             ee_action = np.concatenate((single_action.ee, single_action.gripper))
             logger.info("EE_Action: {}", ee_action)
-        obs, reward, done, env_info = env.step(action=ee_action, info=info)
+        obs, reward, done, env_info = env.step(action=ee_action, info={"done": done})
+        if type(obs) is CalvinObservation:
+            print(f"EE Pose: {obs.ee_pose}")
 
+        logger.info(f"States: {obs.object_states}")
         #     raise ValueError(f"Unexpected number of action shape dims {action.shape}")
 
-        done = done or env_info.get("done", False)
+        done = False  # done or env_info.get("done", False)
 
         step_reward += reward
 
@@ -344,7 +359,7 @@ def process_step(
             break
 
         if type(obs) is CalvinObservation:
-            obs = obs.to_rlbench_format()
+            obs = HRLPolicyObservation(obs).tapas_format
         else:
             obs.action = ee_action
             obs.feedback = step_reward

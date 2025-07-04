@@ -24,14 +24,11 @@ class ManualPolicy:
             self.gripper_open = action[-1]
 
         if not rel:
-            logger.debug("EE pose: ", obs.ee_pose)
-            logger.debug("Action: ", action)
             action = obs.ee_pose + action
 
         done = False
         success = False
         if self.keyboard_obs.is_reset():
-            print("Resetting episode")
             success = self.keyboard_obs.success
             self.keyboard_obs.reset()
             done = True

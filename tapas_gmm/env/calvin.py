@@ -7,8 +7,9 @@ import numpy as np
 import torch
 from loguru import logger
 
-from tapas_gmm.calvin_project.calvin.envs.master_tasks.calvin_task import PressButton
 
+from calvin_env.envs.observation import CalvinObservation
+from calvin_env.envs.calvin_env import get_env_from_cfg, CalvinEnvironment
 from tapas_gmm.env import Environment
 from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
 from tapas_gmm.utils.geometry_np import (
@@ -24,12 +25,6 @@ from tapas_gmm.utils.geometry_np import (
     quaternion_pose_diff,
     quaternion_to_axis_angle,
     quaternion_to_matrix,
-)
-
-from tapas_gmm.calvin_project.calvin.envs.calvin_env import (
-    CalvinObservation,
-    CalvinEnvironment,
-    get_env_from_cfg,
 )
 
 
@@ -49,13 +44,26 @@ class CalvinConfig(BaseEnvironmentConfig):
 
 
 class Calvin(BaseEnvironment):
-    def __init__(self, config: CalvinConfig, eval=False, **kwargs):
+    def __init__(self, config=None, eval=False, **kwargs):
+        if config is None:
+            config = CalvinConfig(
+                task="Undefined",
+                cameras=("wrist", "front"),
+                camera_pose={},
+                image_size=(256, 256),
+                static=False,
+                headless=False,
+                scale_action=False,
+                delay_gripper=False,
+                gripper_plot=False,
+                postprocess_actions=False,
+            )
         super().__init__(config)
 
         self.cameras = config.cameras
 
         self.env: CalvinEnvironment = get_env_from_cfg(
-            config.task, eval
+            eval
         )  # Give the config to the env so that i can connect both config systems and remove the pain
         if self.env is None:
             raise RuntimeError("Could not create environment.")
@@ -64,8 +72,10 @@ class Calvin(BaseEnvironment):
     def close(self):
         self.env.close()
 
-    def reset(self) -> tuple[CalvinObservation, float, bool, dict]:
-        return self.env.reset()
+    def reset(
+        self, scene_obs=None, static=True
+    ) -> tuple[CalvinObservation, float, bool, dict]:
+        return self.env.reset(scene_obs=scene_obs, static=static)
 
     def reset_to_demo(self, path: str) -> CalvinObservation:
         raise NotImplementedError("Not implemented yet")
@@ -160,8 +170,6 @@ class Calvin(BaseEnvironment):
             action_delayed = zero_action
 
         # action_delayed[:3] *= 0.05
-
-        logger.info(f"Action {action_delayed}")
 
         obs, reward, done, info = self.env.step(action_delayed, action_mode)
         self.env.render(obs, policy_info)

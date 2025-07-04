@@ -4,7 +4,7 @@ import numpy as np
 from tapas_gmm.env.calvin import Calvin
 from tapas_gmm.env.environment import BaseEnvironment
 from tapas_gmm.utils.human_feedback import correct_action
-from tapas_gmm.calvin_project.calvin.envs.calvin_env import (
+from calvin_env.envs.observation import (
     CalvinObservation,
 )
 from tapas_gmm.utils.keyboard_observer import KeyboardObserver
@@ -40,7 +40,6 @@ class ManualCalvinPolicy:
             self.keyboard_obs.reset()
             done = True
 
-        logger.debug(f"Prediction: {action}")
         return action, done, success
 
     def reset_episode(self, env: BaseEnvironment | None = None):

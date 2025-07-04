@@ -15,9 +15,11 @@ from tapas_gmm.env import Environment
 from tapas_gmm.env.calvin import CalvinConfig, Calvin
 
 from tapas_gmm.env.environment import BaseEnvironmentConfig
+from tapas_gmm.master_project.master_sample import sample_pre_condition
 from tapas_gmm.policy import PolicyEnum
 from tapas_gmm.policy.manual_policy import ManualCalvinPolicy
 from tapas_gmm.dataset.scene import SceneDataset, SceneDatasetConfig
+from tapas_gmm.master_project.master_observation import HRLPolicyObservation
 from tapas_gmm.utils.argparse import parse_and_build_config
 from tapas_gmm.utils.misc import (
     DataNamingConfig,
@@ -51,7 +53,7 @@ class Config:
 
 
 def main(config: Config) -> None:
-    env = Calvin(config.env_config, eval=False)
+    env = Calvin(config=config.env_config, eval=False)
     keyboard_obs = KeyboardObserver()
     policy = ManualCalvinPolicy(config, env, keyboard_obs)
     assert config.data_naming.data_root is not None
@@ -90,6 +92,7 @@ def main(config: Config) -> None:
                     ebar.set_description("Running episode")
                     start_time = time.time()
 
+                    print(obs.ee_pose)
                     prediction, policy_done, policy_success = policy.predict(
                         obs
                     )  # Action is relative
@@ -99,25 +102,27 @@ def main(config: Config) -> None:
                         logger.error(f"Raw action: {prediction}")
                         logger.error(f"Error: {e}")
                         raise e
-
-                    # actual_action = env._get_action(obs, next_obs)
-                    # logger.debug(f"Saved Demo Action: {actual_action.round(5)}")
+                    # logger.error(obs.scene_obs)
+                    # logger.debug(obs.object_poses)
                     ee_delta = env.compute_ee_delta(obs, next_obs)
                     obs.action = torch.Tensor(ee_delta)
                     obs.reward = torch.Tensor([step_reward])
-                    replay_memory.add_observation(obs.to_rlbench_format())
+                    replay_memory.add_observation(
+                        HRLPolicyObservation(obs).tapas_format
+                    )
 
                     obs = next_obs
-
                     timesteps += 1
                     tbar.update(1)
 
-                    if env_done or policy_success:
+                    if (env_done and policy_done) or policy_success:
                         # logger.info("Saving trajectory.")
                         ebar.set_description("Saving trajectory")
                         replay_memory.save_current_traj()
 
-                        obs, _, policy_done, _ = env.reset()
+                        obs, _, policy_done, _ = env.reset(
+                            sample_pre_condition(obs.scene_obs)
+                        )
                         keyboard_obs.reset()
                         policy.reset_episode(env)
 
@@ -132,7 +137,8 @@ def main(config: Config) -> None:
                         ebar.set_description("Resetting without saving traj")
                         replay_memory.reset_current_traj()
 
-                        obs, _, _, _ = env.reset()
+                        obs, _, _, _ = env.reset(sample_pre_condition(obs.scene_obs))
+                        # logger.debug(obs.scene_obs)
                         keyboard_obs.reset()
                         policy.reset_episode(env)
 

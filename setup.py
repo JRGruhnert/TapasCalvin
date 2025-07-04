@@ -44,7 +44,7 @@ rlbench_requires = [
 ]
 
 calvin_requires = [
-    "calvin",
+    "calvin_env",
 ]
 
 

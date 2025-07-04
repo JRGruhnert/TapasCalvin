@@ -1,0 +1,15 @@
+static_dict = {
+    "PressButton": press_button_config,
+    "PressButtonReversed": press_button_config,
+    "OpenGripper": open_gripper_config,
+    "CloseGripper": close_gripper_config,
+    "OpenDrawer": open_drawer_config,
+    "CloseDrawer": close_drawer_config,
+    "OpenCabinet": open_cabinet_config,
+    "CloseCabinet": close_cabinet_config,
+    "OpenSwitch": open_switch_config,
+    "CloseSwitch": close_switch_config,
+    "MoveToDrawerReversed": move_to_drawer_reversed_config,
+    "MoveToCabinetReversed": move_to_cabinet_reversed_config,
+    "MoveToSwitchReversed": move_to_switch_reversed_config,
+}
