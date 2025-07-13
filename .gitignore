@@ -139,7 +139,7 @@ cython_debug/
 # wandb logs
 src/wandb
 wandb
-data
+#data
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
