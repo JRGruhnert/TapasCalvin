@@ -253,7 +253,7 @@ class BaseEnvironment(ABC):
         else:
             delta_rot_axis_angle = delta_rot
 
-        print(prediction_is_quat, prediction_is_euler, delta_rot_axis_angle)
+        # print(prediction_is_quat, prediction_is_euler, delta_rot_axis_angle)
 
         if scale_action:
             delta_position = delta_position * trans_scale

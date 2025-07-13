@@ -51,7 +51,7 @@ class ObservationEncoder(nn.Module):
         else:
             self.image_encoder = ImageEncoder(config.image_encoder)
 
-        print(self.image_encoder)
+        # print(self.image_encoder)
 
         if image_encoder_checkpoint and self.image_encoder:
             self.image_encoder.from_disk(image_encoder_checkpoint)

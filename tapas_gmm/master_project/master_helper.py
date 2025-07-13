@@ -7,7 +7,7 @@ import numpy as np
 from tapas_gmm.master_project.master_data_def import (
     ActionSpace,
     Task,
-    ObservationState,
+    State,
     _origin_ee_tp_pose,
 )
 
@@ -29,10 +29,10 @@ class HRLHelper:
     """Utility class for returning meaningful model sets."""
 
     @classmethod
-    def c_states(cls) -> Set[ObservationState]:
+    def c_states(cls) -> Set[State]:
         return {
             m
-            for m in ObservationState
+            for m in State
             if (
                 not (
                     m.value.identifier.endswith("euler")
@@ -72,22 +72,32 @@ class HRLHelper:
         return obs
 
     @classmethod
-    def get_tp_indices_from_model(
-        cls, model: Task
-    ) -> Dict[ObservationState, np.ndarray]:
-        policy: GMMPolicy = HRLHelper.load_policy(model)
+    def get_tp_from_task(cls, task: Task, split_pose: bool) -> Dict[State, np.ndarray]:
+        policy: GMMPolicy = HRLHelper.load_policy(task)
         tpgmm = policy.model
-        result: Dict[ObservationState, np.ndarray] = {}
-        obs_mapping = list(ObservationState)
+        result: Dict[State, np.ndarray] = {}
         for _, segment in enumerate(tpgmm.segment_frames):
             for _, frame_idx in enumerate(segment):
-                if frame_idx == 0:
-                    # Zero means its the ee_pose
-                    result[ObservationState.EE_Pose] = model.value.ee_hrl_start
+                if split_pose:
+                    transfrom_key, quaternion_key = State.get_tp_by_index(
+                        frame_idx, True
+                    )
+                    if frame_idx == 0:
+                        # Zero means its the ee_pose
+                        result[transfrom_key] = task.value.ee_hrl_start[:3]
+                        result[quaternion_key] = task.value.ee_hrl_start[-4:]
+                    else:
+                        result[transfrom_key] = task.value.obj_start[:3]
+                        result[quaternion_key] = task.value.obj_start[-4:]
                 else:
-                    result[obs_mapping[frame_idx]] = model.value.obj_start
-                    # Else it is an object poses. Unfortunaetly in calvin each object has the same pose.
-
+                    pose_key = State.get_tp_by_index(frame_idx, False)
+                    if frame_idx == 0:
+                        # Zero means its the ee_pose
+                        result[pose_key] = task.value.ee_hrl_start
+                    else:
+                        result[pose_key] = task.value.obj_start
+        for key, value in task.value.precondition.items():
+            result[key] = value
         return result
 
     @classmethod

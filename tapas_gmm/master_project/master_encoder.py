@@ -13,11 +13,10 @@ class QuaternionEncoder(nn.Module):
         )
 
     def forward(self, q):
-        q = F.normalize(q, dim=-1)
         return self.fc(q)
 
 
-class EulerEncoder(nn.Module):
+class TransformEncoder(nn.Module):
     def __init__(self, out_dim):
         super().__init__()
         self.fc = nn.Sequential(

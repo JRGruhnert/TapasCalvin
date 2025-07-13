@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Dict
 from loguru import logger
@@ -13,7 +13,7 @@ from tapas_gmm.master_project.master_data_def import (
     StateSpace,
     StateType,
     Task,
-    ObservationState,
+    State,
 )
 from tapas_gmm.master_project.master_helper import HRLHelper
 from tapas_gmm.master_project.master_observation import HRLPolicyObservation
@@ -21,84 +21,224 @@ from tapas_gmm.policy.models.tpgmm import Gaussian
 from scipy.stats import chi2
 
 
-class FeatureConverter:
+class StateConverter(ABC):
+    def __init__(self, state: State, normalized: bool = True):
+        self.min = state.value.min
+        self.max = state.value.max
+        self.normalized = normalized
+
+    def clamp(self, x: np.ndarray | float) -> np.ndarray:
+        return np.clip(x, self.min, self.max)
+
     @abstractmethod
-    def feature(self) -> float:
-        raise NotImplementedError("Subclasses must implement the feature method.")
+    def value(self, current: np.ndarray | float) -> float | np.ndarray:
+        """Return the (optionally normalized) raw feature value."""
+        pass
 
+    @abstractmethod
+    def distance(self, current: np.ndarray | float, goal: np.ndarray | float) -> float:
+        """Return the (optionally normalized) difference to the goal."""
+        pass
 
-class P_A_ScalarConverter:
-    def node_features(self, current: float, goal: float) -> float:
+    def normalize(self, x: np.ndarray | float) -> float:
         """
-        Compute the absolute difference between the current and goal scalar values.
-
-        Parameters:
-        - current (float): Current scalar value.
-        - goal (float): Goal scalar value.
-
-        Returns:
-        - float: Absolute difference between current and goal.
+        Normalize a value x to the range [0, 1] based on min and max.
         """
-        return abs(current - goal)
+        return (x - self.min) / (self.max - self.min)
 
 
-class P_A_EulerConverter:
-    def node_features(self, current: np.ndarray, goal: np.ndarray) -> np.ndarray:
+class ScalarConverter(StateConverter):
+
+    def value(self, current: float) -> float:
+        clamped = self.clamp(current)
+        if not self.normalized:
+            return clamped
+        else:
+            return self.normalize(clamped)
+
+    def distance(self, current: float, goal: float) -> float:
+        cl_curr = self.clamp(current)
+        cl_goal = self.clamp(goal)
+        if not self.normalized:
+            return abs(cl_goal - cl_curr)
+        else:
+            norm_curr = self.normalize(cl_curr)
+            norm_goal = self.normalize(cl_goal)
+            return abs(norm_goal - norm_curr)
+
+
+class TransformConverter(StateConverter):
+    def value(self, current: np.ndarray) -> np.ndarray:
+        clamped = self.clamp(current)
+        if not self.normalized:
+            return clamped
+        else:
+            return self.normalize(clamped)
+
+    def distance(self, current: np.ndarray, goal: np.ndarray) -> float:
         """
-        Compute the absolute difference between the current and goal Euler angles.
-
-        Parameters:
-        - current (np.ndarray): Current Euler angles as a numpy array.
-        - goal (np.ndarray): Goal Euler angles as a numpy array.
-
-        Returns:
-        - float: Absolute difference between current and goal Euler angles.
+        Returns the Euclidean distance between current and goal
+        (after clamping current), optionally normalized by max span.
         """
-        if current.shape != goal.shape:
-            raise ValueError("Current and goal must have the same shape.")
-        return np.abs(current - goal)
+        cl_curr = self.clamp(current)
+        cl_goal = self.clamp(goal)
+        if not self.normalized:
+            return np.linalg.norm(cl_curr - cl_goal)
+        else:
+            norm_curr = self.normalize(cl_curr)
+            norm_goal = self.normalize(cl_goal)
+            return np.linalg.norm(norm_curr - norm_goal)
 
 
-class P_A_QuatConverter:
-    def node_features(self, current: np.ndarray, goal: np.ndarray) -> np.ndarray:
-        """Compute normalized angular distance between two quaternions (range [0, 1])."""
-        # Absolute dot product to handle sign ambiguity
-        dot = np.abs(np.dot(current, goal))
-        angular_distance = 2 * np.arccos(
-            np.clip(dot, -1.0, 1.0)
-        )  # Clip for numerical stability
-        return angular_distance / np.pi  # Scale to [0, 1]
+class QuaternionConverter(StateConverter):
+    def __init__(self, state, normalized: bool = True):
+        """
+        Quaternions are assumed unit‑length; we don't clamp components.
+        """
+        super().__init__(state, normalized)
+        self.ident = np.array([0.0, 0.0, 0.0, 1.0])
+
+    def normalize_quat(self, q: np.ndarray) -> np.ndarray:
+        return q / np.linalg.norm(q)
+
+    def angular_distance(self, q1: np.ndarray, q2: np.ndarray) -> float:
+        """
+        Smallest rotation angle between two quaternions, in radians [0, π].
+        """
+        q1u = self.normalize_quat(q1)
+        q2u = self.normalize_quat(q2)
+        dot = np.clip(np.abs(np.dot(q1u, q2u)), -1.0, 1.0)
+        return 2.0 * np.arccos(dot)
+
+    def canonicalize(self, q: np.ndarray) -> np.ndarray:
+        """
+        Enforce qw >= 0 by flipping sign if needed.
+        q is assumed unit‑length.
+        """
+        # quaternion format [qx, qy, qz, qw]
+        if q[3] < 0:
+            return -q
+        return q
+
+    def value(self, current: np.ndarray) -> np.ndarray:
+        """
+        Returns the normalized quaternion, or the identity quaternion if current is None.
+        """
+        if not self.normalized:
+            return self.canonicalize(current)
+        else:
+            q_unit = self.normalize_quat(current)
+            return self.canonicalize(q_unit)
+
+    def distance(self, current: np.ndarray, goal: np.ndarray) -> float:
+        """
+        Returns the angular distance between current and goal quaternions,
+        optionally normalized by π to lie in [0,1].
+        """
+        angle = self.angular_distance(current, goal)
+        if not self.normalized:
+            return float(angle)
+        return float(angle / np.pi)
 
 
-class P_A_Converter:
-    def __init__(self, goal: HRLPolicyObservation, state_space: StateSpace):
+class IgnoreConverter(StateConverter):
+    def __init__(self):
+        """
+        Quaternions are assumed unit‑length; we don't clamp components.
+        """
+
+    def value(self, current: np.ndarray | float) -> np.ndarray | float:
+        """
+        Returns zeros as in current size, indicating no contribution to the feature.
+        """
+        if isinstance(current, np.ndarray):
+            value = np.zeros_like(current)
+            if current.shape[0] == 3:
+                return value
+            elif current.shape[0] == 4 or current.shape[0] == 7:
+                value[-1] = 1.0  # last element is 1.0 is for unit quaternion
+                return value
+
+        else:
+            return 0.0
+
+    def distance(self, current: np.ndarray | float, goal: np.ndarray | float) -> float:
+        """
+        Returns a constant value of 0.0, indicating no contribution to the feature.
+        """
+        return 0.0
+
+
+class NodeConverter:
+    def __init__(
+        self,
+        state_list: list[State],
+        task_list: list[Task],
+        normalized: bool = True,
+    ):
         """
         Initialize the converter with a goal observation.
         """
-        self._goal = goal
-        self.scalar_converter = P_A_ScalarConverter()
-        self.euler_converter = P_A_EulerConverter()
-        self.quat_converter = P_A_QuatConverter()
+        self.tasks = task_list
+        self.converter: Dict[State, StateConverter] = {}
+        self.ignore_converter = IgnoreConverter()
+        for state in state_list:
+            if state.value.state_type == StateType.Transform:
+                self.converter[state] = TransformConverter(state, normalized)
+            elif state.value.state_type == StateType.Quat:
+                self.converter[state] = QuaternionConverter(state, normalized)
+            elif state.value.state_type == StateType.Scalar:
+                self.converter[state] = ScalarConverter(state, normalized)
+            else:
+                raise ValueError(f"Unsupported state type: {state.value.state_type}")
 
-    def partition_features(self, current: HRLPolicyObservation) -> torch.Tensor:
-        feature_dict: Dict[ObservationState, float] = {}
-        for key, goal_value in self._goal.euler_states.items():
-            feature_dict[key] = self.euler_converter.node_features(
-                current.euler_states[key], goal_value
-            )
-        for key, goal_value in self._goal.quat_states.items():
-            feature_dict[key] = self.quat_converter.node_features(
-                current.quat_states[key], goal_value
-            )
-        for key, goal_value in self._goal.scalar_states.items():
-            feature_dict[key] = self.scalar_converter.node_features(
-                current.scalar_states[key], goal_value
-            )
+    def dict_distance(
+        self,
+        current: HRLPolicyObservation,
+        goal: HRLPolicyObservation,
+    ) -> Dict[State, torch.Tensor]:
+        """
+        Compute the distance for each state in the observation.
+        Returns a dictionary mapping each state to its distance tensor.
+        """
+        distances = {}
+        for key, converter in self.converter.items():
+            dist = converter.distance(current.split_states[key], goal.split_states[key])
+            distances[key] = torch.tensor(dist).float()
+        return distances
 
+    def tensor_dict_distance(
+        self,
+        current: HRLPolicyObservation,
+        goal: HRLPolicyObservation,
+    ) -> Dict[StateType, torch.Tensor]:
+        # Initialize groups
+        transform_values = []
+        quaternion_values = []
+        scalar_values = []
+        for key, converter in self.converter.items():
+            val = converter.distance(current.split_states[key], goal.split_states[key])
+            if key.value.state_type == StateType.Transform:
+                transform_values.append(np.array([val]))
+            elif key.value.state_type == StateType.Quat:
+                quaternion_values.append(np.array([val]))
+            elif key.value.state_type == StateType.Scalar:
+                scalar_values.append(np.array([val]))
+
+        # Stack each group (assumes all shapes in group match!)
+        return {
+            StateType.Transform: torch.from_numpy(np.stack(transform_values)).float(),
+            StateType.Quat: torch.from_numpy(np.stack(quaternion_values)).float(),
+            StateType.Scalar: torch.from_numpy(np.stack(scalar_values)).float(),
+        }
+
+    def tensor_combined_distance(
+        self, current: HRLPolicyObservation, goal: HRLPolicyObservation
+    ) -> torch.Tensor:
         # Convert all values to numpy arrays and concatenate
         values = []
-        for key in self._goal.split_keys:
-            val = feature_dict[key]
+        for key, converter in self.converter.items():
+            val = converter.distance(current.split_states[key], goal.split_states[key])
             val = np.asarray(val).flatten()  # Ensures it's an array and flattens it
             values.append(val)
 
@@ -107,73 +247,115 @@ class P_A_Converter:
         result_1d = torch.from_numpy(flat_array).float()
         return result_1d.unsqueeze(0)
 
-    def num_features(self, obs: HRLPolicyObservation) -> int:
-        print(f"Dim A {self.partition_features(obs).size()}")
-        return self.partition_features(obs).size(1)
-
-
-class P_B_Converter:
-
-    def partition_features(
+    def dict_values(
         self,
         obs: HRLPolicyObservation,
-        state_space: StateSpace = None,
+    ) -> Dict[State, float | np.ndarray]:
+        """
+        Compute the value for each state in the observation.
+        Returns a dictionary mapping each state to its value.
+        """
+        values = {}
+        for key, converter in self.converter.items():
+            val = converter.value(obs.split_states[key])
+            values[key] = val
+        return values
+
+    def tensor_dict_values(
+        self,
+        obs: HRLPolicyObservation,
     ) -> Dict[StateType, torch.Tensor]:
         # Initialize groups
-        euler_values = [obs.euler_states[key] for key in obs.euler_states.keys()]
-        quaternion_values = [obs.quat_states[key] for key in obs.quat_states.keys()]
-        scalar_values = [
-            np.array([obs.scalar_states[key]]) for key in obs.scalar_states.keys()
-        ]
+        transform_values = []
+        quaternion_values = []
+        scalar_values = []
+        for key, converter in self.converter.items():
+            val = converter.value(obs.split_states[key])
+            if key.value.state_type == StateType.Transform:
+                transform_values.append(val)
+            elif key.value.state_type == StateType.Quat:
+                quaternion_values.append(val)
+            elif key.value.state_type == StateType.Scalar:
+                scalar_values.append(np.array([val]))
 
         # Stack each group (assumes all shapes in group match!)
-
         return {
-            StateType.Euler: torch.from_numpy(np.stack(euler_values)).float(),
+            StateType.Transform: torch.from_numpy(np.stack(transform_values)).float(),
             StateType.Quat: torch.from_numpy(np.stack(quaternion_values)).float(),
             StateType.Scalar: torch.from_numpy(np.stack(scalar_values)).float(),
         }
 
-    def num_states(self, obs: HRLPolicyObservation):
-        return len(obs.euler_states) + len(obs.scalar_states) + len(obs.quat_states)
+    def tensor_combined_values(self, current: HRLPolicyObservation) -> torch.Tensor:
+        # Convert all values to numpy arrays and concatenate
+        values = []
+        for key, converter in self.converter.items():
+            val = converter.value(current.split_states[key])
+            val = np.asarray(val).flatten()  # Ensures it's an array and flattens it
+            values.append(val)
 
-    def get_state_list(self, obs: HRLPolicyObservation) -> list[ObservationState]:
-        return (
-            list(obs.euler_states.keys())
-            + list(obs.quat_states.keys())
-            + list(obs.scalar_states.keys())
-        )
+        # Concatenate all into a single flat array
+        flat_array = np.concatenate(values)
+        result_1d = torch.from_numpy(flat_array).float()
+        return result_1d.unsqueeze(0)
 
+    def tensor_task_distance(
+        self,
+        current: HRLPolicyObservation,
+    ) -> torch.Tensor:
+        features: list[np.ndarray] = []
+        for task in self.tasks:
+            task_features: list[float] = []
+            tp_dict = HRLHelper.get_tp_from_task(task)
+            for key, converter in self.converter.items():
+                if key in tp_dict:
+                    # Use the task-specific value if available
+                    task_value = converter.value(tp_dict[key])
+                else:
+                    # Empty value if not specified
+                    task_value = self.ignore_converter.value(current.split_states[key])
 
-class P_C_ScalarConverter(FeatureConverter):
-    def __init__(self, state: ObservationState, target: float):
-        self.target = target
-        self.min = state.value.min
-        self.max = state.value.max
-        self.state = state
-
-    def feature(self, current: float) -> float:
-        if not isinstance(current, (int, float)):
-            raise TypeError(
-                f"Expected a numeric type, got {type(current)} with value {current}"
-            )
-
-        value = min(max(self.min, current), self.max)
-
-        diff = abs(self.target - value)
-        normalized = diff / (self.max - self.min)
-
-        # print(f"Name: {self.state.value.identifier}")
-        # print(f"Min: {self.state.value.min}")
-        # print(f"Max: {self.state.value.max}")
-        # print(f"Target: {self.target}")
-        # print(f"Current: {current}")
-        # print(f"Clipped: {value}")
-        # normalize
-        return normalized
+                if isinstance(task_value, np.ndarray):
+                    task_features.append(task_value)
+                else:
+                    task_features.append(np.array([task_value]))
+            features.append(np.array(task_features))
+        return torch.from_numpy(np.stack(features, axis=0)).float()
 
 
-class P_C_GaussianConverter(FeatureConverter):
+class EdgeConverter:
+    def __init__(self, active_states: list[State], active_tasks: list[Task]):
+        """
+        Initialize the edge converter with a list of active states and tasks.
+        """
+        self.active_states = active_states
+        self.active_tasks = active_tasks
+
+    def ab_edges(self) -> torch.Tensor:
+        """
+        Returns the edges between partitions A and B.
+        Each edge is represented as a tuple (source, target).
+        """
+        edge_list = []
+        for i, state in enumerate(self.active_states):
+            for j, task in enumerate(self.active_tasks):
+                if state in task.value.precondition:
+                    edge_list.append((i, j))
+        return torch.tensor(edge_list, dtype=torch.long)
+
+    def bc_edges(self) -> torch.Tensor:
+        """
+        Returns the edges between partitions B and C.
+        Each edge is represented as a tuple (source, target).
+        """
+        edge_list = []
+        for i, task in enumerate(self.active_tasks):
+            for j, state in enumerate(self.active_states):
+                if state in task.value.precondition:
+                    edge_list.append((i, j))
+        return torch.tensor(edge_list, dtype=torch.long)
+
+
+class P_C_GaussianConverter(StateConverter):
     def __init__(self, g: Gaussian):
         """
         Represents a single Gaussian prior.
@@ -226,7 +408,7 @@ class P_C_GaussianConverter(FeatureConverter):
         d2 = self._mahalanobis_distance(x) ** 2
         return 1.0 - chi2.cdf(d2, df=self._dof)
 
-    def feature(self, current: np.ndarray) -> float:
+    def distance(self, current: np.ndarray) -> float:
         """
         Compute the Mahalanobis distance between current and the stored mean/cov.
 
@@ -290,17 +472,13 @@ class P_C_StartPoseConverter:
         - float: similarity score
         """
         return self._distance(query_pose)
-        print(f"Distance: {dist}")
-        dist2 = 1 - np.exp(-dist)
-        print(f"Distance2: {dist2}")
-        return dist2
 
     def feature(self, current: np.ndarray) -> float:
         return self._similarity_score(current)
 
 
-class P_C_IgnoreConverter(FeatureConverter):
-    def feature(self, _: np.ndarray) -> float:
+class P_C_IgnoreConverter(StateConverter):
+    def distance(self, _: np.ndarray) -> float:
         """
         Returns a constant value of 0.0, indicating no contribution to the feature.
         """
@@ -309,15 +487,15 @@ class P_C_IgnoreConverter(FeatureConverter):
 
 class P_C_NodeConverter:
     def __init__(self, model: Task):
-        self._feature_converter: dict[ObservationState, FeatureConverter] = {
+        self._feature_converter: dict[State, StateConverter] = {
             obs_state: P_C_IgnoreConverter() for obs_state in HRLHelper.c_states()
         }
-        for key, value in HRLHelper.get_tp_indices_from_model(model).items():
+        for key, value in HRLHelper.get_tp_from_task(model).items():
             self._feature_converter[key] = P_C_StartPoseConverter(value)
 
         for key, value in model.value.precondition.items():
             if isinstance(value, float):
-                self._feature_converter[key] = P_C_ScalarConverter(key, value)
+                self._feature_converter[key] = ScalarConverter(key, value)
             else:
                 self._feature_converter[key] = P_C_StartPoseConverter(value)
 
@@ -328,21 +506,21 @@ class P_C_NodeConverter:
     ) -> np.ndarray:
         if not only_precondition:
             features: list[float] = [
-                self._feature_converter[key].feature(value)
+                self._feature_converter[key].distance(value)
                 for key, value in obs.normal_states.items()
             ]
 
         else:
             features: list[float] = [
-                self._feature_converter[key].feature(value)
+                self._feature_converter[key].distance(value)
                 for key, value in obs.normal_states.items()
                 if not isinstance(self._feature_converter[key], P_C_IgnoreConverter)
             ]
         return np.array(features)
 
     def get_ee_score(self, obs: HRLPolicyObservation) -> float:
-        return self._feature_converter[ObservationState.EE_Pose].feature(
-            obs.normal_states[ObservationState.EE_Pose]
+        return self._feature_converter[State.EE_Pose].distance(
+            obs.normal_states[State.EE_Pose]
         )
 
     @cached_property
@@ -356,11 +534,11 @@ class P_C_NodeConverter:
 
 
 class P_C_Converter:
-    def __init__(self, dataset: ActionSpace, states: list[ObservationState]):
+    def __init__(self, dataset: ActionSpace, states: list[State]):
         self._node_converter: Dict[Task, P_C_NodeConverter] = {
             model: P_C_NodeConverter(model) for model in HRLHelper.models(dataset)
         }
-        self.states: list[ObservationState] = states
+        self.states: list[State] = states
 
     def partition_features(self, obs: HRLPolicyObservation) -> torch.Tensor:
         """Convert the observation into a feature vector for Partition C using the node converters."""
@@ -380,8 +558,8 @@ class P_C_Converter:
         for i, node_converter in enumerate(self._node_converter.items()):
             for state in node_converter[0].value.precondition:
                 if state.value.state_type == StateType.Pose:
-                    sub_states: list[ObservationState] = (
-                        ObservationState.from_pose_string(state.value.identifier)
+                    sub_states: list[State] = State.from_pose_string(
+                        state.value.identifier
                     )
                     for sub_state in sub_states:
                         index = self.states.index(sub_state)

@@ -44,7 +44,7 @@ class CalvinConfig(BaseEnvironmentConfig):
 
 
 class Calvin(BaseEnvironment):
-    def __init__(self, config=None, eval=False, **kwargs):
+    def __init__(self, config=None, eval=False, vis=True, **kwargs):
         if config is None:
             config = CalvinConfig(
                 task="Undefined",
@@ -63,7 +63,7 @@ class Calvin(BaseEnvironment):
         self.cameras = config.cameras
 
         self.env: CalvinEnvironment = get_env_from_cfg(
-            eval
+            eval, vis
         )  # Give the config to the env so that i can connect both config systems and remove the pain
         if self.env is None:
             raise RuntimeError("Could not create environment.")
@@ -83,7 +83,7 @@ class Calvin(BaseEnvironment):
     def update_prediction_marker(self, points: list):
         self.env.update_prediction_marker(points)
 
-    def step(self, action: np.ndarray, info: dict = None) -> tuple[CalvinObservation, float, bool, dict]:  # type: ignore
+    def step(self, action: np.ndarray, render: bool, info: dict = None) -> tuple[CalvinObservation, float, bool, dict]:  # type: ignore
         """
         Postprocess the action and execute it in the environment.
         Simple wrapper around _step, that provides the kwargs for
@@ -106,6 +106,7 @@ class Calvin(BaseEnvironment):
             delay_gripper=self.do_delay_gripper,
             scale_action=self.do_scale_action,
             policy_info=info,
+            render=render,
         )
 
     def _step(
@@ -115,6 +116,7 @@ class Calvin(BaseEnvironment):
         delay_gripper: bool = True,
         scale_action: bool = True,
         policy_info: dict = None,
+        render: bool = True,
     ) -> tuple[CalvinObservation, float, bool, dict]:  # type: ignore
         """
         Postprocess the action and execute it in the environment.
@@ -172,7 +174,8 @@ class Calvin(BaseEnvironment):
         # action_delayed[:3] *= 0.05
 
         obs, reward, done, info = self.env.step(action_delayed, action_mode)
-        self.env.render(obs, policy_info)
+        if render:
+            self.env.render(obs, policy_info)
         return obs, reward, done, info
 
     @staticmethod

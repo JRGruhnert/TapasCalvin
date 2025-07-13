@@ -1,0 +1,26 @@
+{
+    "action_space": "STATIC",
+    "state_space": "STATIC",
+    "batch_size": 128,
+    "mini_batch_size": 16,
+    "n_epochs": 10,
+    "lr_actor": 0.0003,
+    "lr_critic": 0.0003,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "eps_clip": 0.2,
+    "entropy_coef": 0.01,
+    "value_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "target_kl": 0.02,
+    "success_threshold": {
+        "Transform": 0.05,
+        "Quat": 0.1,
+        "Scalar": 0.05
+    },
+    "reward_scale": {
+        "Transform": 2.0,
+        "Quat": 1.0,
+        "Scalar": 2.0
+    }
+}

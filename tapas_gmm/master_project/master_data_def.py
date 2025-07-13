@@ -1,7 +1,7 @@
 from enum import Enum
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict
+from typing import Dict, Union
 from git import List
 import numpy as np
 
@@ -40,7 +40,7 @@ class StateSpace(Enum):
 
 class StateType(Enum):
     Pose = 0
-    Euler = 1
+    Transform = 1
     Quat = 2
     Scalar = 3
 
@@ -50,8 +50,8 @@ class StateInfo:
     identifier: str
     state_type: StateType
     state_space: StateSpace = StateSpace.UNUSED
-    min: float = 0.0
-    max: float = 1.0
+    min: float | np.ndarray = np.array([-1.0, -1.0, -1.0])
+    max: float | np.ndarray = np.array([1.0, 1.0, 1.0])
 
     def __eq__(self, other):
         # Always return False unless it's the same object
@@ -62,13 +62,29 @@ class StateInfo:
         return id(self)
 
 
-class ObservationState(Enum):
+class State(Enum):
     @classmethod
     def from_string(cls, name: str):
         for member in cls:
             if member.value.identifier in name:
                 return member
         raise NotImplementedError(f"Enum for {name} does not exist.")
+
+    @classmethod
+    def get_tp_by_index(
+        cls, index: int, split_pose: bool = False
+    ) -> Union["State", tuple["State", "State"]]:
+        """Get enum member by index"""
+        if index < 0 or index >= len(cls):
+            raise IndexError(f"Index {index} out of range for ObservationState.")
+        if split_pose:
+            # Return both transform and quat for pose states
+            return (
+                list(cls)[index + 10],
+                list(cls)[index + 20],
+            )  # transform and quat
+
+        return list(cls)[index]
 
     @classmethod
     def from_pose_string(cls, name: str) -> list:
@@ -98,6 +114,15 @@ class ObservationState(Enum):
             if state_info.state_space.value <= space_type.value:
                 count += 1
         return count
+
+    @classmethod
+    def list_by_state_space(cls, space_type: StateSpace) -> List["State"]:
+        states = []
+        for member in cls:
+            state_info = member.value
+            if state_info.state_space.value <= space_type.value:
+                states.append(member)
+        return states
 
     EE_Pose = StateInfo(
         identifier="ee_pose",
@@ -139,90 +164,78 @@ class ObservationState(Enum):
         identifier="block_pink_pose",
         state_type=StateType.Pose,
     )
-    EE_Euler = StateInfo(
+    EE_Transform = StateInfo(
         identifier="ee_euler",
-        state_type=StateType.Euler,
-        state_space=StateSpace.SMALL,
+        state_type=StateType.Transform,
+        state_space=StateSpace.STATIC,
     )
-    Slide_Euler = StateInfo(
+    Slide_Transform = StateInfo(
         identifier="base__slide_euler",
-        state_type=StateType.Euler,
-        state_space=StateSpace.SMALL,
+        state_type=StateType.Transform,
     )
-    Drawer_Euler = StateInfo(
+    Drawer_Transform = StateInfo(
         identifier="base__drawer_euler",
-        state_type=StateType.Euler,
-        state_space=StateSpace.SMALL,
+        state_type=StateType.Transform,
     )
-    Button_Euler = StateInfo(
+    Button_Transform = StateInfo(
         identifier="base__button_euler",
-        state_type=StateType.Euler,
-        state_space=StateSpace.SMALL,
+        state_type=StateType.Transform,
     )
-    Switch_Euler = StateInfo(
+    Switch_Transform = StateInfo(
         identifier="base__switch_euler",
-        state_type=StateType.Euler,
-        state_space=StateSpace.STATIC,
+        state_type=StateType.Transform,
     )
-    Lightbulb_Euler = StateInfo(
+    Lightbulb_Transform = StateInfo(
         identifier="lightbulb_euler",
-        state_type=StateType.Euler,
-        state_space=StateSpace.STATIC,
+        state_type=StateType.Transform,
     )
-    Led_Euler = StateInfo(
+    Led_Transform = StateInfo(
         identifier="led_euler",
-        state_type=StateType.Euler,
-        state_space=StateSpace.SMALL,
+        state_type=StateType.Transform,
     )
-    Red_Euler = StateInfo(
+    Red_Transform = StateInfo(
         identifier="block_red_euler",
-        state_type=StateType.Euler,
+        state_type=StateType.Transform,
         state_space=StateSpace.DYNAMIC,
     )
-    Blue_Euler = StateInfo(
+    Blue_Transform = StateInfo(
         identifier="block_blue_euler",
-        state_type=StateType.Euler,
+        state_type=StateType.Transform,
         state_space=StateSpace.DYNAMIC,
     )
-    Pink_Euler = StateInfo(
+    Pink_Transform = StateInfo(
         identifier="block_pink_euler",
-        state_type=StateType.Euler,
+        state_type=StateType.Transform,
         state_space=StateSpace.DYNAMIC,
     )
     EE_Quat = StateInfo(
         identifier="ee_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.SMALL,
+        state_space=StateSpace.STATIC,
     )
     Slide_Quat = StateInfo(
         identifier="base__slide_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.SMALL,
     )
     Drawer_Quat = StateInfo(
         identifier="base__drawer_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.SMALL,
     )
     Button_Quat = StateInfo(
         identifier="base__button_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.SMALL,
     )
     Switch_Quat = StateInfo(
         identifier="base__switch_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.STATIC,
     )
     Lightbulb_Quat = StateInfo(
         identifier="lightbulb_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.STATIC,
     )
     Led_Quat = StateInfo(
         identifier="led_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.SMALL,
     )
     Red_Quat = StateInfo(
         identifier="block_red_quat",
@@ -242,51 +255,51 @@ class ObservationState(Enum):
     EE_State = StateInfo(
         identifier="ee_state",
         state_type=StateType.Scalar,
-        min=-1.0,
+        min=0.0,
         max=1.0,
-        state_space=StateSpace.SMALL,
+        state_space=StateSpace.STATIC,
     )  # Gripper
     Slide_State = StateInfo(
         identifier="base__slide",
         state_type=StateType.Scalar,
         min=0.0,
         max=0.28,
-        state_space=StateSpace.SMALL,
+        state_space=StateSpace.STATIC,
     )
     Drawer_State = StateInfo(
         identifier="base__drawer",
         state_type=StateType.Scalar,
         min=0.0,
         max=0.22,
-        state_space=StateSpace.SMALL,
+        state_space=StateSpace.STATIC,
     )
     Button_State = StateInfo(
         identifier="base__button",
         state_type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        state_space=StateSpace.SMALL,
+        state_space=StateSpace.STATIC,
     )
     Switch_State = StateInfo(
         identifier="base__switch",
         state_type=StateType.Scalar,
         min=0.0,
         max=0.088,
-        state_space=StateSpace.STATIC,
+        state_space=StateSpace.SMALL,
     )
     Lightbulb_State = StateInfo(
         identifier="lightbulb",
         state_type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        state_space=StateSpace.STATIC,
+        state_space=StateSpace.SMALL,
     )
     Led_State = StateInfo(
         identifier="led",
         state_type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        state_space=StateSpace.SMALL,
+        state_space=StateSpace.STATIC,
     )
     Red_State = StateInfo(
         identifier="block_red",
@@ -313,7 +326,7 @@ class ObservationState(Enum):
 
 @dataclass
 class ModelInfo:
-    precondition: Dict[ObservationState, float | np.ndarray]
+    precondition: Dict[State, float | np.ndarray]
     action_space: ActionSpace = ActionSpace.STATIC
     reversed: bool = False
     ee_tp_start: np.ndarray = _origin_ee_tp_pose
@@ -344,28 +357,25 @@ class Task(Enum):
                 count += 1
         return count
 
+    @classmethod
+    def list_by_action_space(cls, action_space: ActionSpace) -> List["Task"]:
+        tasks = []
+        for member in cls:
+            model_info = member.value
+            if model_info.action_space == action_space:
+                tasks.append(member)
+        return tasks
+
     CloseDrawer = ModelInfo(
         precondition={
-            ObservationState.EE_State: ObservationState.EE_State.value.max,
-            ObservationState.EE_Pose: _origin_ee_tp_pose,
-            ObservationState.Drawer_State: ObservationState.Drawer_State.value.max,
+            State.EE_State: State.EE_State.value.max,
+            State.Drawer_State: State.Drawer_State.value.max,
         },
     )
     MoveToDoorLeftReversed = ModelInfo(
         precondition={
-            ObservationState.EE_State: ObservationState.EE_State.value.min,
-            ObservationState.EE_Pose: np.array(
-                [
-                    -0.24200995,
-                    0.03103676,
-                    0.57855496,
-                    0.72666244,
-                    0.6863869,
-                    0.02884163,
-                    -0.00169593,
-                ]
-            ),
-            ObservationState.Slide_State: ObservationState.Slide_State.value.max,
+            State.EE_State: State.EE_State.value.min,
+            State.Slide_State: State.Slide_State.value.max,
         },
         reversed=True,
         ee_hrl_start=np.array(
@@ -382,19 +392,8 @@ class Task(Enum):
     )
     MoveToDoorRightReversed = ModelInfo(
         precondition={
-            ObservationState.EE_State: ObservationState.EE_State.value.min,
-            ObservationState.EE_Pose: np.array(
-                [
-                    0.0446754,
-                    0.03459689,
-                    0.56971713,
-                    0.73415732,
-                    0.67768943,
-                    0.04181756,
-                    -0.00116969,
-                ]
-            ),
-            ObservationState.Slide_State: ObservationState.Slide_State.value.min,
+            State.EE_State: State.EE_State.value.min,
+            State.Slide_State: State.Slide_State.value.min,
         },
         reversed=True,
         ee_hrl_start=np.array(
@@ -411,19 +410,8 @@ class Task(Enum):
     )
     MoveToDrawerClosedReversed = ModelInfo(
         precondition={
-            ObservationState.EE_State: ObservationState.EE_State.value.min,
-            ObservationState.EE_Pose: np.array(
-                [
-                    0.1799327,
-                    -0.20690583,
-                    0.46871324,
-                    0.73168841,
-                    0.68082266,
-                    0.0325737,
-                    0.00717814,
-                ]
-            ),
-            ObservationState.Drawer_State: ObservationState.Drawer_State.value.min,
+            State.EE_State: State.EE_State.value.min,
+            State.Drawer_State: State.Drawer_State.value.min,
         },
         reversed=True,
         ee_hrl_start=np.array(
@@ -440,19 +428,8 @@ class Task(Enum):
     )
     MoveToDrawerOpenReversed = ModelInfo(
         precondition={
-            ObservationState.EE_State: ObservationState.EE_State.value.min,
-            ObservationState.EE_Pose: np.array(
-                [
-                    0.18521255,
-                    -0.43961252,
-                    0.43864139,
-                    0.73337219,
-                    0.67915659,
-                    0.02904117,
-                    0.00825612,
-                ]
-            ),
-            ObservationState.Drawer_State: ObservationState.Drawer_State.value.max,
+            State.EE_State: State.EE_State.value.min,
+            State.Drawer_State: State.Drawer_State.value.max,
         },
         reversed=True,
         ee_hrl_start=np.array(
@@ -469,33 +446,20 @@ class Task(Enum):
     )
     OpenDrawer = ModelInfo(
         precondition={
-            ObservationState.EE_State: ObservationState.EE_State.value.max,
-            ObservationState.EE_Pose: _origin_ee_tp_pose,
-            ObservationState.Drawer_State: ObservationState.Drawer_State.value.min,
+            State.EE_State: State.EE_State.value.max,
+            State.Drawer_State: State.Drawer_State.value.min,
         },
     )
     PressButton = ModelInfo(
         precondition={
-            ObservationState.EE_State: ObservationState.EE_State.value.max,
-            ObservationState.EE_Pose: _origin_ee_tp_pose,
-            ObservationState.Button_State: ObservationState.Button_State.value.min,
+            State.EE_State: State.EE_State.value.max,
+            State.Button_State: State.Button_State.value.min,
         },
     )
     PressButtonReversed = ModelInfo(
         precondition={
-            ObservationState.EE_State: ObservationState.EE_State.value.min,
-            ObservationState.EE_Pose: np.array(
-                [
-                    -0.11145425,
-                    -0.12517733,
-                    0.47878784,
-                    0.73138852,
-                    0.68118917,
-                    0.03111799,
-                    0.00915563,
-                ]
-            ),
-            ObservationState.Button_State: ObservationState.Button_State.value.max,
+            State.EE_State: State.EE_State.value.min,
+            State.Button_State: State.Button_State.value.max,
         },
         reversed=True,
         ee_hrl_start=np.array(
@@ -512,16 +476,14 @@ class Task(Enum):
     )
     SlideDoorLeft = ModelInfo(
         precondition={
-            ObservationState.EE_State: ObservationState.EE_State.value.max,
-            ObservationState.EE_Pose: _origin_ee_tp_pose,
-            ObservationState.Slide_State: ObservationState.Slide_State.value.min,
+            State.EE_State: State.EE_State.value.max,
+            State.Slide_State: State.Slide_State.value.min,
         },
     )
     SlideDoorRight = ModelInfo(
         precondition={
-            ObservationState.EE_State: ObservationState.EE_State.value.max,
-            ObservationState.EE_Pose: _origin_ee_tp_pose,
-            ObservationState.Slide_State: ObservationState.Slide_State.value.max,
+            State.EE_State: State.EE_State.value.max,
+            State.Slide_State: State.Slide_State.value.max,
         },
     )
 

@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 
 from tapas_gmm.master_project.master_data_def import StateType
 from tapas_gmm.master_project.master_encoder import (
-    EulerEncoder,
+    TransformEncoder,
     QuaternionEncoder,
     ScalarEncoder,
 )
@@ -18,13 +18,13 @@ class ActorCriticBase(nn.Module, ABC):
     @abstractmethod
     def forward(
         self, obs: dict[StateType, torch.Tensor], goal: dict[StateType, torch.Tensor]
-    ):
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         pass
 
     @abstractmethod
     def act(
         self, obs: dict[StateType, torch.Tensor], goal: dict[StateType, torch.Tensor]
-    ):
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         pass
 
     @abstractmethod
@@ -33,7 +33,7 @@ class ActorCriticBase(nn.Module, ABC):
         obs: dict[StateType, torch.Tensor],
         goal: dict[StateType, torch.Tensor],
         action: torch.Tensor,
-    ):
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         pass
 
 
@@ -51,7 +51,7 @@ class PPOActorCritic(ActorCriticBase):
 
         self.encoder_obs = nn.ModuleDict(
             {
-                StateType.Euler.name: EulerEncoder(h_dim_encoder),
+                StateType.Transform.name: TransformEncoder(h_dim_encoder),
                 StateType.Quat.name: QuaternionEncoder(h_dim_encoder),
                 StateType.Scalar.name: ScalarEncoder(h_dim_encoder),
             }
@@ -59,7 +59,7 @@ class PPOActorCritic(ActorCriticBase):
 
         self.encoder_goal = nn.ModuleDict(
             {
-                StateType.Euler.name: EulerEncoder(h_dim_encoder),
+                StateType.Transform.name: TransformEncoder(h_dim_encoder),
                 StateType.Quat.name: QuaternionEncoder(h_dim_encoder),
                 StateType.Scalar.name: ScalarEncoder(h_dim_encoder),
             }
@@ -67,13 +67,16 @@ class PPOActorCritic(ActorCriticBase):
 
         self.combined_feature_dim = h_dim_encoder * 2 * state_dim  # encoder count
 
+        # states werden encoded (quats, transforms, scalars) -> h_dim_encoder
+        # combined_feature_dim = 1920
+        # h_dim_encoder = 32 (encoded state size)
+        # state_dim = 30 (number of states) -> x2 für current und goal state
         self.actor = nn.Sequential(
             nn.Linear(self.combined_feature_dim, h_dim1),
             nn.Tanh(),
             nn.Linear(h_dim1, h_dim2),
             nn.Tanh(),
             nn.Linear(h_dim2, action_dim),
-            nn.Softmax(dim=-1),
         )
         # critic
         self.critic = nn.Sequential(
@@ -86,7 +89,7 @@ class PPOActorCritic(ActorCriticBase):
 
     def forward(
         self, obs: dict[StateType, torch.Tensor], goal: dict[StateType, torch.Tensor]
-    ):
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         # obs and goal are dicts with keys 'euler', 'quat', 'scalar'
 
         obs_encoded = [self.encoder_obs[k.name](v) for k, v in obs.items()]
@@ -121,9 +124,9 @@ class PPOActorCritic(ActorCriticBase):
 
     def act(
         self, obs: dict[StateType, torch.Tensor], goal: dict[StateType, torch.Tensor]
-    ):
-        prob, value = self.forward(obs, goal)
-        dist = Categorical(prob)
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        logits, value = self.forward(obs, goal)
+        dist = Categorical(logits=logits)
         action = dist.sample()  # shape: [B]
         logprob = dist.log_prob(action)  # shape: [B]
         return action, logprob, value
@@ -132,10 +135,10 @@ class PPOActorCritic(ActorCriticBase):
         self,
         obs: dict[StateType, torch.Tensor],
         goal: dict[StateType, torch.Tensor],
-        action: int,
-    ):
-        prob, value = self.forward(obs, goal)
-        dist = Categorical(prob)
+        action: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        logits, value = self.forward(obs, goal)
+        dist = Categorical(logits=logits)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
 

@@ -74,6 +74,7 @@ setuptools.setup(
             "tapas-eval = tapas_gmm.master_evaluate:entry_point",
             "hrl-train = tapas_gmm.master_train_hrl:entry_point",
             "hrl-eval = tapas_gmm.master_evaluate_hrl:entry_point",
+            "hrl-plot = tapas_gmm.master_plot:entry_point",
             "tapas-kp-encode = tapas_gmm.kp_encode_trajectories:entry_point",
             "tapas-pretrain = tapas_gmm.pretrain:entry_point",
         ]

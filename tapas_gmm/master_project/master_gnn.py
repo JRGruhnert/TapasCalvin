@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tapas_gmm.master_project.master_encoder import (
-    EulerEncoder,
+    TransformEncoder,
     QuaternionEncoder,
     ScalarEncoder,
 )
@@ -98,27 +98,27 @@ class HRL_GNN2(nn.Module):
 
     def __init__(
         self,
-        num_states: int,
+        state_dim: int,
         dim_a: int,
-        dim_c: int,
+        action_dim: int,
         d_linear: int = 32,
     ):
         super().__init__()
         # Wir hängen an den d_linear-Vektor ein One-Hot der Länge num_states an → ergibt d_B:
-        self.feature_dim = d_linear + num_states  # +1 für One-Hot
+        self.feature_dim = d_linear + state_dim  # +1 für One-Hot
 
-        self.num_states = num_states
+        self.num_states = state_dim
 
         # self.one_hot = torch.eye(num_states)
-        self.register_buffer("one_hot", torch.eye(num_states))  # Ensures gradient flow
+        self.register_buffer("one_hot", torch.eye(state_dim))  # Ensures gradient flow
 
         self.encoder_a = nn.Linear(dim_a, self.feature_dim)
 
-        self.encoder_b_euler = EulerEncoder(d_linear)
+        self.encoder_b_euler = TransformEncoder(d_linear)
         self.encoder_b_quat = QuaternionEncoder(d_linear)
         self.encoder_b_scalar = ScalarEncoder(d_linear)
 
-        self.encoder_c = nn.Linear(dim_c, self.feature_dim)
+        self.encoder_c = nn.Linear(action_dim, self.feature_dim)
 
         # self.d_C = dim_c_out  # Policy-Knoten-Embedding-Dimension
         # 5) GAT A→B: in_channels=(d_A, d_B) → out_channels = d_B

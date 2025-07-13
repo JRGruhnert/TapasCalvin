@@ -53,7 +53,7 @@ class Config:
 
 
 def main(config: Config) -> None:
-    env = Calvin(config=config.env_config, eval=False)
+    env = Calvin(config=config.env_config, eval=False, vis=False)
     keyboard_obs = KeyboardObserver()
     policy = ManualCalvinPolicy(config, env, keyboard_obs)
     assert config.data_naming.data_root is not None
@@ -97,7 +97,9 @@ def main(config: Config) -> None:
                         obs
                     )  # Action is relative
                     try:
-                        next_obs, step_reward, env_done, _ = env.step(prediction)
+                        next_obs, step_reward, env_done, _ = env.step(
+                            prediction, render=True
+                        )
                     except RuntimeError as e:
                         logger.error(f"Raw action: {prediction}")
                         logger.error(f"Error: {e}")

@@ -14,11 +14,11 @@ from tapas_gmm.master_project.master_sample import (
 )
 from tapas_gmm.policy.gmm import GMMPolicy
 from tapas_gmm.master_project.master_converter import (
-    FeatureConverter,
+    StateConverter,
     P_C_GaussianConverter,
     P_C_Converter,
     P_C_NodeConverter,
-    P_C_ScalarConverter,
+    ScalarDifference,
 )
 import wandb
 from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig

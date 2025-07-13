@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from tapas_gmm.master_project.master_data_def import (
-    ObservationState,
+    State,
     _origin_ee_tp_pose,
 )
 from tapas_gmm.utils.observation import (
@@ -99,35 +99,30 @@ class HRLPolicyObservation(object):
         self,
         obs: CalvinObservation,
     ):
-        self._pose_states: dict[ObservationState, float | np.ndarray] = {
-            ObservationState.EE_Pose: obs.ee_pose,
+        self._pose_states: dict[State, float | np.ndarray] = {
+            State.EE_Pose: obs.ee_pose,
+            **{State.from_string(f"{k}_pose"): v for k, v in obs.object_poses.items()},
+        }
+
+        self._euler_states: dict[State, float | np.ndarray] = {
+            State.EE_Transform: obs.ee_pose[:3],
             **{
-                ObservationState.from_string(f"{k}_pose"): v
+                State.from_string(f"{k}_euler"): v[:3]
                 for k, v in obs.object_poses.items()
             },
         }
 
-        self._euler_states: dict[ObservationState, float | np.ndarray] = {
-            ObservationState.EE_Euler: obs.ee_pose[:3],
+        self._quat_states: dict[State, float | np.ndarray] = {
+            State.EE_Quat: obs.ee_pose[-4:],
             **{
-                ObservationState.from_string(f"{k}_euler"): v[:3]
+                State.from_string(f"{k}_quat"): v[-4:]
                 for k, v in obs.object_poses.items()
             },
         }
 
-        self._quat_states: dict[ObservationState, float | np.ndarray] = {
-            ObservationState.EE_Quat: obs.ee_pose[-4:],
-            **{
-                ObservationState.from_string(f"{k}_quat"): v[-4:]
-                for k, v in obs.object_poses.items()
-            },
-        }
-
-        self._scalar_states: dict[ObservationState, float] = {
-            ObservationState.EE_State: obs.ee_state,
-            **{
-                ObservationState.from_string(k): v for k, v in obs.object_states.items()
-            },
+        self._scalar_states: dict[State, float] = {
+            State.EE_State: obs.ee_state,
+            **{State.from_string(k): v for k, v in obs.object_states.items()},
         }
 
         self._pose_keys = list(self._pose_states.keys())
@@ -138,42 +133,42 @@ class HRLPolicyObservation(object):
         self._obs: CalvinObservation = obs
 
     @property
-    def normal_states(self) -> dict[ObservationState, float | np.ndarray]:
+    def normal_states(self) -> dict[State, float | np.ndarray]:
         """Returns the normal states of the observation."""
         return {**self._pose_states, **self._scalar_states}
 
     @property
-    def split_states(self) -> dict[ObservationState, float | np.ndarray]:
+    def split_states(self) -> dict[State, float | np.ndarray]:
         """Returns the split states of the observation."""
         return {**self._euler_states, **self._quat_states, **self._scalar_states}
 
     @property
-    def normal_keys(self) -> list[ObservationState]:
+    def normal_keys(self) -> list[State]:
         """Returns the keys of the normal states."""
         return self._pose_keys + self._scalar_keys
 
     @property
-    def split_keys(self) -> list[ObservationState]:
+    def split_keys(self) -> list[State]:
         """Returns the keys of the split states."""
         return self._euler_keys + self._quat_keys + self._scalar_keys
 
     @property
-    def euler_states(self) -> dict[ObservationState, np.ndarray]:
+    def transform_states(self) -> dict[State, np.ndarray]:
         """Returns the euler states of the observation."""
         return self._euler_states
 
     @property
-    def quat_states(self) -> dict[ObservationState, np.ndarray]:
+    def quat_states(self) -> dict[State, np.ndarray]:
         """Returns the quaternion states of the observation."""
         return self._quat_states
 
     @property
-    def pose_states(self) -> dict[ObservationState, np.ndarray]:
+    def pose_states(self) -> dict[State, np.ndarray]:
         """Returns the pose states of the observation."""
         return self._pose_states
 
     @property
-    def scalar_states(self) -> dict[ObservationState, float]:
+    def scalar_states(self) -> dict[State, float]:
         """Returns the scalar states of the observation."""
         return self._scalar_states
 

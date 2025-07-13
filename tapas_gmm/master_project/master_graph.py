@@ -2,11 +2,15 @@ from typing import Dict
 import torch
 from torch_geometric.data import HeteroData
 
-from tapas_gmm.master_project.master_data_def import ActionSpace, StateSpace
+from tapas_gmm.master_project.master_data_def import (
+    ActionSpace,
+    State,
+    StateSpace,
+    Task,
+)
 from tapas_gmm.master_project.master_observation import HRLPolicyObservation
 from tapas_gmm.master_project.master_converter import (
-    P_A_Converter,
-    P_B_Converter,
+    NodeConverter,
     P_C_Converter,
 )
 
@@ -102,23 +106,19 @@ class GraphData(HeteroData):
 class Graph:
     def __init__(
         self,
-        goal: HRLPolicyObservation,
         action_space: ActionSpace,
         state_space: StateSpace,
     ):
-        self.a_converter = P_A_Converter(goal, state_space)
-        self.b_converter = P_B_Converter(state_space)
-        self.c_converter = P_C_Converter(
-            action_space, self.b_converter.get_state_list(goal)
-        )
+        state_list = State.list_by_state_space(state_space)
+        task_list = Task.list_by_action_space(action_space)
+        self.converter = NodeConverter(state_list, task_list, True)
         self.data = GraphData()
         self.data.set_bc_edges(self.c_converter.bc_edges)
 
-    def goal_update(self, goal: HRLPolicyObservation) -> None:
-        self.a_converter = P_A_Converter(goal)
-
-    def state_update(self, obs: HRLPolicyObservation) -> GraphData:
-        self.data.set_a(self.a_converter.partition_features(obs))
-        self.data.set_b(self.b_converter.partition_features(obs))
-        self.data.set_c(self.c_converter.partition_features(obs))
+    def update(
+        self, current: HRLPolicyObservation, goal: HRLPolicyObservation
+    ) -> GraphData:
+        self.data.set_a(self.converter.tensor(current))
+        self.data.set_b(self.converter.tensor_dict(current))
+        self.data.set_c(self.converter.partition_features(current))
         return self.data

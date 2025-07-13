@@ -559,7 +559,7 @@ class GMMPolicy(Policy):
         )
         # Split EE part into state and action if needed
         if self._model_is_txdx and self._time_based:
-            print("Prediction is TXDX model.")
+            # print("Prediction is TXDX model.")
             # TXDX model, ie contains time, state and action. Can use either x or dx.
             assert ee_prediction.shape == (state_dim + action_dim,)
 
@@ -571,12 +571,12 @@ class GMMPolicy(Policy):
                 )
             ]
         else:
-            print("Prediction is not TXDX model.")
+            # print("Prediction is not TXDX model.")
             ee_dim = action_dim if self._prediction_is_delta_pose else state_dim
             assert ee_prediction.shape == (ee_dim,)
 
         if self._prediction_is_delta_pose:
-            print("Prediction is delta pose.")
+            # print("Prediction is delta pose.")
             if self._model_factorizes_action:
                 # Prediction is factorized -> reassemble delta pose
                 pos_dir, rot_dir, pos_mag, rot_mag = np.split(ee_prediction, (3, 6, 7))
@@ -609,7 +609,7 @@ class GMMPolicy(Policy):
                     ee_pose, pos_delta, rot_delta
                 )
         else:  # prediction is absolute pose -> get finite difference
-            print("Prediction is absolute pose.")
+            # print("Prediction is absolute pose.")
             pos_delta, rot_delta = self._pose_to_pose_delta(ee_pose, ee_prediction)
         if not self._model_contains_rotation:
             rot_delta = zero_quat
