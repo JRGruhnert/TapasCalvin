@@ -73,9 +73,9 @@ class Calvin(BaseEnvironment):
         self.env.close()
 
     def reset(
-        self, scene_obs=None, static=True
+        self, scene_obs=None, static=True, settle_time=20
     ) -> tuple[CalvinObservation, float, bool, dict]:
-        return self.env.reset(scene_obs=scene_obs, static=static)
+        return self.env.reset(scene_obs=scene_obs, static=static, settle_time= settle_time)
 
     def reset_to_demo(self, path: str) -> CalvinObservation:
         raise NotImplementedError("Not implemented yet")

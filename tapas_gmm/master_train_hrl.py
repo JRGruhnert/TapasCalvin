@@ -43,7 +43,7 @@ def serialize(obj):
 
 def train_agent(
     is_baseline: bool = True,
-    n_episodes: int = 20,  # Number of episodes to train
+    n_episodes: int = 25,  # Number of episodes to train
     horizon: int = 6,  # Max steps the agent can take in one task
     saving_path: str = "results/",
     vis: bool = False,  # Visualize the environment
@@ -107,7 +107,7 @@ def train_agent(
         batch_step = 0
         while batch_step < parameters.batch_size:
             # print(f"Batch: {batch_step}/{n_steps}")
-            random_obs, _, _, _ = env.reset()
+            random_obs, _, _, _ = env.reset(settle_time=0)
             # print("Sampling Precondition")
             scene_starting_obs = sample_pre_condition(
                 random_obs.scene_obs, state_space=parameters.state_space
@@ -118,9 +118,9 @@ def train_agent(
                 scene_starting_obs, state_space=parameters.state_space
             )
             # Reset environment twice to get CalvinObservation (maybe find a better way)
-            calvin_goal_obs, _, _, _ = env.reset(scene_goal_obs)
+            calvin_goal_obs, _, _, _ = env.reset(scene_goal_obs, static=False, settle_time=50)
             hrl_goal_obs = HRLPolicyObservation(calvin_goal_obs)
-            calvin_obs, _, _, _ = env.reset(scene_starting_obs)
+            calvin_obs, _, _, _ = env.reset(scene_starting_obs, static=False, settle_time=50)
             hrl_obs = HRLPolicyObservation(calvin_obs)
             viz_dict: Dict[str, bool] = {
                 key.name: value == hrl_obs.scalar_states[key]

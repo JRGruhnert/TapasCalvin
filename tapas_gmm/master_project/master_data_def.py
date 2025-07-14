@@ -23,6 +23,11 @@ _origin_obj_tp_pose = np.array(
 )
 
 
+class RewardMode(Enum):
+    SPARSE = 0
+    RANGE = 1
+    ONOFF = 2
+
 class ActionSpace(Enum):
     SMALL = "small"
     STATIC = "static"
@@ -31,11 +36,9 @@ class ActionSpace(Enum):
 
 
 class StateSpace(Enum):
-    ALWAYS = 0
-    SMALL = 1
-    STATIC = 2
-    DYNAMIC = 3
-    UNUSED = 4
+    STATIC = 0
+    DYNAMIC = 1
+    UNUSED = 2
 
 
 class StateType(Enum):
@@ -285,14 +288,12 @@ class State(Enum):
         state_type=StateType.Scalar,
         min=0.0,
         max=0.088,
-        state_space=StateSpace.SMALL,
     )
     Lightbulb_State = StateInfo(
         identifier="lightbulb",
         state_type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        state_space=StateSpace.SMALL,
     )
     Led_State = StateInfo(
         identifier="led",

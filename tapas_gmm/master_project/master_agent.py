@@ -16,13 +16,14 @@ from tapas_gmm.master_project.master_data_def import (
     StateSpace,
     StateType,
     Task,
+    RewardMode
 )
-
 
 @dataclass
 class RLConfig:
     action_space: ActionSpace = ActionSpace.STATIC
-    state_space: StateSpace = StateSpace.STATIC
+    state_space: StateSpace = StateSpace.DYNAMIC
+    reward_mode: RewardMode = RewardMode.SPARSE
     batch_size: int = 2048  # 1024 How many steps to collect before updating the policy
     mini_batch_size: int = 64  # How many steps to use in each mini-batch
     n_epochs: int = 50  # How many passes over the collected batch per update
@@ -356,18 +357,25 @@ class Agent(ABC):
         for key, value in next_dist.items():
             if value > self.parameters.success_threshold[key.value.state_type]:
                 goal_reached = False
-                # print(
-                #    f"Goal not reached for {key.name}: {value} > {self.parameters.success_threshold[key.value.state_type]}"
-                # )
-                # break
+                #print(
+                #    f"Goal not reached for {key.name}: {value}"
+                #)
+                #break
 
         # If goal is reached, give a large reward and mark as terminal
         if goal_reached:
             return self.success_step(reward=100.0)
         elif last_step:
+            if self.parameters.reward_mode == RewardMode.SPARSE:
+                return self.failed_step(reward=0.0)
             return self.failed_step(reward=-10.0)
         else:
-            step_reward = self.difference_reward(prev_dist, next_dist)
+            if self.parameters.reward_mode == RewardMode.SPARSE:
+                return self.normal_step(reward=0.0)
+            elif self.parameters.reward_mode == RewardMode.RANGE:
+                step_reward = self.difference_reward(prev_dist, next_dist)
+            else:
+                step_reward = self.on_off_reward(prev_dist, next_dist)
             step_reward *= 10  # The reward is between -1 and 1 -> -10 and 10
             return self.normal_step(reward=step_reward)
 
