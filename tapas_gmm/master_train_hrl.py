@@ -42,7 +42,7 @@ def serialize(obj):
 
 
 def train_agent(
-    is_baseline: bool = True,
+    is_baseline: bool = False,
     n_episodes: int = 25,  # Number of episodes to train
     horizon: int = 6,  # Max steps the agent can take in one task
     saving_path: str = "results/",
@@ -118,9 +118,13 @@ def train_agent(
                 scene_starting_obs, state_space=parameters.state_space
             )
             # Reset environment twice to get CalvinObservation (maybe find a better way)
-            calvin_goal_obs, _, _, _ = env.reset(scene_goal_obs, static=False, settle_time=50)
+            calvin_goal_obs, _, _, _ = env.reset(
+                scene_goal_obs, static=False, settle_time=50
+            )
             hrl_goal_obs = HRLPolicyObservation(calvin_goal_obs)
-            calvin_obs, _, _, _ = env.reset(scene_starting_obs, static=False, settle_time=50)
+            calvin_obs, _, _, _ = env.reset(
+                scene_starting_obs, static=False, settle_time=50
+            )
             hrl_obs = HRLPolicyObservation(calvin_obs)
             viz_dict: Dict[str, bool] = {
                 key.name: value == hrl_obs.scalar_states[key]

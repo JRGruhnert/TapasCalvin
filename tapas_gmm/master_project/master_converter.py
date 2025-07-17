@@ -305,19 +305,20 @@ class NodeConverter:
         features: list[np.ndarray] = []
         for task in self.tasks:
             task_features: list[float] = []
-            tp_dict = HRLHelper.get_tp_from_task(task)
+            tp_dict = HRLHelper.get_tp_from_task(task, split_pose=True)
             for key, converter in self.converter.items():
                 if key in tp_dict:
                     # Use the task-specific value if available
-                    task_value = converter.value(tp_dict[key])
+                    task_value = converter.distance(
+                        current.split_states[key], tp_dict[key]
+                    )
                 else:
                     # Empty value if not specified
-                    task_value = self.ignore_converter.value(current.split_states[key])
+                    task_value = self.ignore_converter.distance(
+                        current.split_states[key], current.split_states[key]
+                    )
 
-                if isinstance(task_value, np.ndarray):
-                    task_features.append(task_value)
-                else:
-                    task_features.append(np.array([task_value]))
+                task_features.append(task_value)
             features.append(np.array(task_features))
         return torch.from_numpy(np.stack(features, axis=0)).float()
 
@@ -331,28 +332,20 @@ class EdgeConverter:
         self.active_tasks = active_tasks
 
     def ab_edges(self) -> torch.Tensor:
-        """
-        Returns the edges between partitions A and B.
-        Each edge is represented as a tuple (source, target).
-        """
-        edge_list = []
-        for i, state in enumerate(self.active_states):
-            for j, task in enumerate(self.active_tasks):
-                if state in task.value.precondition:
-                    edge_list.append((i, j))
-        return torch.tensor(edge_list, dtype=torch.long)
+        num_states = len(self.active_states)
+        src = torch.arange(num_states).unsqueeze(1).repeat(1, num_states).flatten()
+        dst = torch.arange(num_states).repeat(num_states)
+        return torch.stack([src, dst], dim=0)
 
     def bc_edges(self) -> torch.Tensor:
-        """
-        Returns the edges between partitions B and C.
-        Each edge is represented as a tuple (source, target).
-        """
         edge_list = []
-        for i, task in enumerate(self.active_tasks):
-            for j, state in enumerate(self.active_states):
-                if state in task.value.precondition:
-                    edge_list.append((i, j))
-        return torch.tensor(edge_list, dtype=torch.long)
+        for task_idx, task in enumerate(self.active_tasks):
+            tp_dict = HRLHelper.get_tp_from_task(task, split_pose=True)
+            for state_idx, state in enumerate(self.active_states):
+                if state in tp_dict:
+                    # connect B-node b_idx to C-node c_idx
+                    edge_list.append((state_idx, task_idx))
+        return torch.tensor(edge_list, dtype=torch.long).t()
 
 
 class P_C_GaussianConverter(StateConverter):

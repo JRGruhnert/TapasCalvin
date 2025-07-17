@@ -2,6 +2,8 @@ from loguru import logger
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tapas_gmm.master_project.master_baseline import ActorCriticBase
+from tapas_gmm.master_project.master_data_def import StateType
 from tapas_gmm.master_project.master_encoder import (
     TransformEncoder,
     QuaternionEncoder,
@@ -11,41 +13,50 @@ from tapas_gmm.master_project.master_graph import GraphData
 from torch_geometric.nn import GATv2Conv
 
 
-class HRL_GNN(nn.Module):
+class HRL_GNN(ActorCriticBase):
 
     def __init__(
         self,
-        num_states: int,
-        d_linear: int = 32,
-        dim_c_out: int = 32,
+        state_dim: int,
+        action_dim: int,
+        h_dim_encoder: int = 32,
+        h_dim1: int = 256,
+        h_dim2: int = 64,
     ):
         super().__init__()
-        # Wir hängen an den d_linear-Vektor ein One-Hot der Länge num_states an → ergibt d_B:
-        self.d_B = d_linear + num_states  # +1 für One-Hot
+
+        self.encoder_obs = nn.ModuleDict(
+            {
+                StateType.Transform.name: TransformEncoder(h_dim_encoder),
+                StateType.Quat.name: QuaternionEncoder(h_dim_encoder),
+                StateType.Scalar.name: ScalarEncoder(h_dim_encoder),
+            }
+        )
+
+        self.encoder_goal = nn.ModuleDict(
+            {
+                StateType.Transform.name: TransformEncoder(h_dim_encoder),
+                StateType.Quat.name: QuaternionEncoder(h_dim_encoder),
+                StateType.Scalar.name: ScalarEncoder(h_dim_encoder),
+            }
+        )
 
         # self.one_hot = torch.eye(num_states)
-        self.register_buffer("one_hot", torch.eye(num_states))  # Ensures gradient flow
+        self.register_buffer("one_hot", torch.eye(state_dim))  # Ensures gradient flow
 
-        self.encoder_euler = nn.Linear(3, d_linear)
-        self.encoder_quat = nn.Linear(4, d_linear)
-        self.encoder_scalar = nn.Linear(1, d_linear)
-
-        self.encoder_p_a = nn.Linear(-1, self.d_B)
-
-        self.d_C = dim_c_out  # Policy-Knoten-Embedding-Dimension
         # 5) GAT A→B: in_channels=(d_A, d_B) → out_channels = d_B
         self.gat_ab = GATv2Conv(
-            in_channels=(-1, self.d_B),
-            out_channels=self.d_B,
+            in_channels=h_dim_encoder,
+            out_channels=state_dim * 2,
         )
         # 6) GAT B→C: in_channels=(d_B, d_C) → out_channels = d_C
         self.gat_bc = GATv2Conv(
-            in_channels=(self.d_B, -1),
-            out_channels=self.d_C,
+            in_channels=state_dim * 2,
+            out_channels=h_dim2,
         )
 
         # 7) Finaler Kopf: d_C → 1 Logit pro Policy-Knoten
-        self.policy_head = nn.Linear(self.d_C, 1)
+        self.policy_head = nn.Linear(h_dim2, 1)
 
     def forward(self, data: GraphData) -> tuple[int, torch.Tensor]:
         b_scalar = self.encoder_scalar(data.b_scalar)

@@ -21,24 +21,8 @@ class ActorCriticBase(nn.Module, ABC):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         pass
 
-    @abstractmethod
-    def act(
-        self, obs: dict[StateType, torch.Tensor], goal: dict[StateType, torch.Tensor]
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        pass
-
-    @abstractmethod
-    def evaluate(
-        self,
-        obs: dict[StateType, torch.Tensor],
-        goal: dict[StateType, torch.Tensor],
-        action: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        pass
-
 
 class PPOActorCritic(ActorCriticBase):
-
     def __init__(
         self,
         state_dim: int,
@@ -141,5 +125,4 @@ class PPOActorCritic(ActorCriticBase):
         dist = Categorical(logits=logits)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
-
         return action_logprobs, value, dist_entropy

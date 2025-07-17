@@ -4,6 +4,7 @@ from typing import Dict
 import torch
 from torch import nn
 import numpy as np
+from tapas_gmm.master_project.master_ppo_gnn import Master_GNN_PPO
 from tapas_gmm.utils.select_gpu import device
 from tapas_gmm.master_project.master_gnn import HRL_GNN, HRL_GNN2
 from tapas_gmm.master_project.master_graph import Graph
@@ -16,15 +17,18 @@ from tapas_gmm.master_project.master_data_def import (
     StateSpace,
     StateType,
     Task,
-    RewardMode
+    RewardMode,
 )
+
 
 @dataclass
 class RLConfig:
     action_space: ActionSpace = ActionSpace.STATIC
-    state_space: StateSpace = StateSpace.DYNAMIC
+    state_space: StateSpace = StateSpace.STATIC
     reward_mode: RewardMode = RewardMode.SPARSE
-    batch_size: int = 2048  # 1024 How many steps to collect before updating the policy
+    batch_size: int = (
+        2048  # 2048 1024 How many steps to collect before updating the policy
+    )
     mini_batch_size: int = 64  # How many steps to use in each mini-batch
     n_epochs: int = 50  # How many passes over the collected batch per update
     lr_actor: float = 0.0003  # Step size for actor optimizer
@@ -62,6 +66,8 @@ class RolloutBuffer:
         self.goal_dict = {
             k: [] for k in [StateType.Transform, StateType.Quat, StateType.Scalar]
         }
+
+        self.c = []
         self.logprobs = []
         self.rewards = []
         self.state_values = []
@@ -73,6 +79,7 @@ class RolloutBuffer:
         self.rewards.clear()
         self.state_values.clear()
         self.is_terminals.clear()
+        self.c.clear()
 
         for k in self.obs_dict:
             self.obs_dict[k].clear()
@@ -102,6 +109,7 @@ class RolloutBuffer:
             if isinstance(self.actions[0], torch.Tensor)
             else np.array(self.actions)
         )
+        data["c"] = torch.stack(self.c).cpu().numpy()
         data["logprobs"] = torch.tensor(self.logprobs).cpu().numpy()
         data["rewards"] = np.array(self.rewards)
         data["state_values"] = torch.tensor(self.state_values).cpu().numpy()
@@ -175,6 +183,16 @@ class Agent(ABC):
             returns, dtype=torch.float32
         )
 
+    @abstractmethod
+    def call_evaluate(
+        self,
+        obs: dict[StateType, torch.Tensor],
+        goal: dict[StateType, torch.Tensor],
+        action: torch.Tensor,
+        c: torch.Tensor = None,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        pass
+
     def update(self):
         advantages, rewards = self.compute_gae(
             self.buffer.rewards, self.buffer.state_values, self.buffer.is_terminals
@@ -191,6 +209,12 @@ class Agent(ABC):
             k: torch.stack(v, dim=0).detach().to(device)
             for k, v in self.buffer.goal_dict.items()
         }
+
+        if len(self.buffer.c) == 0:
+            # No C‑nodes in this batch—create an “empty batch” of shape [0, D]
+            old_c = None
+        else:
+            old_c = torch.stack(self.buffer.c, dim=0).detach().to(device)
 
         old_actions = (
             torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
@@ -218,10 +242,35 @@ class Agent(ABC):
                 mb_advantages = advantages[mb_idx]
                 mb_rewards = rewards[mb_idx]
 
-                # Evaluate policy
-                logprobs, state_values, dist_entropy = self.policy_new.evaluate(
-                    mb_obs, mb_goal, mb_actions
-                )
+                if old_c is None:
+                    # Evaluate policy
+                    logprobs, state_values, dist_entropy = self.call_evaluate(
+                        mb_obs, mb_goal, mb_actions
+                    )
+                else:
+                    # For now I loop over the minibatch
+                    # Here is optimization potential but for this project it shouldnt matter that much
+                    logprobs_list = []
+                    state_values_list = []
+                    dist_entropy_list = []
+
+                    for i in range(mb_idx.shape[0]):
+                        obs_i = {k: v[mb_idx[i]] for k, v in old_obs.items()}
+                        goal_i = {k: v[mb_idx[i]] for k, v in old_goal.items()}
+
+                        logprob_i, value_i, entropy_i = self.call_evaluate(
+                            obs_i, goal_i, mb_actions[i], old_c[mb_idx[i]]
+                        )
+
+                        logprobs_list.append(logprob_i.unsqueeze(0))
+                        state_values_list.append(value_i.unsqueeze(0))
+                        dist_entropy_list.append(entropy_i)
+
+                    # Concatenate tensors to simulate a batch
+                    logprobs = torch.cat(logprobs_list, dim=0)
+                    state_values = torch.cat(state_values_list, dim=0)
+                    dist_entropy = torch.stack(dist_entropy_list).mean()
+
                 state_values = torch.squeeze(state_values)
 
                 # Ratios
@@ -357,10 +406,10 @@ class Agent(ABC):
         for key, value in next_dist.items():
             if value > self.parameters.success_threshold[key.value.state_type]:
                 goal_reached = False
-                #print(
+                # print(
                 #    f"Goal not reached for {key.name}: {value}"
-                #)
-                #break
+                # )
+                # break
 
         # If goal is reached, give a large reward and mark as terminal
         if goal_reached:
@@ -383,8 +432,12 @@ class Agent(ABC):
 class PPOAgent(Agent):
     def __init__(self, parameters: RLConfig):
         super().__init__(parameters)
-        self.policy_new = PPOActorCritic(self.state_dim, self.action_dim)
-        self.policy_old = PPOActorCritic(self.state_dim, self.action_dim)
+        self.policy_new: PPOActorCritic = PPOActorCritic(
+            self.state_dim, self.action_dim
+        )
+        self.policy_old: PPOActorCritic = PPOActorCritic(
+            self.state_dim, self.action_dim
+        )
         self.policy_old.load_state_dict(self.policy_new.state_dict())
         self.optimizer = torch.optim.Adam(
             [
@@ -402,8 +455,7 @@ class PPOAgent(Agent):
     def act(self, obs: HRLPolicyObservation, goal: HRLPolicyObservation) -> int:
         obs_dict = self.converter.tensor_dict_values(obs)
         goal_dict = self.converter.tensor_dict_values(goal)
-        # print(f"Obs Dict: {obs_dict}")
-        # print(f"Goal Dict: {goal_dict}")
+
         with torch.no_grad():
             action, action_logprob, state_val = self.policy_old.act(obs_dict, goal_dict)
 
@@ -414,6 +466,15 @@ class PPOAgent(Agent):
 
         return action.item()
 
+    def call_evaluate(
+        self,
+        obs: dict[StateType, torch.Tensor],
+        goal: dict[StateType, torch.Tensor],
+        action: torch.Tensor,
+        c: torch.Tensor = None,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        return self.policy_new.evaluate(obs, goal, action)
+
 
 class GNNAgent(Agent):
     def __init__(self, parameters: RLConfig):
@@ -422,15 +483,11 @@ class GNNAgent(Agent):
             action_space=self.parameters.action_space,
             state_space=self.parameters.state_space,
         )
-        self.policy_new = HRL_GNN2(
-            state_dim=self.state_dim,
-            dim_a=self.graph.a_converter.num_features(goal),
-            action_dim=self.action_dim,
+        self.policy_new: Master_GNN_PPO = Master_GNN_PPO(
+            self.state_dim, self.action_dim
         )
-        self.policy_old = HRL_GNN2(
-            state_dim=self.state_dim,
-            dim_a=self.graph.a_converter.num_features(goal),
-            action_dim=self.action_dim,
+        self.policy_old: Master_GNN_PPO = Master_GNN_PPO(
+            self.state_dim, self.action_dim
         )
         self.policy_old.load_state_dict(self.policy_new.state_dict())
         self.optimizer = torch.optim.Adam(
@@ -446,12 +503,24 @@ class GNNAgent(Agent):
             ]
         )
 
-    def reset(self, goal: HRLPolicyObservation):
-        """Reset the agent with a new goal."""
-        self.goal = goal
-        self.graph.goal_update(goal)
+    def act(self, current: HRLPolicyObservation, goal: HRLPolicyObservation) -> int:
+        self.graph.update(current, goal)
+        with torch.no_grad():
+            action, action_logprob, state_val = self.policy_old.act(self.graph)
 
-    def act(self, current: HRLPolicyObservation) -> int:
-        self.graph.update(current)
-        self.action, self.logprob = self.policy_new.forward(self.graph.data)
-        return self.action
+        self.buffer.c.append(self.graph.c)
+        self.buffer.store_dicts(self.graph.b, self.graph.a)
+        self.buffer.actions.append(action)
+        self.buffer.logprobs.append(action_logprob)
+        self.buffer.state_values.append(state_val)
+        return action.item()
+
+    def call_evaluate(
+        self,
+        obs: dict[StateType, torch.Tensor],
+        goal: dict[StateType, torch.Tensor],
+        action: torch.Tensor,
+        c: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        self.graph.overwrite(goal, obs, c)
+        return self.policy_new.evaluate(self.graph, action)

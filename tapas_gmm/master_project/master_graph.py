@@ -1,24 +1,23 @@
 from typing import Dict
 import torch
-from torch_geometric.data import HeteroData
-
 from tapas_gmm.master_project.master_data_def import (
     ActionSpace,
     State,
     StateSpace,
+    StateType,
     Task,
 )
+from tapas_gmm.master_project.master_helper import HRLHelper
 from tapas_gmm.master_project.master_observation import HRLPolicyObservation
 from tapas_gmm.master_project.master_converter import (
+    EdgeConverter,
     NodeConverter,
     P_C_Converter,
 )
 
 
-class GraphData(HeteroData):
+class GraphData:
     def __init__(self):
-        super().__init__()
-
         # Initialize empty node features (can be set later)
         self["partition_a"].x = torch.tensor([], dtype=torch.float32)
         self["partition_b_euler"].x = torch.tensor([], dtype=torch.float32)
@@ -111,14 +110,25 @@ class Graph:
     ):
         state_list = State.list_by_state_space(state_space)
         task_list = Task.list_by_action_space(action_space)
-        self.converter = NodeConverter(state_list, task_list, True)
-        self.data = GraphData()
-        self.data.set_bc_edges(self.c_converter.bc_edges)
+        self.node_converter = NodeConverter(state_list, task_list, True)
+        self.edge_converter = EdgeConverter(state_list, task_list)
+        self.a: Dict[State, torch.Tensor] = None
+        self.b: Dict[State, torch.Tensor] = None
+        self.c: torch.Tensor = None
+        self.ab_edges: torch.Tensor = self.edge_converter.ab_edges()
+        self.bc_edges: torch.Tensor = self.edge_converter.bc_edges()
 
-    def update(
-        self, current: HRLPolicyObservation, goal: HRLPolicyObservation
-    ) -> GraphData:
-        self.data.set_a(self.converter.tensor(current))
-        self.data.set_b(self.converter.tensor_dict(current))
-        self.data.set_c(self.converter.partition_features(current))
-        return self.data
+    def update(self, current: HRLPolicyObservation, goal: HRLPolicyObservation):
+        self.a = self.node_converter.tensor_dict_values(goal)
+        self.b = self.node_converter.tensor_dict_values(current)
+        self.c = self.node_converter.tensor_task_distance(current)
+
+    def overwrite(
+        self,
+        goal: Dict[StateType, torch.Tensor],
+        obs: Dict[StateType, torch.Tensor],
+        c: torch.Tensor,
+    ):
+        self.a = obs
+        self.b = goal
+        self.c = c
