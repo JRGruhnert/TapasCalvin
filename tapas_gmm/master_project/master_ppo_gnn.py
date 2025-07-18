@@ -66,9 +66,6 @@ class Master_GNN_PPO(ActorCriticBase):
     def forward(self, graph: Graph) -> tuple[torch.Tensor, torch.Tensor]:
         obs_encoded = [self.encoder_obs[k.name](v) for k, v in graph.b.items()]
         goal_encoded = [self.encoder_goal[k.name](v) for k, v in graph.a.items()]
-        print(len(obs_encoded))
-        for v in obs_encoded:
-            print(v.shape)
         b_tensor = torch.cat(obs_encoded, dim=0)
         a_tensor = torch.cat(goal_encoded, dim=0)
 

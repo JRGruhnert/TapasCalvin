@@ -24,7 +24,7 @@ from tapas_gmm.master_project.master_data_def import (
 @dataclass
 class RLConfig:
     action_space: ActionSpace = ActionSpace.STATIC
-    state_space: StateSpace = StateSpace.STATIC
+    state_space: StateSpace = StateSpace.DYNAMIC
     reward_mode: RewardMode = RewardMode.SPARSE
     batch_size: int = (
         2048  # 2048 1024 How many steps to collect before updating the policy
