@@ -469,5 +469,6 @@ img/
 /calvin_env
 /master_venv
 
-/results
 results/
+ghalton/
+riepybdlib/
