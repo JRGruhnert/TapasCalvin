@@ -25,6 +25,8 @@ class Master_GNN_PPO(ActorCriticBase):
     ):
         super().__init__()
 
+        self.register_buffer("one_hot", torch.eye(state_dim))  # Ensures gradient flow
+
         self.encoder_obs = nn.ModuleDict(
             {
                 StateType.Transform.name: TransformEncoder(h_dim_encoder),
@@ -42,13 +44,16 @@ class Master_GNN_PPO(ActorCriticBase):
         )
 
         self.gat1 = GATv2Conv(
-            (h_dim_encoder, h_dim_encoder),
+            (h_dim_encoder + state_dim, h_dim_encoder + state_dim),
             state_dim,
             heads=attention_heads,
             concat=False,
         )
         self.gat2 = GATv2Conv(
-            (state_dim, state_dim), gat_out, heads=attention_heads, concat=False
+            (state_dim, state_dim),
+            gat_out,
+            heads=attention_heads,
+            concat=False,
         )
 
         self.actor = nn.Sequential(
@@ -68,8 +73,10 @@ class Master_GNN_PPO(ActorCriticBase):
     def forward(self, graph: Graph) -> tuple[torch.Tensor, torch.Tensor]:
         goal_encoded = [self.encoder_goal[k.name](v) for k, v in graph.a.items()]
         obs_encoded = [self.encoder_obs[k.name](v) for k, v in graph.b.items()]
-        a_tensor = torch.cat(goal_encoded, dim=0)
-        b_tensor = torch.cat(obs_encoded, dim=0)
+        a_encoded = torch.cat(goal_encoded, dim=0)
+        b_encoded = torch.cat(obs_encoded, dim=0)
+        a_tensor = torch.cat([a_encoded, self.one_hot], dim=1)
+        b_tensor = torch.cat([b_encoded, self.one_hot], dim=1)
         # print(f"A\t Mean: {a_tensor.mean().item()}\t Std: {a_tensor.std().item()}")
         # print(f"B\t Mean: {b_tensor.mean().item()} \t Std: {b_tensor.std().item()}")
         # print(f"C\t Mean: {graph.c.mean().item()} \t Std: {graph.c.std().item()}")
