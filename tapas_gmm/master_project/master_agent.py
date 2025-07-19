@@ -440,16 +440,8 @@ class PPOAgent(Agent):
         )
         self.policy_old.load_state_dict(self.policy_new.state_dict())
         self.optimizer = torch.optim.Adam(
-            [
-                {
-                    "params": self.policy_new.actor.parameters(),
-                    "lr": self.parameters.lr_actor,
-                },
-                {
-                    "params": self.policy_new.critic.parameters(),
-                    "lr": self.parameters.lr_critic,
-                },
-            ]
+            self.policy_new.parameters(),
+            lr=self.parameters.lr_actor,
         )
 
     def act(self, obs: HRLPolicyObservation, goal: HRLPolicyObservation) -> int:
@@ -491,16 +483,8 @@ class GNNAgent(Agent):
         )
         self.policy_old.load_state_dict(self.policy_new.state_dict())
         self.optimizer = torch.optim.Adam(
-            [
-                {
-                    "params": self.policy_new.actor.parameters(),
-                    "lr": self.parameters.lr_actor,
-                },
-                {
-                    "params": self.policy_old.critic.parameters(),
-                    "lr": self.parameters.lr_critic,
-                },
-            ]
+            self.policy_new.parameters(),
+            lr=self.parameters.lr_actor,
         )
 
     def act(self, current: HRLPolicyObservation, goal: HRLPolicyObservation) -> int:

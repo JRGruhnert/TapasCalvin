@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch_geometric.data import Data, Batch
 from torch.distributions import Categorical
 from torch_geometric.nn import GATv2Conv
+from torch_geometric.nn import GlobalAttention
 from tapas_gmm.master_project.master_baseline import ActorCriticBase
 from tapas_gmm.master_project.master_data_def import StateType
 from tapas_gmm.master_project.master_encoder import (
@@ -57,7 +58,7 @@ class Master_GNN_PPO(ActorCriticBase):
         )
 
         self.actor = nn.Sequential(
-            nn.BatchNorm1d(gat_out),
+            # nn.BatchNorm1d(gat_out),
             nn.Linear(gat_out, head_hidden),
             nn.Tanh(),
             nn.Linear(head_hidden, 1),
@@ -69,6 +70,11 @@ class Master_GNN_PPO(ActorCriticBase):
             nn.Tanh(),
             nn.Linear(head_hidden, 1),
         )
+
+        # self.critic_readout = GlobalAttention(
+        #    gate_nn=nn.Sequential(nn.Linear(gat_out, 1), nn.Sigmoid())
+        # )
+        # self.critic_head = nn.Linear(gat_out, 1)
 
     def forward(self, graph: Graph) -> tuple[torch.Tensor, torch.Tensor]:
         goal_encoded = [self.encoder_goal[k.name](v) for k, v in graph.a.items()]
@@ -98,6 +104,8 @@ class Master_GNN_PPO(ActorCriticBase):
         # print(logits)
         v_feat = x2.mean(dim=0, keepdim=True)
         value = self.critic(v_feat).squeeze(-1)
+        # v_feat = self.critic_readout(x2, batch=None)   # → [1, gat_out]
+        # value  = self.critic_head(v_feat).squeeze(-1)  # → scalar
         return logits, value
 
     def act(self, graph: Graph) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
