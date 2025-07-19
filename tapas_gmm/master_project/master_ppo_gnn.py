@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch_geometric.data import Data, Batch
 from torch.distributions import Categorical
 from torch_geometric.nn import GATv2Conv
-from torch_geometric.nn import GlobalAttention
+from torch_geometric.nn.aggr import AttentionalAggregation
 from tapas_gmm.master_project.master_baseline import ActorCriticBase
 from tapas_gmm.master_project.master_data_def import StateType
 from tapas_gmm.master_project.master_encoder import (
@@ -20,9 +20,9 @@ class Master_GNN_PPO(ActorCriticBase):
         state_dim: int,
         action_dim: int,
         h_dim_encoder: int = 32,
-        gat_out: int = 32,
-        head_hidden: int = 16,
-        attention_heads: int = 3,
+        gat_out: int = 64,
+        head_hidden: int = 32,
+        attention_heads: int = 1,
     ):
         super().__init__()
 
@@ -71,10 +71,10 @@ class Master_GNN_PPO(ActorCriticBase):
             nn.Linear(head_hidden, 1),
         )
 
-        # self.critic_readout = GlobalAttention(
-        #    gate_nn=nn.Sequential(nn.Linear(gat_out, 1), nn.Sigmoid())
-        # )
-        # self.critic_head = nn.Linear(gat_out, 1)
+        self.critic_readout = AttentionalAggregation(
+            gate_nn=nn.Sequential(nn.Linear(gat_out, 1), nn.Sigmoid())
+        )
+        self.critic_head = nn.Linear(gat_out, 1)
 
     def forward(self, graph: Graph) -> tuple[torch.Tensor, torch.Tensor]:
         goal_encoded = [self.encoder_goal[k.name](v) for k, v in graph.a.items()]
@@ -89,8 +89,8 @@ class Master_GNN_PPO(ActorCriticBase):
 
         x1: torch.Tensor = self.gat1((a_tensor, b_tensor), graph.ab_edges)
         x2: torch.Tensor = self.gat2((x1, graph.c), graph.bc_edges)
-        # print(f"X1 Tensor \t Mean: {x1.mean().item()} \t Std: {x1.std().item()}")
-        # print(f"X2 Tensor \t Mean: {x2.mean().item()} \t Std: {x2.std().item()}")
+        #print(f"X1 Tensor \t Mean: {x1.mean().item()} \t Std: {x1.std().item()}")
+        #print(f"X2 Tensor \t Mean: {x2.mean().item()} \t Std: {x2.std().item()}")
         # print(f"a_tensor.shape: {a_tensor.shape}")
         # print(f"b_tensor.shape: {b_tensor.shape}")
         # print(f"graph.c.shape: {graph.c.shape}")
@@ -102,10 +102,10 @@ class Master_GNN_PPO(ActorCriticBase):
         logits = self.actor(x2).squeeze(-1)
         # print("Logits")
         # print(logits)
-        v_feat = x2.mean(dim=0, keepdim=True)
-        value = self.critic(v_feat).squeeze(-1)
-        # v_feat = self.critic_readout(x2, batch=None)   # → [1, gat_out]
-        # value  = self.critic_head(v_feat).squeeze(-1)  # → scalar
+        #v_feat = x2.mean(dim=0, keepdim=True)
+        #value = self.critic(v_feat).squeeze(-1)
+        v_feat = self.critic_readout(x2)   # → [1, gat_out]
+        value  = self.critic_head(v_feat).squeeze(-1)  # → scalar
         return logits, value
 
     def act(self, graph: Graph) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
