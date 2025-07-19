@@ -357,7 +357,7 @@ def analyze_rollouts(data_path: str):
 
 def entry_point():
     # Example usage
-    data_path = "results/baseline/run_9/logs/"
+    data_path = "results/gnn/run_8/logs/"
     analyzer = analyze_rollouts(data_path)
 
     # Access summary statistics
