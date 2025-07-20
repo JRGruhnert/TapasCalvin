@@ -117,6 +117,8 @@ class Graph:
         self.c: torch.Tensor = None
         self.ab_edges: torch.Tensor = self.edge_converter.ab_edges()
         self.bc_edges: torch.Tensor = self.edge_converter.bc_edges()
+        self.ab_edge_attr: torch.Tensor = self.edge_converter.ab_attr()
+        # self.bc_edge_attr: torch.Tensor = self.edge_converter.bc_attr()
 
     def update(self, current: HRLPolicyObservation, goal: HRLPolicyObservation):
         self.a = self.node_converter.tensor_dict_values(goal)
