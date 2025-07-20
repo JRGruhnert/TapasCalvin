@@ -331,13 +331,17 @@ class EdgeConverter:
         self.active_states = active_states
         self.active_tasks = active_tasks
 
-    def ab_edges(self) -> torch.Tensor:
+    def ab_edges(self, gin_based: bool) -> torch.Tensor:
         num_states = len(self.active_states)
-        src = torch.arange(num_states).unsqueeze(1).repeat(1, num_states).flatten()
-        dst = torch.arange(num_states).repeat(num_states)
+        if gin_based:
+            src = torch.arange(num_states)
+            dst = torch.arange(num_states)
+        else:
+            src = torch.arange(num_states).unsqueeze(1).repeat(1, num_states).flatten()
+            dst = torch.arange(num_states).repeat(num_states)
         return torch.stack([src, dst], dim=0)
 
-    def bc_edges(self) -> torch.Tensor:
+    def bc_edges(self, gin_based: bool) -> torch.Tensor:
         edge_list = []
         for task_idx, task in enumerate(self.active_tasks):
             tp_dict = HRLHelper.get_tp_from_task(task, split_pose=True)
@@ -349,7 +353,7 @@ class EdgeConverter:
 
     def ab_attr(self) -> torch.Tensor:
         # Build edge_index using ab_edges()
-        edge_index = self.ab_edges()  # shape [2, E]
+        edge_index = self.ab_edges(False)  # shape [2, E]
         src = edge_index[0]  # [E]
         dst = edge_index[1]  # [E]
 
