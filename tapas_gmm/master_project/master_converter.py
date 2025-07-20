@@ -347,6 +347,16 @@ class EdgeConverter:
                     edge_list.append((state_idx, task_idx))
         return torch.tensor(edge_list, dtype=torch.long).t()
 
+    def ab_attr(self) -> torch.Tensor:
+        # Build edge_index using ab_edges()
+        edge_index = self.ab_edges()  # shape [2, E]
+        src = edge_index[0]  # [E]
+        dst = edge_index[1]  # [E]
+
+        # Set attribute to 1 if src == dst, else 0
+        edge_attr = (src == dst).to(torch.float).unsqueeze(-1)  # shape [E, 1]
+        return edge_attr
+
 
 class P_C_GaussianConverter(StateConverter):
     def __init__(self, g: Gaussian):
