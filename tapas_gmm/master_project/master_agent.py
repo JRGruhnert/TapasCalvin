@@ -4,7 +4,7 @@ from typing import Dict
 import torch
 from torch import nn
 import numpy as np
-from tapas_gmm.master_project.master_ppo_gnn import Master_GNN_PPO
+from tapas_gmm.master_project.master_ppo_gnn import GNN_PPO, GNN_PPO2
 from tapas_gmm.utils.select_gpu import device
 from tapas_gmm.master_project.master_gnn import HRL_GNN, HRL_GNN2
 from tapas_gmm.master_project.master_graph import Graph
@@ -27,9 +27,9 @@ class RLConfig:
     state_space: StateSpace = StateSpace.DYNAMIC
     reward_mode: RewardMode = RewardMode.SPARSE
     batch_size: int = (
-        2048  # 2048 1024 How many steps to collect before updating the policy
+        8  # 2048 1024 How many steps to collect before updating the policy
     )
-    mini_batch_size: int = 64  # 64 # How many steps to use in each mini-batch
+    mini_batch_size: int = 4  # 64 # How many steps to use in each mini-batch
     n_epochs: int = 50  # How many passes over the collected batch per update
     lr_actor: float = 0.0003  # Step size for actor optimizer
     lr_critic: float = 0.0003  # Step size for critic optimizer
@@ -54,6 +54,7 @@ class RLConfig:
             StateType.Scalar: 2.0,
         }
     )
+    graph_gin_based: bool = True
 
 
 class RolloutBuffer:
@@ -475,13 +476,10 @@ class GNNAgent(Agent):
         self.graph = Graph(
             action_space=self.parameters.action_space,
             state_space=self.parameters.state_space,
+            gin_like=self.parameters.graph_gin_based,
         )
-        self.policy_new: Master_GNN_PPO = Master_GNN_PPO(
-            self.state_dim, self.action_dim
-        )
-        self.policy_old: Master_GNN_PPO = Master_GNN_PPO(
-            self.state_dim, self.action_dim
-        )
+        self.policy_new: GNN_PPO2 = GNN_PPO2(self.state_dim, self.action_dim)
+        self.policy_old: GNN_PPO2 = GNN_PPO2(self.state_dim, self.action_dim)
         self.policy_old.load_state_dict(self.policy_new.state_dict())
         self.optimizer = torch.optim.Adam(
             self.policy_new.parameters(),
