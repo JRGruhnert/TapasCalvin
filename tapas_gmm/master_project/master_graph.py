@@ -104,9 +104,7 @@ class GraphData:
 
 class Graph:
     def __init__(
-        self,
-        action_space: ActionSpace,
-        state_space: StateSpace,
+        self, action_space: ActionSpace, state_space: StateSpace, gin_like: False
     ):
         state_list = State.list_by_state_space(state_space)
         task_list = Task.list_by_action_space(action_space)
@@ -115,8 +113,8 @@ class Graph:
         self.a: Dict[State, torch.Tensor] = None
         self.b: Dict[State, torch.Tensor] = None
         self.c: torch.Tensor = None
-        self.ab_edges: torch.Tensor = self.edge_converter.ab_edges()
-        self.bc_edges: torch.Tensor = self.edge_converter.bc_edges()
+        self.ab_edges: torch.Tensor = self.edge_converter.ab_edges(gin_like)
+        self.bc_edges: torch.Tensor = self.edge_converter.bc_edges(gin_like)
         self.ab_edge_attr: torch.Tensor = self.edge_converter.ab_attr()
         # self.bc_edge_attr: torch.Tensor = self.edge_converter.bc_attr()
 
