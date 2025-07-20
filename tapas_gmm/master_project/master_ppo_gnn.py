@@ -26,8 +26,6 @@ class Master_GNN_PPO(ActorCriticBase):
     ):
         super().__init__()
 
-        self.register_buffer("one_hot", torch.eye(state_dim))  # Ensures gradient flow
-
         self.encoder_obs = nn.ModuleDict(
             {
                 StateType.Transform.name: TransformEncoder(h_dim_encoder),
@@ -45,16 +43,20 @@ class Master_GNN_PPO(ActorCriticBase):
         )
 
         self.gat1 = GATv2Conv(
-            (h_dim_encoder + state_dim, h_dim_encoder + state_dim),
+            (h_dim_encoder, h_dim_encoder),
             state_dim,
             heads=attention_heads,
             concat=False,
+            edge_dim=1,
+            add_self_loops=False,
         )
         self.gat2 = GATv2Conv(
             (state_dim, state_dim),
             gat_out,
             heads=attention_heads,
             concat=False,
+            # edge_dim=1,
+            add_self_loops=False,
         )
 
         self.actor = nn.Sequential(
@@ -79,18 +81,31 @@ class Master_GNN_PPO(ActorCriticBase):
     def forward(self, graph: Graph) -> tuple[torch.Tensor, torch.Tensor]:
         goal_encoded = [self.encoder_goal[k.name](v) for k, v in graph.a.items()]
         obs_encoded = [self.encoder_obs[k.name](v) for k, v in graph.b.items()]
-        a_encoded = torch.cat(goal_encoded, dim=0)
-        b_encoded = torch.cat(obs_encoded, dim=0)
-        a_tensor = torch.cat([a_encoded, self.one_hot], dim=1)
-        b_tensor = torch.cat([b_encoded, self.one_hot], dim=1)
+        a_tensor = torch.cat(goal_encoded, dim=0)
+        b_tensor = torch.cat(obs_encoded, dim=0)
+        # a_tensor = torch.cat([a_encoded, self.one_hot], dim=1)
+        # b_tensor = torch.cat([b_encoded, self.one_hot], dim=1)
         # print(f"A\t Mean: {a_tensor.mean().item()}\t Std: {a_tensor.std().item()}")
         # print(f"B\t Mean: {b_tensor.mean().item()} \t Std: {b_tensor.std().item()}")
         # print(f"C\t Mean: {graph.c.mean().item()} \t Std: {graph.c.std().item()}")
 
-        x1: torch.Tensor = self.gat1((a_tensor, b_tensor), graph.ab_edges)
-        x2: torch.Tensor = self.gat2((x1, graph.c), graph.bc_edges)
-        #print(f"X1 Tensor \t Mean: {x1.mean().item()} \t Std: {x1.std().item()}")
-        #print(f"X2 Tensor \t Mean: {x2.mean().item()} \t Std: {x2.std().item()}")
+        x1: torch.Tensor = self.gat1(
+            x=(a_tensor, b_tensor),
+            edge_index=graph.ab_edges,
+            edge_attr=graph.ab_edge_attr,
+            return_attention_weights=None,
+        )
+        # print(x1)
+        x2, (edge_idx_bc, attn_bc) = self.gat2(
+            x=(x1, graph.c),
+            edge_index=graph.bc_edges,
+            edge_attr=None,
+            return_attention_weights=True,
+        )
+        print(edge_idx_bc)
+        print(attn_bc)
+        # print(f"X1 Tensor \t Mean: {x1.mean().item()} \t Std: {x1.std().item()}")
+        # print(f"X2 Tensor \t Mean: {x2.mean().item()} \t Std: {x2.std().item()}")
         # print(f"a_tensor.shape: {a_tensor.shape}")
         # print(f"b_tensor.shape: {b_tensor.shape}")
         # print(f"graph.c.shape: {graph.c.shape}")
@@ -102,10 +117,10 @@ class Master_GNN_PPO(ActorCriticBase):
         logits = self.actor(x2).squeeze(-1)
         # print("Logits")
         # print(logits)
-        #v_feat = x2.mean(dim=0, keepdim=True)
-        #value = self.critic(v_feat).squeeze(-1)
-        v_feat = self.critic_readout(x2)   # → [1, gat_out]
-        value  = self.critic_head(v_feat).squeeze(-1)  # → scalar
+        # v_feat = x2.mean(dim=0, keepdim=True)
+        # value = self.critic(v_feat).squeeze(-1)
+        v_feat = self.critic_readout(x2)  # → [1, gat_out]
+        value = self.critic_head(v_feat).squeeze(-1)  # → scalar
         return logits, value
 
     def act(self, graph: Graph) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
