@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch_geometric.data import Data, Batch
 from torch.distributions import Categorical
-from torch_geometric.nn import GATv2Conv
+from torch_geometric.nn import GATv2Conv, LayerNorm
 from torch_geometric.nn.aggr import AttentionalAggregation
 from tapas_gmm.master_project.master_baseline import ActorCriticBase
 from tapas_gmm.master_project.master_data_def import StateType
@@ -59,6 +59,8 @@ class Master_GNN_PPO(ActorCriticBase):
             add_self_loops=False,
         )
 
+        self.norm1 = LayerNorm(state_dim)
+        self.norm2 = LayerNorm(gat_out)
         self.actor = nn.Sequential(
             # nn.BatchNorm1d(gat_out),
             nn.Linear(gat_out, head_hidden),
@@ -95,15 +97,21 @@ class Master_GNN_PPO(ActorCriticBase):
             edge_attr=graph.ab_edge_attr,
             return_attention_weights=None,
         )
-        # print(x1)
-        x2, (edge_idx_bc, attn_bc) = self.gat2(
-            x=(x1, graph.c),
+        # print(f"X1: {x1}")
+        x2 = self.norm1(x1)
+        # print(f"X2: {x2}")
+        x3, (edge_idx_bc, attn_bc) = self.gat2(
+            x=(x2, graph.c),
             edge_index=graph.bc_edges,
             edge_attr=None,
             return_attention_weights=True,
         )
-        print(edge_idx_bc)
-        print(attn_bc)
+        # print(f"X3: {x3}")
+        x4 = self.norm2(x3)
+        # print(f"X4: {x4}")
+        # print(edge_idx_bc)
+        # print(attn_bc)
+
         # print(f"X1 Tensor \t Mean: {x1.mean().item()} \t Std: {x1.std().item()}")
         # print(f"X2 Tensor \t Mean: {x2.mean().item()} \t Std: {x2.std().item()}")
         # print(f"a_tensor.shape: {a_tensor.shape}")
@@ -114,12 +122,12 @@ class Master_GNN_PPO(ActorCriticBase):
         # print(f"x1.shape: {x1.shape}")
         # print(f"x2.shape: {x2.shape}")
 
-        logits = self.actor(x2).squeeze(-1)
+        logits = self.actor(x4).squeeze(-1)
         # print("Logits")
         # print(logits)
         # v_feat = x2.mean(dim=0, keepdim=True)
         # value = self.critic(v_feat).squeeze(-1)
-        v_feat = self.critic_readout(x2)  # → [1, gat_out]
+        v_feat = self.critic_readout(x4)  # → [1, gat_out]
         value = self.critic_head(v_feat).squeeze(-1)  # → scalar
         return logits, value
 
