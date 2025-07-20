@@ -109,7 +109,8 @@ class RolloutBuffer:
             if isinstance(self.actions[0], torch.Tensor)
             else np.array(self.actions)
         )
-        data["c"] = torch.stack(self.c).cpu().numpy()
+        if self.c:
+            data["c"] = torch.stack(self.c).cpu().numpy()
         data["logprobs"] = torch.tensor(self.logprobs).cpu().numpy()
         data["rewards"] = np.array(self.rewards)
         data["state_values"] = torch.tensor(self.state_values).cpu().numpy()
