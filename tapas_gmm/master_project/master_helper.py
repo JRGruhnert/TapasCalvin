@@ -72,23 +72,33 @@ class HRLHelper:
         return obs
 
     @classmethod
-    def get_tp_from_task(cls, task: Task, split_pose: bool) -> Dict[State, np.ndarray]:
+    def get_tp_from_task(
+        cls,
+        task: Task,
+        split_pose: bool,
+        active_states: list[State],
+    ) -> Dict[State, np.ndarray]:
         policy: GMMPolicy = HRLHelper.load_policy(task)
         tpgmm = policy.model
         result: Dict[State, np.ndarray] = {}
         for _, segment in enumerate(tpgmm.segment_frames):
             for _, frame_idx in enumerate(segment):
                 if split_pose:
-                    transfrom_key, quaternion_key = State.get_tp_by_index(
+                    transform_key, quaternion_key = State.get_tp_by_index(
                         frame_idx, True
                     )
-                    if frame_idx == 0:
-                        # Zero means its the ee_pose
-                        result[transfrom_key] = task.value.ee_hrl_start[:3]
-                        result[quaternion_key] = task.value.ee_hrl_start[-4:]
-                    else:
-                        result[transfrom_key] = task.value.obj_start[:3]
-                        result[quaternion_key] = task.value.obj_start[-4:]
+                    if transform_key in active_states:
+                        if frame_idx == 0:
+                            # Zero means its the ee_pose
+                            result[transform_key] = task.value.ee_hrl_start[:3]
+                        else:
+                            result[transform_key] = task.value.obj_start[:3]
+                    if quaternion_key in active_states:
+                        if frame_idx == 0:
+                            # Zero means its the ee_pose
+                            result[quaternion_key] = task.value.ee_hrl_start[-4:]
+                        else:
+                            result[quaternion_key] = task.value.obj_start[-4:]
                 else:
                     pose_key = State.get_tp_by_index(frame_idx, False)
                     if frame_idx == 0:
