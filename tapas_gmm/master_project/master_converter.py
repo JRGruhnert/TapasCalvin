@@ -344,7 +344,7 @@ class EdgeConverter:
     def bc_edges(self, gin_based: bool) -> torch.Tensor:
         edge_list = []
         for task_idx, task in enumerate(self.active_tasks):
-            tp_dict = HRLHelper.get_tp_from_task(task, split_pose=True)
+            tp_dict = HRLHelper.get_tp_from_task(task, True, self.active_states)
             for state_idx, state in enumerate(self.active_states):
                 if state in tp_dict:
                     # connect B-node b_idx to C-node c_idx
