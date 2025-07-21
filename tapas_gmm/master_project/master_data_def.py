@@ -28,6 +28,7 @@ class RewardMode(Enum):
     RANGE = 1
     ONOFF = 2
 
+
 class ActionSpace(Enum):
     SMALL = "small"
     STATIC = "static"
@@ -175,17 +176,14 @@ class State(Enum):
     Slide_Transform = StateInfo(
         identifier="base__slide_euler",
         state_type=StateType.Transform,
-        state_space=StateSpace.DYNAMIC,
     )
     Drawer_Transform = StateInfo(
         identifier="base__drawer_euler",
         state_type=StateType.Transform,
-        state_space=StateSpace.DYNAMIC,
     )
     Button_Transform = StateInfo(
         identifier="base__button_euler",
         state_type=StateType.Transform,
-        state_space=StateSpace.DYNAMIC,
     )
     Switch_Transform = StateInfo(
         identifier="base__switch_euler",
@@ -194,12 +192,10 @@ class State(Enum):
     Lightbulb_Transform = StateInfo(
         identifier="lightbulb_euler",
         state_type=StateType.Transform,
-        state_space=StateSpace.DYNAMIC,
     )
     Led_Transform = StateInfo(
         identifier="led_euler",
         state_type=StateType.Transform,
-        state_space=StateSpace.DYNAMIC,
     )
     Red_Transform = StateInfo(
         identifier="block_red_euler",
@@ -224,17 +220,14 @@ class State(Enum):
     Slide_Quat = StateInfo(
         identifier="base__slide_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.DYNAMIC,
     )
     Drawer_Quat = StateInfo(
         identifier="base__drawer_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.DYNAMIC,
     )
     Button_Quat = StateInfo(
         identifier="base__button_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.DYNAMIC,
     )
     Switch_Quat = StateInfo(
         identifier="base__switch_quat",
@@ -243,12 +236,10 @@ class State(Enum):
     Lightbulb_Quat = StateInfo(
         identifier="lightbulb_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.DYNAMIC,
     )
     Led_Quat = StateInfo(
         identifier="led_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.DYNAMIC,
     )
     Red_Quat = StateInfo(
         identifier="block_red_quat",
@@ -317,21 +308,21 @@ class State(Enum):
         state_type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        #state_space=StateSpace.DYNAMIC,
+        # state_space=StateSpace.DYNAMIC,
     )
     Blue_State = StateInfo(
         identifier="block_blue",
         state_type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        #state_space=StateSpace.DYNAMIC,
+        # state_space=StateSpace.DYNAMIC,
     )
     Pink_State = StateInfo(
         identifier="block_pink",
         state_type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        #state_space=StateSpace.DYNAMIC,
+        # state_space=StateSpace.DYNAMIC,
     )
 
 
@@ -464,13 +455,13 @@ class Task(Enum):
     PressButton = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
-            #State.Button_State: State.Button_State.value.min,
+            # State.Button_State: State.Button_State.value.min,
         },
     )
     PressButtonReversed = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
-            #State.Button_State: State.Button_State.value.max,
+            # State.Button_State: State.Button_State.value.max,
         },
         reversed=True,
         ee_hrl_start=np.array(
