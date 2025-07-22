@@ -275,13 +275,22 @@ class GNN_PPO3(ActorCriticBase):
         )
 
         self.state_gin = GINEConv(
-            nn=GinStateMlp(h_dim_encoder, hidden_mlp_dim1, state_dim),
+            nn=nn.Sequential(
+                nn.Linear(h_dim_encoder, hidden_mlp_dim1),
+                nn.Tanh(),
+                nn.Linear(hidden_mlp_dim1, state_dim),
+                nn.Tanh(),
+            ),
             train_eps=True,
             edge_dim=1,
         )
 
         self.action_gin = GINEConv(
-            nn=GinActionMlp(state_dim),
+            nn=nn.Sequential(
+                nn.Linear(state_dim, state_dim // 2),
+                nn.Tanh(),
+                nn.Linear(state_dim // 2, 1),
+            ),
             train_eps=True,
             edge_dim=1,
         )

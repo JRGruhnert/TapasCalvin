@@ -4,7 +4,7 @@ from typing import Dict
 import torch
 from torch import nn
 import numpy as np
-from tapas_gmm.master_project.master_ppo_gnn import GNN_PPO, GNN_PPO2
+from tapas_gmm.master_project.master_ppo_gnn import GNN_PPO, GNN_PPO2, GNN_PPO3
 from tapas_gmm.utils.select_gpu import device
 from tapas_gmm.master_project.master_gnn import HRL_GNN, HRL_GNN2
 from tapas_gmm.master_project.master_graph import Graph
@@ -507,8 +507,8 @@ class GNNAgent(Agent):
             state_space=self.parameters.state_space,
             gin_like=self.parameters.graph_gin_based,
         )
-        self.policy_new: GNN_PPO2 = GNN_PPO2(self.state_dim, self.action_dim)
-        self.policy_old: GNN_PPO2 = GNN_PPO2(self.state_dim, self.action_dim)
+        self.policy_new: GNN_PPO3 = GNN_PPO3(self.state_dim, self.action_dim)
+        self.policy_old: GNN_PPO3 = GNN_PPO3(self.state_dim, self.action_dim)
         self.policy_old.load_state_dict(self.policy_new.state_dict())
         self.optimizer = torch.optim.Adam(
             self.policy_new.parameters(),
