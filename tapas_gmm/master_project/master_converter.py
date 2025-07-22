@@ -334,9 +334,9 @@ class EdgeConverter:
         self.active_states = active_states
         self.active_tasks = active_tasks
 
-    def ab_edges(self, gin_based: bool) -> torch.Tensor:
+    def state_state_edges(self, full: bool) -> torch.Tensor:
         num_states = len(self.active_states)
-        if gin_based:
+        if not full:
             src = torch.arange(num_states)
             dst = torch.arange(num_states)
         else:
@@ -344,24 +344,53 @@ class EdgeConverter:
             dst = torch.arange(num_states).repeat(num_states)
         return torch.stack([src, dst], dim=0)
 
-    def bc_edges(self, gin_based: bool) -> torch.Tensor:
-        edge_list = []
-        for task_idx, task in enumerate(self.active_tasks):
-            tp_dict = HRLHelper.get_tp_from_task(task, True, self.active_states)
-            for state_idx, state in enumerate(self.active_states):
-                if state in tp_dict:
-                    # connect B-node b_idx to C-node c_idx
-                    edge_list.append((state_idx, task_idx))
-        return torch.tensor(edge_list, dtype=torch.long).t()
+    def state_task_edges(self, full: bool) -> torch.Tensor:
+        if not full:
+            edge_list = []
+            for task_idx, task in enumerate(self.active_tasks):
+                tp_dict = HRLHelper.get_tp_from_task(task, True, self.active_states)
+                for state_idx, state in enumerate(self.active_states):
+                    if state in tp_dict:
+                        # connect B-node b_idx to C-node c_idx
+                        edge_list.append((state_idx, task_idx))
+            return torch.tensor(edge_list, dtype=torch.long).t()
+        else:
+            src = (
+                torch.arange(len(self.active_states))
+                .unsqueeze(1)
+                .repeat(1, len(self.active_tasks))
+                .flatten()
+            )
+            dst = torch.arange(len(self.active_tasks)).repeat(len(self.active_states))
+            return torch.stack([src, dst], dim=0)
 
-    def ab_attr(self) -> torch.Tensor:
+    def state_state_attr(self) -> torch.Tensor:
         # Build edge_index using ab_edges()
-        edge_index = self.ab_edges(False)  # shape [2, E]
+        edge_index = self.state_state_edges(True)  # shape [2, E]
         src = edge_index[0]  # [E]
         dst = edge_index[1]  # [E]
 
         # Set attribute to 1 if src == dst, else 0
         edge_attr = (src == dst).to(torch.float).unsqueeze(-1)  # shape [E, 1]
+        return edge_attr
+
+    def state_task_attr(self) -> torch.Tensor:
+        # Fully connected edge index
+        full_edge_index = self.state_task_edges(full=True)  # shape [2, E]
+
+        # Sparse (actual) edge index
+        sparse_edge_index = self.state_task_edges(full=False)  # shape [2, E_sparse]
+
+        # Build set of valid (state_idx, task_idx) from sparse edges
+        sparse_edge_set = set((s.item(), t.item()) for s, t in sparse_edge_index.t())
+
+        # Create attribute tensor: 1 if (s, t) in sparse, else 0
+        attrs = [
+            1.0 if (s.item(), t.item()) in sparse_edge_set else 0.0
+            for s, t in full_edge_index.t()
+        ]
+        edge_attr = torch.tensor(attrs, dtype=torch.float).unsqueeze(-1)  # shape [E, 1]
+
         return edge_attr
 
 

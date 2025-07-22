@@ -113,10 +113,20 @@ class Graph:
         self.a: Dict[State, torch.Tensor] = None
         self.b: Dict[State, torch.Tensor] = None
         self.c: torch.Tensor = None
-        self.ab_edges: torch.Tensor = self.edge_converter.ab_edges(gin_like)
-        self.bc_edges: torch.Tensor = self.edge_converter.bc_edges(gin_like)
-        self.ab_edge_attr: torch.Tensor = self.edge_converter.ab_attr()
-        # self.bc_edge_attr: torch.Tensor = self.edge_converter.bc_attr()
+        self.state_state_edges_full: torch.Tensor = (
+            self.edge_converter.state_state_edges(True)
+        )
+        self.state_task_edges_full: torch.Tensor = self.edge_converter.state_task_edges(
+            True
+        )
+        self.state_state_edges_sparse: torch.Tensor = (
+            self.edge_converter.state_state_edges(False)
+        )
+        self.state_task_edges_sparse: torch.Tensor = (
+            self.edge_converter.state_task_edges(False)
+        )
+        self.state_state_attr: torch.Tensor = self.edge_converter.state_state_attr()
+        self.state_task_attr: torch.Tensor = self.edge_converter.state_task_attr()
 
     def update(self, current: HRLPolicyObservation, goal: HRLPolicyObservation):
         self.a = self.node_converter.tensor_dict_values(goal)

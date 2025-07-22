@@ -96,8 +96,8 @@ class GNN_PPO(ActorCriticBase):
 
         x1: torch.Tensor = self.gat1(
             x=(a_tensor, b_tensor),
-            edge_index=graph.ab_edges,
-            edge_attr=graph.ab_edge_attr,
+            edge_index=graph.state_state_edges_full,
+            edge_attr=graph.state_state_attr,
             return_attention_weights=None,
         )
         # print(f"X1: {x1}")
@@ -105,7 +105,7 @@ class GNN_PPO(ActorCriticBase):
         # print(f"X2: {x2}")
         x3, (edge_idx_bc, attn_bc) = self.gat2(
             x=(x2, graph.c),
-            edge_index=graph.bc_edges,
+            edge_index=graph.state_task_edges_full,
             edge_attr=None,
             return_attention_weights=True,
         )
@@ -207,11 +207,102 @@ class GNN_PPO2(ActorCriticBase):
 
         x1: torch.Tensor = self.state_gin(
             x=(a_tensor, b_tensor),
-            edge_index=graph.ab_edges,
+            edge_index=graph.state_state_edges_full,
         )
         x2 = self.action_gin(
             x=(x1, graph.c),
-            edge_index=graph.bc_edges,
+            edge_index=graph.state_task_edges_full,
+        )
+
+        logits = x2.squeeze(-1)
+        max = global_max_pool(x2, None)
+        mean = global_mean_pool(x2, None)
+        max_val = max.max()
+        mean_val = mean.mean()
+        combined = torch.tensor([max_val, mean_val])
+        value = self.critic_head(combined)
+        return logits, value
+
+    def act(self, graph: Graph) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        logits, value = self.forward(graph)
+        dist = Categorical(logits=logits)
+        action = dist.sample()  # shape: [B]
+        logprob = dist.log_prob(action)  # shape: [B]
+        return action, logprob, value
+
+    def evaluate(
+        self,
+        graph: Graph,
+        action: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        logits, value = self.forward(graph)
+        dist = Categorical(logits=logits)
+        # print(dist.probs)
+        action_logprobs = dist.log_prob(action)
+        # print(action_logprobs)
+        dist_entropy = dist.entropy()
+        return action_logprobs, value, dist_entropy
+
+
+class GNN_PPO3(ActorCriticBase):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        h_dim_encoder: int = 32,
+        gat_out: int = 64,
+        head_hidden: int = 32,
+        attention_heads: int = 1,
+        hidden_mlp_dim1: int = 32,
+        mlp_out: int = 16,
+    ):
+        super().__init__()
+
+        self.encoder_obs = nn.ModuleDict(
+            {
+                StateType.Transform.name: TransformEncoder(h_dim_encoder),
+                StateType.Quat.name: QuaternionEncoder(h_dim_encoder),
+                StateType.Scalar.name: ScalarEncoder(h_dim_encoder),
+            }
+        )
+
+        self.encoder_goal = nn.ModuleDict(
+            {
+                StateType.Transform.name: TransformEncoder(h_dim_encoder),
+                StateType.Quat.name: QuaternionEncoder(h_dim_encoder),
+                StateType.Scalar.name: ScalarEncoder(h_dim_encoder),
+            }
+        )
+
+        self.state_gin = GINEConv(
+            nn=GinStateMlp(h_dim_encoder, hidden_mlp_dim1, state_dim),
+            train_eps=True,
+            edge_dim=1,
+        )
+
+        self.action_gin = GINEConv(
+            nn=GinActionMlp(state_dim),
+            train_eps=True,
+            edge_dim=1,
+        )
+
+        self.critic_head = GinActionMlp(2)
+
+    def forward(self, graph: Graph) -> tuple[torch.Tensor, torch.Tensor]:
+        goal_encoded = [self.encoder_goal[k.name](v) for k, v in graph.a.items()]
+        obs_encoded = [self.encoder_obs[k.name](v) for k, v in graph.b.items()]
+        a_tensor = torch.cat(goal_encoded, dim=0)
+        b_tensor = torch.cat(obs_encoded, dim=0)
+
+        x1: torch.Tensor = self.state_gin(
+            x=(a_tensor, b_tensor),
+            edge_index=graph.state_state_edges_full,
+            edge_attr=graph.state_state_attr,
+        )
+        x2 = self.action_gin(
+            x=(x1, graph.c),
+            edge_index=graph.state_task_edges_full,
+            edge_attr=graph.state_task_attr,
         )
 
         logits = x2.squeeze(-1)

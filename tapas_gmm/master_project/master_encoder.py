@@ -1,5 +1,7 @@
+import torch
 import torch.nn as nn
 from torch_geometric.nn import GINConv, GINEConv
+from torch_geometric.nn import MessagePassing
 
 
 class QuaternionEncoder(nn.Module):
@@ -69,3 +71,27 @@ class GinActionMlp(nn.Module):
 
     def forward(self, s):
         return self.fc(s)
+
+
+class SrcOnlyConv(MessagePassing):
+    def __init__(self):
+        super().__init__(aggr="mean")  # or 'add', 'max'
+
+    def message(self, x_j):  # only uses src features
+        return x_j
+
+    def forward(self, x, edge_index):
+        return self.propagate(edge_index, x=x)
+
+
+class PureSourceGINConv(MessagePassing):
+    def __init__(self, in_channels):
+        super().__init__(aggr="add")  # GIN uses sum aggregation
+        self.mlp = GinActionMlp(in_channels)
+
+    def message(self, x_j):
+        return x_j  # Only source node features
+
+    def forward(self, x, edge_index):
+        out = self.propagate(edge_index, x=x)  # no x added
+        return self.mlp(out)  # No destination feature at all
