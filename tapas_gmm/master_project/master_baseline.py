@@ -28,8 +28,6 @@ class PPOActorCritic(ActorCriticBase):
         state_dim: int,
         action_dim: int,
         h_dim_encoder: int = 32,
-        h_dim1: int = 256,
-        h_dim2: int = 64,
     ):
         super().__init__()
 
@@ -55,6 +53,8 @@ class PPOActorCritic(ActorCriticBase):
         # combined_feature_dim = 1920
         # h_dim_encoder = 32 (encoded state size)
         # state_dim = 30 (number of states) -> x2 für current und goal state
+        h_dim1 = self.combined_feature_dim // 2
+        h_dim2 = h_dim1 // 2
         self.actor = nn.Sequential(
             nn.Linear(self.combined_feature_dim, h_dim1),
             nn.Tanh(),

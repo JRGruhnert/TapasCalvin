@@ -51,6 +51,7 @@ class GinStateMlp(nn.Module):
             nn.Linear(input_dim, hidden_dim),
             nn.Tanh(),
             nn.Linear(hidden_dim, output_dim),
+            nn.Tanh(),
         )
 
     def forward(self, s):

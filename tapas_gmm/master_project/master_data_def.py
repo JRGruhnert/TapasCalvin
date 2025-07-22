@@ -244,17 +244,17 @@ class State(Enum):
     Red_Quat = StateInfo(
         identifier="block_red_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.DYNAMIC,
+        # state_space=StateSpace.DYNAMIC,
     )
     Blue_Quat = StateInfo(
         identifier="block_blue_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.DYNAMIC,
+        # state_space=StateSpace.DYNAMIC,
     )
     Pink_Quat = StateInfo(
         identifier="block_pink_quat",
         state_type=StateType.Quat,
-        state_space=StateSpace.DYNAMIC,
+        # state_space=StateSpace.DYNAMIC,
     )
     EE_State = StateInfo(
         identifier="ee_state",
@@ -368,13 +368,13 @@ class Task(Enum):
                 tasks.append(member)
         return tasks
 
-    CloseDrawer = ModelInfo(
+    DrawerDoClose = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Drawer_State: State.Drawer_State.value.max,
         },
     )
-    MoveToDoorLeftReversed = ModelInfo(
+    SliderLeftMoveTo = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Slide_State: State.Slide_State.value.max,
@@ -392,7 +392,7 @@ class Task(Enum):
             ]
         ),
     )
-    MoveToDoorRightReversed = ModelInfo(
+    SliderRightMoveTo = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Slide_State: State.Slide_State.value.min,
@@ -410,7 +410,7 @@ class Task(Enum):
             ]
         ),
     )
-    MoveToDrawerClosedReversed = ModelInfo(
+    DrawerMoveToClosed = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Drawer_State: State.Drawer_State.value.min,
@@ -428,7 +428,7 @@ class Task(Enum):
             ]
         ),
     )
-    MoveToDrawerOpenReversed = ModelInfo(
+    DrawerMoveToOpen = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Drawer_State: State.Drawer_State.value.max,
@@ -446,19 +446,19 @@ class Task(Enum):
             ]
         ),
     )
-    OpenDrawer = ModelInfo(
+    DrawerDoOpen = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Drawer_State: State.Drawer_State.value.min,
         },
     )
-    PressButton = ModelInfo(
+    ButtonPress = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             # State.Button_State: State.Button_State.value.min,
         },
     )
-    PressButtonReversed = ModelInfo(
+    ButtonPressReversed = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             # State.Button_State: State.Button_State.value.max,
@@ -476,13 +476,13 @@ class Task(Enum):
             ]
         ),
     )
-    SlideDoorLeft = ModelInfo(
+    SliderLeftDoOpen = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Slide_State: State.Slide_State.value.min,
         },
     )
-    SlideDoorRight = ModelInfo(
+    SliderRightDoOpen = ModelInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Slide_State: State.Slide_State.value.max,

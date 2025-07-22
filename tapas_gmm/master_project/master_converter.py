@@ -180,6 +180,7 @@ class NodeConverter:
         Initialize the converter with a goal observation.
         """
         self.tasks = task_list
+        self.states = state_list
         self.converter: Dict[State, StateConverter] = {}
         self.ignore_converter = IgnoreConverter()
         for state in state_list:
@@ -305,7 +306,9 @@ class NodeConverter:
         features: list[np.ndarray] = []
         for task in self.tasks:
             task_features: list[float] = []
-            tp_dict = HRLHelper.get_tp_from_task(task, split_pose=True)
+            tp_dict = HRLHelper.get_tp_from_task(
+                task, split_pose=True, active_states=self.states
+            )
             for key, converter in self.converter.items():
                 if key in tp_dict:
                     # Use the task-specific value if available

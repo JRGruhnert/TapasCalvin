@@ -51,15 +51,15 @@ class HRLHelper:
 
     @classmethod
     def dynamic(cls) -> Set[Task]:
-        return {Task.CloseDrawer, Task.OpenDrawer}
+        return {Task.DrawerDoClose, Task.DrawerDoOpen}
 
     @classmethod
     def button(cls) -> Set[Task]:
-        return {Task.PressButton, Task.PressButtonReversed}
+        return {Task.ButtonPress, Task.ButtonPressReversed}
 
     @classmethod
     def sliding_doors(cls) -> Set[Task]:
-        return {Task.SlideDoorLeft, Task.SlideDoorRight}
+        return {Task.SliderLeftDoOpen, Task.SliderRightDoOpen}
 
     @classmethod
     def convert_observation(

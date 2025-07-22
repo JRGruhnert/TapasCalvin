@@ -3,7 +3,6 @@ import pathlib
 import time
 from dataclasses import dataclass
 from typing import Any
-from mplib.pymp import Pose
 import numpy as np
 from omegaconf import MISSING, DictConfig, OmegaConf, SCMode
 import torch
@@ -15,6 +14,7 @@ from tapas_gmm.env import Environment
 from tapas_gmm.env.calvin import CalvinConfig, Calvin
 
 from tapas_gmm.env.environment import BaseEnvironmentConfig
+from tapas_gmm.master_project.master_data_def import StateSpace
 from tapas_gmm.master_project.master_sample import sample_pre_condition
 from tapas_gmm.policy import PolicyEnum
 from tapas_gmm.policy.manual_policy import ManualCalvinPolicy
@@ -28,7 +28,6 @@ from tapas_gmm.utils.misc import (
 )
 
 from tapas_gmm.utils.keyboard_observer import KeyboardObserver
-from tapas_gmm.utils.observation import SceneObservation
 
 
 @dataclass
@@ -123,7 +122,7 @@ def main(config: Config) -> None:
                         replay_memory.save_current_traj()
 
                         obs, _, policy_done, _ = env.reset(
-                            sample_pre_condition(obs.scene_obs)
+                            sample_pre_condition(obs.scene_obs, StateSpace.DYNAMIC)
                         )
                         keyboard_obs.reset()
                         policy.reset_episode(env)
@@ -139,7 +138,9 @@ def main(config: Config) -> None:
                         ebar.set_description("Resetting without saving traj")
                         replay_memory.reset_current_traj()
 
-                        obs, _, _, _ = env.reset(sample_pre_condition(obs.scene_obs))
+                        obs, _, _, _ = env.reset(
+                            sample_pre_condition(obs.scene_obs, StateSpace.DYNAMIC)
+                        )
                         # logger.debug(obs.scene_obs)
                         keyboard_obs.reset()
                         policy.reset_episode(env)

@@ -27,9 +27,9 @@ class RLConfig:
     state_space: StateSpace = StateSpace.DYNAMIC
     reward_mode: RewardMode = RewardMode.SPARSE
     batch_size: int = (
-        8  # 2048 1024 How many steps to collect before updating the policy
+        2048  # 2048 1024 How many steps to collect before updating the policy
     )
-    mini_batch_size: int = 4  # 64 # How many steps to use in each mini-batch
+    mini_batch_size: int = 64  # 64 # How many steps to use in each mini-batch
     n_epochs: int = 50  # How many passes over the collected batch per update
     lr_actor: float = 0.0003  # Step size for actor optimizer
     lr_critic: float = 0.0003  # Step size for critic optimizer
@@ -137,15 +137,28 @@ class Agent(ABC):
         self.buffer = RolloutBuffer()
         self.state_dim = State.count_by_state_space(self.parameters.state_space)
         self.action_dim = Task.count_by_action_space(self.parameters.action_space)
+        self.active_states = State.list_by_state_space(parameters.state_space)
+        self.active_tasks = Task.list_by_action_space(parameters.action_space)
         self.converter = NodeConverter(
-            State.list_by_state_space(parameters.state_space),
-            Task.list_by_action_space(parameters.action_space),
+            state_list=self.active_states,
+            task_list=self.active_tasks,
             normalized=True,
         )
         total = sum(parameters.reward_scale.values())
         self.normalized_reward_scale = {
             key: value / total for key, value in parameters.reward_scale.items()
         }
+        self.surfaces = {
+            "table": [[0.0, -0.15, 0.46], [0.30, -0.03, 0.52]],
+            # "slider_left": [[-0.32, 0.05, 0.46], [-0.16, 0.12, 0.46]],
+            "slider_right": [[-0.05, 0.05, 0.46], [0.13, 0.12, 0.52]],
+            "drawer_open": [[0.0, -0.35, 0.38], [0.40, 0.12, 0.44]],
+        }  # changed drawer box since its a movable surface
+        # NOTE: Coords for original surfaces
+        # table: [[0.0, -0.15, 0.46], [0.30, -0.03, 0.46]]
+        # slider_left: [[-0.32, 0.05, 0.46], [-0.16, 0.12, 0.46]]
+        # slider_right: [[-0.05, 0.05, 0.46], [0.13, 0.12, 0.46]]
+        # drawer_open: [[0.04, -0.35, 0.38], [0.30, -0.21, 0.38]]
 
     @abstractmethod
     def act(self, current: HRLPolicyObservation, goal: HRLPolicyObservation) -> int:
@@ -382,6 +395,14 @@ class Agent(ABC):
         self.buffer.is_terminals.append(False)
         return reward, False
 
+    def check_surface(self, transform) -> str | None:
+        for name, (min_corner, max_corner) in self.surfaces.items():
+            box_min = np.array(min_corner)
+            box_max = np.array(max_corner)
+            if np.all(transform >= box_min) and np.all(transform <= box_max):
+                return name
+        return None
+
     def step(
         self,
         prev_obs: HRLPolicyObservation,
@@ -399,19 +420,27 @@ class Agent(ABC):
         Returns:
             Reward (positive if closer to goal, negative if moving away).
         """
+
         # Compute distances to goal
         prev_dist = self.converter.dict_distance(prev_obs, goal_obs)
         next_dist = self.converter.dict_distance(next_obs, goal_obs)
 
         ##### Checking if goal is reached
         goal_reached = True
-        for key, value in next_dist.items():
-            if value > self.parameters.success_threshold[key.value.state_type]:
-                goal_reached = False
-                # print(
-                #    f"Goal not reached for {key.name}: {value}"
-                # )
-                # break
+        for state in self.active_states:
+            state_type = state.value.state_type
+            if state_type == StateType.Transform and state is not State.EE_Transform:
+                goal_value = goal_obs.transform_states[state]
+                goal_surface = self.check_surface(goal_value)
+                next_value = next_obs.transform_states[state]
+                next_surface = self.check_surface(next_value)
+                if goal_surface != next_surface:
+                    goal_reached = False
+                    break
+            else:  # Scalars and EE States
+                if next_dist[state] > self.parameters.success_threshold[state_type]:
+                    goal_reached = False
+                    break
 
         # If goal is reached, give a large reward and mark as terminal
         if goal_reached:
