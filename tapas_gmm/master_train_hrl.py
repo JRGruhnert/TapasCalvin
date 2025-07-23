@@ -7,15 +7,16 @@ from typing import Dict
 import numpy as np
 
 from tapas_gmm.master_project.master_converter import P_C_NodeConverter
-from tapas_gmm.master_project.master_data_def import State
+from tapas_gmm.master_project.master_definitions import State, Task
 from tapas_gmm.master_project.master_helper import HRLHelper
-from tapas_gmm.master_project.master_sample import (
+from tapas_gmm.master_project.master_env_sample import (
     sample_post_condition,
     sample_pre_condition,
 )
-from tapas_gmm.master_project.master_agent import GNNAgent, PPOAgent, Agent, RLConfig
-from tapas_gmm.master_project.master_observation import HRLPolicyObservation
+from tapas_gmm.master_project.master_agent import GNNAgent, PPOAgent, Agent, AgentConfig
+from tapas_gmm.master_project.master_observation import MasterObservation
 from tapas_gmm.env.calvin import Calvin
+from tapas_gmm.master_project.master_tapas_policy import PolicyStorage
 
 
 # Custom encoder that converts Enums to their names
@@ -49,10 +50,11 @@ def train_agent(
     vis: bool = False,  # Visualize the environment
     use_gpu: bool = True,  # Use GPU for training
     # Agent Parameters
-    parameters: RLConfig = RLConfig(),
+    parameters: AgentConfig = AgentConfig(),
 ):
     # Initialize the environment and agent
     env = Calvin(eval=True, vis=not use_gpu)
+    policy_storage = PolicyStorage(parameters.task_space)
     agent: Agent = None
     if is_baseline:
         agent = PPOAgent(
@@ -121,11 +123,11 @@ def train_agent(
             calvin_goal_obs, _, _, _ = env.reset(
                 scene_goal_obs, static=False, settle_time=50
             )
-            hrl_goal_obs = HRLPolicyObservation(calvin_goal_obs)
+            hrl_goal_obs = MasterObservation(calvin_goal_obs)
             calvin_obs, _, _, _ = env.reset(
                 scene_starting_obs, static=False, settle_time=50
             )
-            hrl_obs = HRLPolicyObservation(calvin_obs)
+            hrl_obs = MasterObservation(calvin_obs)
             viz_dict: Dict[str, bool] = {
                 key.name: value == hrl_obs.scalar_states[key]
                 for key, value in hrl_goal_obs.scalar_states.items()
@@ -134,47 +136,34 @@ def train_agent(
                 last_step = task_step == horizon
                 # Retrieve policy from agent
                 task_id = agent.act(hrl_obs, hrl_goal_obs)
-                selected_task = HRLHelper.retrieve_task(task_id)
-                # print(f"{task_step}/{horizon}: {selected_task.name}")
-                # Decides wether selected policy has a good starting position
-                # based of preconditions and current observation
-                skip = False
-                pre_con_check = False
-                selection_threshold = 0.5  # Threshold for precondition check
-                if pre_con_check:
-                    con_eval = P_C_NodeConverter(selected_task)
-                    score = con_eval.node_features(hrl_obs, True)
-                    if np.any(score > selection_threshold):
-                        step_reward = -10.0
-                        task_done = False
-                        skip = True
+                selected_task = Task.get_enum_by_index(task_id)
 
-                if not skip:
-                    # Loads Tapas Policy for that Task (batch predict config)
-                    policy = HRLHelper.load_policy(selected_task)
-                    policy.reset_episode(env)
-                    # This is a hack for changing the ee_pose to the origin for reversed models
-                    # It does nothing for standard models
-                    hrl_obs = HRLHelper.convert_observation(selected_task, hrl_obs)
-                    # Batch prediction for the given observation
-                    try:
-                        prediction, _ = policy.predict(hrl_obs.tapas_format)
-                        for action in prediction:
-                            ee_action = np.concatenate((action.ee, action.gripper))
-                            calvin_obs, _, _, _ = env.step(ee_action, vis, viz_dict)
-                        new_hrl_obs = HRLPolicyObservation(calvin_obs)
-                        step_reward, task_done = agent.step(
-                            hrl_obs, new_hrl_obs, hrl_goal_obs, last_step
-                        )
-                    except FloatingPointError:
-                        # At some point the model crashes.
-                        # Have to debug if its because of bad input
-                        print(f"Error happened!")
-                        new_hrl_obs = hrl_obs
-                        step_reward, task_done = agent.step(
-                            hrl_obs, new_hrl_obs, hrl_goal_obs, True
-                        )
-                    hrl_obs = new_hrl_obs
+                # Loads Tapas Policy for that Task (batch predict config)
+                policy = policy_storage.get_policy(selected_task)
+                policy.reset_episode(env)
+                # This is a hack for changing the ee_pose to the origin for reversed models
+                # It does nothing for standard models
+                hrl_obs = HRLHelper.convert_observation(selected_task, hrl_obs)
+                # Batch prediction for the given observation
+                try:
+                    prediction, _ = policy.predict(hrl_obs.tapas_format)
+                    for action in prediction:
+                        ee_action = np.concatenate((action.ee, action.gripper))
+                        calvin_obs, _, _, _ = env.step(ee_action, vis, viz_dict)
+                    new_hrl_obs = MasterObservation(calvin_obs)
+                    reward, terminal
+                    step_reward, task_done = agent.step(
+                        hrl_obs, new_hrl_obs, hrl_goal_obs, last_step
+                    )
+                except FloatingPointError:
+                    # At some point the model crashes.
+                    # Have to debug if its because of bad input
+                    print(f"Error happened!")
+                    new_hrl_obs = hrl_obs
+                    step_reward, task_done = agent.step(
+                        hrl_obs, new_hrl_obs, hrl_goal_obs, True
+                    )
+                hrl_obs = new_hrl_obs
                 ep_reward += step_reward
                 batch_step += 1
 

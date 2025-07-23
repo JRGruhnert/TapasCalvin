@@ -3,8 +3,8 @@ import torch.nn as nn
 from torch.distributions import Categorical
 from abc import ABC, abstractmethod
 
-from tapas_gmm.master_project.master_data_def import StateType
-from tapas_gmm.master_project.master_encoder import (
+from tapas_gmm.master_project.master_definitions import StateType
+from tapas_gmm.master_project.master_modules import (
     TransformEncoder,
     QuaternionEncoder,
     ScalarEncoder,

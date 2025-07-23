@@ -7,8 +7,8 @@ import torch
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from tapas_gmm.master_project.master_data_def import (
-    ActionSpace,
+from tapas_gmm.master_project.master_definitions import (
+    TaskSpace,
     StateInfo,
     StateSpace,
     StateType,
@@ -16,8 +16,10 @@ from tapas_gmm.master_project.master_data_def import (
     State,
 )
 from tapas_gmm.master_project.master_helper import HRLHelper
-from tapas_gmm.master_project.master_observation import HRLPolicyObservation
-from tapas_gmm.policy.models.tpgmm import Gaussian
+from tapas_gmm.master_project.master_observation import MasterObservation
+from tapas_gmm.master_project.master_tapas_policy import PolicyStorage
+from tapas_gmm.policy.gmm import GMMPolicy
+from tapas_gmm.policy.models.tpgmm import TPGMM, Gaussian
 from scipy.stats import chi2
 
 
@@ -195,8 +197,8 @@ class NodeConverter:
 
     def dict_distance(
         self,
-        current: HRLPolicyObservation,
-        goal: HRLPolicyObservation,
+        current: MasterObservation,
+        goal: MasterObservation,
     ) -> Dict[State, torch.Tensor]:
         """
         Compute the distance for each state in the observation.
@@ -210,8 +212,8 @@ class NodeConverter:
 
     def tensor_dict_distance(
         self,
-        current: HRLPolicyObservation,
-        goal: HRLPolicyObservation,
+        current: MasterObservation,
+        goal: MasterObservation,
     ) -> Dict[StateType, torch.Tensor]:
         # Initialize groups
         transform_values = []
@@ -234,7 +236,7 @@ class NodeConverter:
         }
 
     def tensor_combined_distance(
-        self, current: HRLPolicyObservation, goal: HRLPolicyObservation
+        self, current: MasterObservation, goal: MasterObservation
     ) -> torch.Tensor:
         # Convert all values to numpy arrays and concatenate
         values = []
@@ -250,7 +252,7 @@ class NodeConverter:
 
     def dict_values(
         self,
-        obs: HRLPolicyObservation,
+        obs: MasterObservation,
     ) -> Dict[State, float | np.ndarray]:
         """
         Compute the value for each state in the observation.
@@ -264,7 +266,7 @@ class NodeConverter:
 
     def tensor_dict_values(
         self,
-        obs: HRLPolicyObservation,
+        obs: MasterObservation,
     ) -> Dict[StateType, torch.Tensor]:
         # Initialize groups
         transform_values = []
@@ -286,7 +288,7 @@ class NodeConverter:
             StateType.Scalar: torch.from_numpy(np.stack(scalar_values)).float(),
         }
 
-    def tensor_combined_values(self, current: HRLPolicyObservation) -> torch.Tensor:
+    def tensor_combined_values(self, current: MasterObservation) -> torch.Tensor:
         # Convert all values to numpy arrays and concatenate
         values = []
         for key, converter in self.converter.items():
@@ -301,7 +303,7 @@ class NodeConverter:
 
     def tensor_task_distance(
         self,
-        current: HRLPolicyObservation,
+        current: MasterObservation,
     ) -> torch.Tensor:
         features: list[np.ndarray] = []
         for task in self.tasks:
@@ -327,19 +329,65 @@ class NodeConverter:
 
 
 class EdgeConverter:
-    def __init__(self, active_states: list[State], active_tasks: list[Task]):
+    def __init__(
+        self,
+        active_states: list[State],
+        active_tasks: list[Task],
+        policy_storage: PolicyStorage,
+    ):
         """
         Initialize the edge converter with a list of active states and tasks.
         """
         self.active_states = active_states
         self.active_tasks = active_tasks
+        self.policy_storage = policy_storage
+
+    def _get_tp_from_task(
+        self,
+        task: Task,
+        split_pose: bool,
+        active_states: list[State],
+    ) -> Dict[State, np.ndarray]:
+        tpgmm: TPGMM = self.policy_storage.get_policy(task).tpgmm
+        result: Dict[State, np.ndarray] = {}
+        for _, segment in enumerate(tpgmm.segment_frames):
+            for _, frame_idx in enumerate(segment):
+                if split_pose:
+                    transform_key, quaternion_key = State.get_tp_by_index(
+                        frame_idx, True
+                    )
+                    if transform_key in active_states:
+                        if frame_idx == 0:
+                            # Zero means its the ee_pose
+                            result[transform_key] = task.value.ee_hrl_start[:3]
+                        else:
+                            result[transform_key] = task.value.obj_start[:3]
+                    if quaternion_key in active_states:
+                        if frame_idx == 0:
+                            # Zero means its the ee_pose
+                            result[quaternion_key] = task.value.ee_hrl_start[-4:]
+                        else:
+                            result[quaternion_key] = task.value.obj_start[-4:]
+                else:
+                    pose_key = State.get_tp_by_index(frame_idx, False)
+                    if frame_idx == 0:
+                        # Zero means its the ee_pose
+                        result[pose_key] = task.value.ee_hrl_start
+                    else:
+                        result[pose_key] = task.value.obj_start
+        for key, value in task.value.precondition.items():
+            result[key] = value
+        return result
 
     def state_state_edges(self, full: bool) -> torch.Tensor:
         num_states = len(self.active_states)
         if not full:
+            # Only connects edges with same index
+            # (therefore being the same state but with different value)
             src = torch.arange(num_states)
             dst = torch.arange(num_states)
         else:
+            # Fully connected Graph
             src = torch.arange(num_states).unsqueeze(1).repeat(1, num_states).flatten()
             dst = torch.arange(num_states).repeat(num_states)
         return torch.stack([src, dst], dim=0)
@@ -348,7 +396,7 @@ class EdgeConverter:
         if not full:
             edge_list = []
             for task_idx, task in enumerate(self.active_tasks):
-                tp_dict = HRLHelper.get_tp_from_task(task, True, self.active_states)
+                tp_dict = self._get_tp_from_task(task, True, self.active_states)
                 for state_idx, state in enumerate(self.active_states):
                     if state in tp_dict:
                         # connect B-node b_idx to C-node c_idx
@@ -392,222 +440,3 @@ class EdgeConverter:
         edge_attr = torch.tensor(attrs, dtype=torch.float).unsqueeze(-1)  # shape [E, 1]
 
         return edge_attr
-
-
-class P_C_GaussianConverter(StateConverter):
-    def __init__(self, g: Gaussian):
-        """
-        Represents a single Gaussian prior.
-
-        Parameters:
-        - mu (np.ndarray): Mean vector of shape (D,)
-        - sigma (np.ndarray): Covariance matrix of shape (D, D)
-        """
-        self._g = g
-        self._mu, self._sigma = g.get_mu_sigma(mu_on_tangent=True, as_np=True)
-        self._dof = self._mu.shape[0]
-        self._det_sigma = np.linalg.det(self._sigma)
-
-    def _mahalanobis_distance(self, x: np.ndarray) -> float:
-        """
-        Compute the Mahalanobis distance between x and the stored mean/cov.
-
-        Parameters:
-        - x (np.ndarray): Input vector of shape (D,)
-
-        Returns:
-        - float: Mahalanobis distance
-        """
-
-        # Swap third (index 2) and last (index -1)
-        x[3], x[-1] = x[-1], x[3]
-
-        padd_x = np.concatenate([x, np.array([1.0])])  # 1.0 for gripper
-
-        mu_test, _ = self._g.get_mu_sigma(mu_on_tangent=False, as_np=True)
-
-        logp = self._g.prob_from_np(mu_test, log=True)
-
-        # recover Mahalanobis distance
-        norm_term = 0.5 * (self._dof * np.log(2 * np.pi) + np.log(self._det_sigma))
-
-        d2 = max(-2 * (logp + norm_term), 0.0)
-        return np.sqrt(d2)
-
-    def _mahalanobis_score(self, x: np.ndarray) -> float:
-        """
-        Compute a normalized Mahalanobis alignment score in [0, 1].
-
-        Parameters:
-        - x (np.ndarray): Input vector of shape (D,)
-
-        Returns:
-        - float: A score in [0, 1], higher is better alignment (1 is perfect match)
-        """
-        d2 = self._mahalanobis_distance(x) ** 2
-        return 1.0 - chi2.cdf(d2, df=self._dof)
-
-    def distance(self, current: np.ndarray) -> float:
-        """
-        Compute the Mahalanobis distance between current and the stored mean/cov.
-
-        Parameters:
-        - current (np.ndarray): Current observation vector of shape (D,)
-
-        Returns:
-        - float: Mahalanobis distance
-        """
-        result = self._mahalanobis_score(current)
-        return result
-
-
-class P_C_StartPoseConverter:
-    def __init__(self, reference_pose: np.ndarray, weights: np.ndarray = None):
-        """
-        Compare poses using a weighted distance.
-
-        Parameters:
-        - reference_pose (np.ndarray): [x, y, z, qx, qy, qz, qw] reference pose
-        - weights (np.ndarray): length-6 vector for weighting pos + rot diffs
-                                If None, defaults to [1,1,1,1,1,1]
-        """
-        assert reference_pose.shape == (7,), "Pose must be [x, y, z, qx, qy, qz, qw]"
-        self._ref_pose = reference_pose
-        # weights = np.ndarray([2, 2, 2, 1, 1, 1])
-        self._weights = weights if weights is not None else np.ones(6)
-
-    def _quat_log_map(self, q1: np.ndarray, q2: np.ndarray) -> np.ndarray:
-        """Return rotation difference log(q2⁻¹ * q1) as 3D rotvec"""
-        r1 = R.from_quat(q1)
-        r2 = R.from_quat(q2)
-        r_rel = r2.inv() * r1
-        return r_rel.as_rotvec()  # shape (3,)
-
-    def _distance(self, query_pose: np.ndarray) -> float:
-        """
-        Compute weighted Mahalanobis-like distance between two poses.
-
-        Parameters:
-        - query_pose (np.ndarray): [x, y, z, qx, qy, qz, qw]
-
-        Returns:
-        - float: distance
-        """
-        assert query_pose.shape == (7,), "Pose must be [x, y, z, qx, qy, qz, qw]"
-        pos_diff = query_pose[:3] - self._ref_pose[:3]
-        rot_diff = self._quat_log_map(query_pose[3:], self._ref_pose[3:])
-        delta = np.concatenate([pos_diff, rot_diff])  # shape (6,)
-        weighted = self._weights * delta**2
-        return np.sqrt(np.sum(weighted))
-
-    def _similarity_score(self, query_pose: np.ndarray) -> float:
-        """
-        Return a similarity score between 0 and 1 (1 = exact match)
-
-        Parameters:
-        - query_pose (np.ndarray): [x, y, z, qx, qy, qz, qw]
-
-        Returns:
-        - float: similarity score
-        """
-        return self._distance(query_pose)
-
-    def feature(self, current: np.ndarray) -> float:
-        return self._similarity_score(current)
-
-
-class P_C_IgnoreConverter(StateConverter):
-    def distance(self, _: np.ndarray) -> float:
-        """
-        Returns a constant value of 0.0, indicating no contribution to the feature.
-        """
-        return 0.0
-
-
-class P_C_NodeConverter:
-    def __init__(self, model: Task):
-        self._feature_converter: dict[State, StateConverter] = {
-            obs_state: P_C_IgnoreConverter() for obs_state in HRLHelper.c_states()
-        }
-        for key, value in HRLHelper.get_tp_from_task(model).items():
-            self._feature_converter[key] = P_C_StartPoseConverter(value)
-
-        for key, value in model.value.precondition.items():
-            if isinstance(value, float):
-                self._feature_converter[key] = ScalarConverter(key, value)
-            else:
-                self._feature_converter[key] = P_C_StartPoseConverter(value)
-
-    def node_features(
-        self,
-        obs: HRLPolicyObservation,
-        only_precondition: bool = False,
-    ) -> np.ndarray:
-        if not only_precondition:
-            features: list[float] = [
-                self._feature_converter[key].distance(value)
-                for key, value in obs.normal_states.items()
-            ]
-
-        else:
-            features: list[float] = [
-                self._feature_converter[key].distance(value)
-                for key, value in obs.normal_states.items()
-                if not isinstance(self._feature_converter[key], P_C_IgnoreConverter)
-            ]
-        return np.array(features)
-
-    def get_ee_score(self, obs: HRLPolicyObservation) -> float:
-        return self._feature_converter[State.EE_Pose].distance(
-            obs.normal_states[State.EE_Pose]
-        )
-
-    @cached_property
-    def index_list(self) -> list[int]:
-        # TODO: Fix
-        indices: list[int] = []
-        for idx, feature_converter in enumerate(self._feature_converter.values()):
-            if not isinstance(feature_converter, P_C_IgnoreConverter):
-                indices.append(idx)
-        return indices
-
-
-class P_C_Converter:
-    def __init__(self, dataset: ActionSpace, states: list[State]):
-        self._node_converter: Dict[Task, P_C_NodeConverter] = {
-            model: P_C_NodeConverter(model) for model in HRLHelper.models(dataset)
-        }
-        self.states: list[State] = states
-
-    def partition_features(self, obs: HRLPolicyObservation) -> torch.Tensor:
-        """Convert the observation into a feature vector for Partition C using the node converters."""
-        features: list[np.ndarray] = []
-        for _, converter in self._node_converter.items():
-            features.append(converter.node_features(obs))
-
-        return torch.from_numpy(np.stack(features, axis=0)).float()
-
-    def evaluate_ee_pose(self, obs: HRLPolicyObservation) -> float:
-        raise NotImplementedError()
-
-    @cached_property
-    def bc_edges(self) -> torch.Tensor:
-        edge_list = []
-        # TODO: Object poses hardcoded because all the same, but have to change later
-        for i, node_converter in enumerate(self._node_converter.items()):
-            for state in node_converter[0].value.precondition:
-                if state.value.state_type == StateType.Pose:
-                    sub_states: list[State] = State.from_pose_string(
-                        state.value.identifier
-                    )
-                    for sub_state in sub_states:
-                        index = self.states.index(sub_state)
-                        edge_list.append([index, i])
-                else:
-                    index = self.states.index(state)
-                    edge_list.append([index, i])  # edge from j to i
-
-        # Converts to tensor with shape [2, num_edges]
-        edge_index = torch.tensor(edge_list, dtype=torch.long).T  # transposes to [2, N]
-        logger.warning(f"BC Edges {edge_index}")
-        return edge_index

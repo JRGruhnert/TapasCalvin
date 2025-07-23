@@ -3,7 +3,7 @@ from loguru import logger
 import numpy as np
 import torch
 
-from tapas_gmm.master_project.master_data_def import (
+from tapas_gmm.master_project.master_definitions import (
     State,
     _origin_ee_tp_pose,
 )
@@ -94,7 +94,7 @@ def _to_rlbench_format(obs: CalvinObservation) -> SceneObservation:  # type: ign
     return obs
 
 
-class HRLPolicyObservation(object):
+class MasterObservation(object):
     def __init__(
         self,
         obs: CalvinObservation,

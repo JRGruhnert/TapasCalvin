@@ -4,15 +4,16 @@ from typing import Dict
 import torch
 from torch import nn
 import numpy as np
-from tapas_gmm.master_project.master_ppo_gnn import GNN_PPO, GNN_PPO2, GNN_PPO3
+from tapas_gmm.master_project.master_gnn import GNN_PPO, GNN_PPO2, GNN_PPO3
+from tapas_gmm.master_project.master_scorer import Scorer, ScorerConfig
 from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.master_project.master_gnn import HRL_GNN, HRL_GNN2
+from tapas_gmm.master_project.master_old_gnn import HRL_GNN, HRL_GNN2
 from tapas_gmm.master_project.master_graph import Graph
-from tapas_gmm.master_project.master_observation import HRLPolicyObservation
+from tapas_gmm.master_project.master_observation import MasterObservation
 from tapas_gmm.master_project.master_baseline import ActorCriticBase, PPOActorCritic
 from tapas_gmm.master_project.master_converter import NodeConverter
-from tapas_gmm.master_project.master_data_def import (
-    ActionSpace,
+from tapas_gmm.master_project.master_definitions import (
+    TaskSpace,
     State,
     StateSpace,
     StateType,
@@ -22,16 +23,17 @@ from tapas_gmm.master_project.master_data_def import (
 
 
 @dataclass
-class RLConfig:
-    action_space: ActionSpace = ActionSpace.STATIC
+class AgentConfig:
+    task_space: TaskSpace = TaskSpace.STATIC
     state_space: StateSpace = StateSpace.DYNAMIC
+    scorer: ScorerConfig = None
     reward_mode: RewardMode = RewardMode.SPARSE
     batch_size: int = (
         2048  # 2048 1024 How many steps to collect before updating the policy
     )
     mini_batch_size: int = 64  # 64 # How many steps to use in each mini-batch
     n_epochs: int = 50  # How many passes over the collected batch per update
-    lr_actor: float = 0.0003  # Step size for actor optimizer
+    lr_actor: float = 0.0006  # Step size for actor optimizer
     lr_critic: float = 0.0003  # Step size for critic optimizer
     gamma: float = 0.99  # How much future rewards are worth today
     gae_lambda: float = 0.95  # Bias/variance trade‑off in advantage estimation
@@ -40,20 +42,6 @@ class RLConfig:
     value_coef: float = 0.5  # Weight on the critic (value) loss vs. the policy loss
     max_grad_norm: float = 0.5  # Threshold for clipping gradient norms
     target_kl: float = 0.02  # (Optional) early stopping if KL divergence gets too large
-    success_threshold: Dict[StateType, float] = field(
-        default_factory=lambda: {
-            StateType.Transform: 0.05,
-            StateType.Quat: 0.1,
-            StateType.Scalar: 0.05,
-        }
-    )
-    reward_scale: Dict[StateType, float] = field(
-        default_factory=lambda: {
-            StateType.Transform: 2.0,
-            StateType.Quat: 1.0,
-            StateType.Scalar: 2.0,
-        }
-    )
     graph_gin_based: bool = True
 
 
@@ -124,10 +112,10 @@ class Agent(ABC):
 
     def __init__(
         self,
-        parameters: RLConfig,
+        config: AgentConfig,
     ):
         # Hyperparameters
-        self.parameters = parameters
+        self.config = config
 
         # Initialize the agent
         self.policy_new: ActorCriticBase = None
@@ -135,33 +123,18 @@ class Agent(ABC):
         self.optimizer: torch.optim.Adam = None
         self.mse_loss = nn.MSELoss()
         self.buffer = RolloutBuffer()
-        self.state_dim = State.count_by_state_space(self.parameters.state_space)
-        self.action_dim = Task.count_by_action_space(self.parameters.action_space)
-        self.active_states = State.list_by_state_space(parameters.state_space)
-        self.active_tasks = Task.list_by_action_space(parameters.action_space)
-        self.converter = NodeConverter(
-            state_list=self.active_states,
-            task_list=self.active_tasks,
-            normalized=True,
+        self.state_dim = State.count_by_state_space(self.config.state_space)
+        self.action_dim = Task.count_by_action_space(self.config.task_space)
+        self.active_states = State.list_by_state_space(config.state_space)
+        self.active_tasks = Task.get_tasks_in_task_space(config.task_space)
+        self.scorer = Scorer(
+            self.config.scorer,
+            self.active_states,
+            self.active_tasks,
         )
-        total = sum(parameters.reward_scale.values())
-        self.normalized_reward_scale = {
-            key: value / total for key, value in parameters.reward_scale.items()
-        }
-        self.surfaces = {
-            "table": [[0.0, -0.15, 0.46], [0.30, -0.03, 0.52]],
-            # "slider_left": [[-0.32, 0.05, 0.46], [-0.16, 0.12, 0.46]],
-            "slider_right": [[-0.05, 0.05, 0.46], [0.13, 0.12, 0.52]],
-            "drawer_open": [[0.0, -0.35, 0.38], [0.40, 0.12, 0.44]],
-        }  # changed drawer box since its a movable surface
-        # NOTE: Coords for original surfaces
-        # table: [[0.0, -0.15, 0.46], [0.30, -0.03, 0.46]]
-        # slider_left: [[-0.32, 0.05, 0.46], [-0.16, 0.12, 0.46]]
-        # slider_right: [[-0.05, 0.05, 0.46], [0.13, 0.12, 0.46]]
-        # drawer_open: [[0.04, -0.35, 0.38], [0.30, -0.21, 0.38]]
 
     @abstractmethod
-    def act(self, current: HRLPolicyObservation, goal: HRLPolicyObservation) -> int:
+    def act(self, current: MasterObservation, goal: MasterObservation) -> int:
         pass
 
     def save_buffer(self, path: str, batch_num: int):
@@ -182,13 +155,13 @@ class Agent(ABC):
         for step in reversed(range(len(rewards))):
             delta = (
                 rewards[step]
-                + self.parameters.gamma * values[step + 1] * (1 - is_terminals[step])
+                + self.config.gamma * values[step + 1] * (1 - is_terminals[step])
                 - values[step]
             )
             gae = (
                 delta
-                + self.parameters.gamma
-                * self.parameters.gae_lambda
+                + self.config.gamma
+                * self.config.gae_lambda
                 * (1 - is_terminals[step])
                 * gae
             )
@@ -240,14 +213,12 @@ class Agent(ABC):
 
         early_stop = False
         # Optimize policy for K epochs
-        for epoch in range(self.parameters.n_epochs):
+        for epoch in range(self.config.n_epochs):
             # Shuffle indices for minibatch
-            indices = torch.randperm(self.parameters.batch_size)
+            indices = torch.randperm(self.config.batch_size)
 
-            for start in range(
-                0, self.parameters.batch_size, self.parameters.mini_batch_size
-            ):
-                end = start + self.parameters.mini_batch_size
+            for start in range(0, self.config.batch_size, self.config.mini_batch_size):
+                end = start + self.config.mini_batch_size
                 mb_idx = indices[start:end]
 
                 mb_obs = {k: v[mb_idx] for k, v in old_obs.items()}
@@ -296,8 +267,8 @@ class Agent(ABC):
                 surr2 = (
                     torch.clamp(
                         ratios,
-                        1 - self.parameters.eps_clip,
-                        1 + self.parameters.eps_clip,
+                        1 - self.config.eps_clip,
+                        1 + self.config.eps_clip,
                     )
                     * mb_advantages
                 )
@@ -305,15 +276,14 @@ class Agent(ABC):
                 # PPO loss
                 loss: torch.Tensor = (
                     -torch.min(surr1, surr2)
-                    + self.parameters.value_coef
-                    * self.mse_loss(state_values, mb_rewards)
-                    - self.parameters.entropy_coef * dist_entropy
+                    + self.config.value_coef * self.mse_loss(state_values, mb_rewards)
+                    - self.config.entropy_coef * dist_entropy
                 )
 
                 self.optimizer.zero_grad()
                 loss.mean().backward()
                 nn.utils.clip_grad_norm_(
-                    self.policy_new.parameters(), self.parameters.max_grad_norm
+                    self.policy_new.parameters(), self.config.max_grad_norm
                 )
                 self.optimizer.step()
 
@@ -351,117 +321,17 @@ class Agent(ABC):
             torch.load(path, map_location=lambda storage, _: storage)
         )
 
-    def difference_reward(
-        self,
-        prev: dict[State, torch.Tensor],
-        next: dict[State, torch.Tensor],
-    ) -> float:
-        total = 0.0
-        for key in prev:
-            diff = prev[key].item() - next[key].item()
-            scale = self.normalized_reward_scale[key.value.state_type]
-            # Multiply and accumulate
-            total += scale * diff
-
-        return total / len(prev)
-
-    def on_off_reward(
-        self,
-        prev: dict[State, torch.Tensor],
-        next: dict[State, torch.Tensor],
-    ) -> float:
-        total = 0.0
-        for key in prev:
-            diff = prev[key].item() - next[key].item()
-            scale = self.normalized_reward_scale[key.value.state_type]
-            if diff < 0:
-                total -= 1.0 * scale
-            elif diff > 0:
-                total += 1.0 * scale
-        return total / len(prev)
-
-    def failed_step(self, reward: float = 0.0) -> tuple[float, bool]:
-        self.buffer.rewards.append(reward)
-        self.buffer.is_terminals.append(True)
-        return reward, True
-
-    def success_step(self, reward: float = 10.0) -> tuple[float, bool]:
-        self.buffer.rewards.append(reward)
-        self.buffer.is_terminals.append(True)
-        return reward, True
-
-    def normal_step(self, reward: float = 0.0) -> tuple[float, bool]:
-        self.buffer.rewards.append(reward)
-        self.buffer.is_terminals.append(False)
-        return reward, False
-
-    def check_surface(self, transform) -> str | None:
-        for name, (min_corner, max_corner) in self.surfaces.items():
-            box_min = np.array(min_corner)
-            box_max = np.array(max_corner)
-            if np.all(transform >= box_min) and np.all(transform <= box_max):
-                return name
-        return None
-
     def step(
         self,
-        prev_obs: HRLPolicyObservation,
-        next_obs: HRLPolicyObservation,
-        goal_obs: HRLPolicyObservation,
-        last_step: bool = False,
+        obs: MasterObservation,
     ) -> tuple[float, bool]:
-        """Compute reward based on progress toward the goal state.
-
-        Args:
-            prev_obs: Previous observation.
-            next_obs: Current observation after taking an action.
-            goal_obs: Desired goal observation.
-
-        Returns:
-            Reward (positive if closer to goal, negative if moving away).
-        """
-
-        # Compute distances to goal
-        prev_dist = self.converter.dict_distance(prev_obs, goal_obs)
-        next_dist = self.converter.dict_distance(next_obs, goal_obs)
-
-        ##### Checking if goal is reached
-        goal_reached = True
-        for state in self.active_states:
-            state_type = state.value.state_type
-            if state_type == StateType.Transform and state is not State.EE_Transform:
-                goal_value = goal_obs.transform_states[state]
-                goal_surface = self.check_surface(goal_value)
-                next_value = next_obs.transform_states[state]
-                next_surface = self.check_surface(next_value)
-                if goal_surface != next_surface:
-                    goal_reached = False
-                    break
-            else:  # Scalars and EE States
-                if next_dist[state] > self.parameters.success_threshold[state_type]:
-                    goal_reached = False
-                    break
-
-        # If goal is reached, give a large reward and mark as terminal
-        if goal_reached:
-            return self.success_step(reward=100.0)
-        elif last_step:
-            if self.parameters.reward_mode == RewardMode.SPARSE:
-                return self.failed_step(reward=0.0)
-            return self.failed_step(reward=-10.0)
-        else:
-            if self.parameters.reward_mode == RewardMode.SPARSE:
-                return self.normal_step(reward=0.0)
-            elif self.parameters.reward_mode == RewardMode.RANGE:
-                step_reward = self.difference_reward(prev_dist, next_dist)
-            else:
-                step_reward = self.on_off_reward(prev_dist, next_dist)
-            step_reward *= 10  # The reward is between -1 and 1 -> -10 and 10
-            return self.normal_step(reward=step_reward)
+        reward, terminal = self.scorer.reward(obs)
+        self.buffer.rewards.append(reward)
+        self.buffer.is_terminals.append(terminal)
 
 
 class PPOAgent(Agent):
-    def __init__(self, parameters: RLConfig):
+    def __init__(self, parameters: AgentConfig):
         super().__init__(parameters)
         self.policy_new: PPOActorCritic = PPOActorCritic(
             self.state_dim, self.action_dim
@@ -472,10 +342,10 @@ class PPOAgent(Agent):
         self.policy_old.load_state_dict(self.policy_new.state_dict())
         self.optimizer = torch.optim.Adam(
             self.policy_new.parameters(),
-            lr=self.parameters.lr_actor,
+            lr=self.config.lr_actor,
         )
 
-    def act(self, obs: HRLPolicyObservation, goal: HRLPolicyObservation) -> int:
+    def act(self, obs: MasterObservation, goal: MasterObservation) -> int:
         obs_dict = self.converter.tensor_dict_values(obs)
         goal_dict = self.converter.tensor_dict_values(goal)
 
@@ -500,22 +370,22 @@ class PPOAgent(Agent):
 
 
 class GNNAgent(Agent):
-    def __init__(self, parameters: RLConfig):
+    def __init__(self, parameters: AgentConfig):
         super().__init__(parameters)
         self.graph = Graph(
-            action_space=self.parameters.action_space,
-            state_space=self.parameters.state_space,
-            gin_like=self.parameters.graph_gin_based,
+            action_space=self.config.task_space,
+            state_space=self.config.state_space,
+            gin_like=self.config.graph_gin_based,
         )
         self.policy_new: GNN_PPO3 = GNN_PPO3(self.state_dim, self.action_dim)
         self.policy_old: GNN_PPO3 = GNN_PPO3(self.state_dim, self.action_dim)
         self.policy_old.load_state_dict(self.policy_new.state_dict())
         self.optimizer = torch.optim.Adam(
             self.policy_new.parameters(),
-            lr=self.parameters.lr_actor,
+            lr=self.config.lr_actor,
         )
 
-    def act(self, current: HRLPolicyObservation, goal: HRLPolicyObservation) -> int:
+    def act(self, current: MasterObservation, goal: MasterObservation) -> int:
         self.graph.update(current, goal)
         with torch.no_grad():
             action, action_logprob, state_val = self.policy_old.act(self.graph)

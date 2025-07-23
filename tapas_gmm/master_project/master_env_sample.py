@@ -5,8 +5,8 @@ from typing import Dict, List
 from loguru import logger
 import numpy as np
 
-from tapas_gmm.master_project.master_data_def import (
-    ActionSpace,
+from tapas_gmm.master_project.master_definitions import (
+    TaskSpace,
     State,
     StateSpace,
     StateType,

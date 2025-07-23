@@ -1,19 +1,20 @@
 from typing import Dict
 import torch
-from tapas_gmm.master_project.master_data_def import (
-    ActionSpace,
+from tapas_gmm.master_project.master_definitions import (
+    TaskSpace,
     State,
     StateSpace,
     StateType,
     Task,
 )
 from tapas_gmm.master_project.master_helper import HRLHelper
-from tapas_gmm.master_project.master_observation import HRLPolicyObservation
+from tapas_gmm.master_project.master_observation import MasterObservation
 from tapas_gmm.master_project.master_converter import (
     EdgeConverter,
     NodeConverter,
     P_C_Converter,
 )
+from tapas_gmm.master_project.master_tapas_policy import PolicyStorage
 
 
 class GraphData:
@@ -104,12 +105,15 @@ class GraphData:
 
 class Graph:
     def __init__(
-        self, action_space: ActionSpace, state_space: StateSpace, gin_like: False
+        self,
+        action_space: TaskSpace,
+        state_space: StateSpace,
+        policy_storage: PolicyStorage,
     ):
         state_list = State.list_by_state_space(state_space)
-        task_list = Task.list_by_action_space(action_space)
+        task_list = Task.get_tasks_in_task_space(action_space)
         self.node_converter = NodeConverter(state_list, task_list, True)
-        self.edge_converter = EdgeConverter(state_list, task_list)
+        self.edge_converter = EdgeConverter(state_list, task_list, policy_storage)
         self.a: Dict[State, torch.Tensor] = None
         self.b: Dict[State, torch.Tensor] = None
         self.c: torch.Tensor = None
@@ -128,7 +132,7 @@ class Graph:
         self.state_state_attr: torch.Tensor = self.edge_converter.state_state_attr()
         self.state_task_attr: torch.Tensor = self.edge_converter.state_task_attr()
 
-    def update(self, current: HRLPolicyObservation, goal: HRLPolicyObservation):
+    def update(self, current: MasterObservation, goal: MasterObservation):
         self.a = self.node_converter.tensor_dict_values(goal)
         self.b = self.node_converter.tensor_dict_values(current)
         self.c = self.node_converter.tensor_task_distance(current)

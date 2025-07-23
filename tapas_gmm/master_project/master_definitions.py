@@ -29,7 +29,7 @@ class RewardMode(Enum):
     ONOFF = 2
 
 
-class ActionSpace(Enum):
+class TaskSpace(Enum):
     SMALL = "small"
     STATIC = "static"
     DYNAMIC = "dynamic"
@@ -327,9 +327,9 @@ class State(Enum):
 
 
 @dataclass
-class ModelInfo:
+class TaskInfo:
     precondition: Dict[State, float | np.ndarray]
-    action_space: ActionSpace = ActionSpace.STATIC
+    action_space: TaskSpace = TaskSpace.STATIC
     reversed: bool = False
     ee_tp_start: np.ndarray = _origin_ee_tp_pose
     obj_start: np.ndarray = _origin_obj_tp_pose
@@ -351,7 +351,7 @@ class Task(Enum):
         return list(enum_cls)[index]
 
     @classmethod
-    def count_by_action_space(cls, action_space: ActionSpace) -> int:
+    def count_by_action_space(cls, action_space: TaskSpace) -> int:
         count = 0
         for member in cls:
             model_info = member.value
@@ -360,21 +360,21 @@ class Task(Enum):
         return count
 
     @classmethod
-    def list_by_action_space(cls, action_space: ActionSpace) -> List["Task"]:
+    def get_tasks_in_task_space(cls, task_space: TaskSpace) -> List["Task"]:
         tasks = []
         for member in cls:
             model_info = member.value
-            if model_info.action_space == action_space:
+            if model_info.action_space == task_space:
                 tasks.append(member)
         return tasks
 
-    DrawerDoClose = ModelInfo(
+    DrawerDoClose = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Drawer_State: State.Drawer_State.value.max,
         },
     )
-    SliderLeftMoveTo = ModelInfo(
+    SliderLeftMoveTo = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Slide_State: State.Slide_State.value.max,
@@ -392,7 +392,7 @@ class Task(Enum):
             ]
         ),
     )
-    SliderRightMoveTo = ModelInfo(
+    SliderRightMoveTo = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Slide_State: State.Slide_State.value.min,
@@ -410,7 +410,7 @@ class Task(Enum):
             ]
         ),
     )
-    DrawerMoveToClosed = ModelInfo(
+    DrawerMoveToClosed = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Drawer_State: State.Drawer_State.value.min,
@@ -428,7 +428,7 @@ class Task(Enum):
             ]
         ),
     )
-    DrawerMoveToOpen = ModelInfo(
+    DrawerMoveToOpen = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Drawer_State: State.Drawer_State.value.max,
@@ -446,19 +446,19 @@ class Task(Enum):
             ]
         ),
     )
-    DrawerDoOpen = ModelInfo(
+    DrawerDoOpen = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Drawer_State: State.Drawer_State.value.min,
         },
     )
-    ButtonPress = ModelInfo(
+    ButtonPress = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             # State.Button_State: State.Button_State.value.min,
         },
     )
-    ButtonPressReversed = ModelInfo(
+    ButtonPressReversed = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             # State.Button_State: State.Button_State.value.max,
@@ -476,89 +476,15 @@ class Task(Enum):
             ]
         ),
     )
-    SliderLeftDoOpen = ModelInfo(
+    SliderLeftDoOpen = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Slide_State: State.Slide_State.value.min,
         },
     )
-    SliderRightDoOpen = ModelInfo(
+    SliderRightDoOpen = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Slide_State: State.Slide_State.value.max,
         },
     )
-
-
-class TaskModel(Enum):
-    # A.1 Model Set 1 - Static Elements
-    PRESS_BUTTON = "Press Button"
-    PRESS_BUTTON_REVERSED = "Press Button (Reversed)"
-    OPEN_GRIPPER = "Open Gripper"
-    CLOSE_GRIPPER = "Close Gripper"
-    OPEN_DRAWER = "Open Drawer"
-    CLOSE_DRAWER = "Close Drawer"
-    MOVETO_DRAWER_REVERSED = "MoveTo Drawer (Reversed)"
-    OPEN_CABINET = "Open Cabinet"
-    CLOSE_CABINET = "Close Cabinet"
-    MOVETO_CABINET_REVERSED = "MoveTo Cabinet (Reversed)"
-    UP_LEVER = "Up Lever"
-    DOWN_LEVER = "Down Lever"
-    MOVETO_LEVER_REVERSED = "MoveTo Lever (Reversed)"
-
-    # A.2 Model Set 2 - Dynamic Elements
-    PICKUP_BLUEBLOCK_INSIDE_CABINET = "PickUp BlueBlock Inside Cabinet"
-    PICKUP_BLUEBLOCK_INSIDE_DRAWER = "PickUp BlueBlock Inside Drawer"
-    PICKUP_BLUEBLOCK_INFRONT_CABINET = "PickUp BlueBlock Infront Cabinet"
-    PICKUP_BLUEBLOCK_INFRONT_LEVER = "PickUp BlueBlock Infront Lever"
-    PICKUP_BLUEBLOCK_INSIDE_CABINET_REVERSED = (
-        "PickUp BlueBlock Inside Cabinet (Reversed)"
-    )
-    PICKUP_BLUEBLOCK_INSIDE_DRAWER_REVERSED = (
-        "PickUp BlueBlock Inside Drawer (Reversed)"
-    )
-    PICKUP_BLUEBLOCK_INFRONT_CABINET_REVERSED = (
-        "PickUp BlueBlock Infront Cabinet (Reversed)"
-    )
-    PICKUP_BLUEBLOCK_INFRONT_LEVER_REVERSED = (
-        "PickUp BlueBlock Infront Lever (Reversed)"
-    )
-
-    PICKUP_REDBLOCK_INSIDE_CABINET = "PickUp RedBlock Inside Cabinet"
-    PICKUP_REDBLOCK_INSIDE_DRAWER = "PickUp RedBlock Inside Drawer"
-    PICKUP_REDBLOCK_INFRONT_CABINET = "PickUp RedBlock Infront Cabinet"
-    PICKUP_REDBLOCK_INFRONT_LEVER = "PickUp RedBlock Infront Lever"
-    PICKUP_REDBLOCK_INSIDE_CABINET_REVERSED = (
-        "PickUp RedBlock Inside Cabinet (Reversed)"
-    )
-    PICKUP_REDBLOCK_INSIDE_DRAWER_REVERSED = "PickUp RedBlock Inside Drawer (Reversed)"
-    PICKUP_REDBLOCK_INFRONT_CABINET_REVERSED = (
-        "PickUp RedBlock Infront Cabinet (Reversed)"
-    )
-    PICKUP_REDBLOCK_INFRONT_LEVER_REVERSED = "PickUp RedBlock Infront Lever (Reversed)"
-
-    PICKUP_PURPLEBLOCK_INSIDE_CABINET = "PickUp PurpleBlock Inside Cabinet"
-    PICKUP_PURPLEBLOCK_INSIDE_DRAWER = "PickUp PurpleBlock Inside Drawer"
-    PICKUP_PURPLEBLOCK_INFRONT_CABINET = "PickUp PurpleBlock Infront Cabinet"
-    PICKUP_PURPLEBLOCK_INFRONT_LEVER = "PickUp PurpleBlock Infront Lever"
-    PICKUP_PURPLEBLOCK_INSIDE_CABINET_REVERSED = (
-        "PickUp PurpleBlock Inside Cabinet (Reversed)"
-    )
-    PICKUP_PURPLEBLOCK_INSIDE_DRAWER_REVERSED = (
-        "PickUp PurpleBlock Inside Drawer (Reversed)"
-    )
-    PICKUP_PURPLEBLOCK_INFRONT_CABINET_REVERSED = (
-        "PickUp PurpleBlock Infront Cabinet (Reversed)"
-    )
-    PICKUP_PURPLEBLOCK_INFRONT_LEVER_REVERSED = (
-        "PickUp PurpleBlock Infront Lever (Reversed)"
-    )
-
-    MOVETO_INSIDE_CABINET = "MoveTo Inside Cabinet"
-    MOVETO_INSIDE_DRAWER = "MoveTo Inside Drawer"
-    MOVETO_INFRONT_CABINET = "MoveTo Infront Cabinet"
-    MOVETO_INFRONT_LEVER = "MoveTo Infront Lever"
-    MOVETO_INSIDE_CABINET_REVERSED = "MoveTo Inside Cabinet (Reversed)"
-    MOVETO_INSIDE_DRAWER_REVERSED = "MoveTo Inside Drawer (Reversed)"
-    MOVETO_INFRONT_CABINET_REVERSED = "MoveTo Infront Cabinet (Reversed)"
-    MOVETO_INFRONT_LEVER_REVERSED = "MoveTo Infront Lever (Reversed)"

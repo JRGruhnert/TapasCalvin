@@ -8,7 +8,7 @@ from omegaconf import DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
 from tapas_gmm.env.calvin import Calvin
-from tapas_gmm.master_project.master_sample import (
+from tapas_gmm.master_project.master_env_sample import (
     _get_gaussians_from_model,
     sample_pre_condition,
 )
@@ -23,7 +23,7 @@ from tapas_gmm.master_project.master_converter import (
 import wandb
 from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
 from tapas_gmm.policy import import_policy
-from tapas_gmm.master_project.master_observation import HRLPolicyObservation
+from tapas_gmm.master_project.master_observation import MasterObservation
 from tapas_gmm.policy.policy import Policy, PolicyConfig
 from tapas_gmm.utils.argparse import parse_and_build_config
 from tapas_gmm.utils.config import value_not_set
@@ -188,7 +188,7 @@ def run_episode(
     obs, reward, done, _ = env.reset(
         sample_pre_condition(calvin_obs.scene_obs, True), static=True
     )
-    obs = HRLPolicyObservation(calvin_obs).tapas_format
+    obs = MasterObservation(calvin_obs).tapas_format
     if keyboard_obs is not None:
         keyboard_obs.reset()
 
@@ -359,7 +359,7 @@ def process_step(
             break
 
         if type(obs) is CalvinObservation:
-            obs = HRLPolicyObservation(obs).tapas_format
+            obs = MasterObservation(obs).tapas_format
         else:
             obs.action = ee_action
             obs.feedback = step_reward

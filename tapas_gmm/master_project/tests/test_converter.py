@@ -7,11 +7,16 @@ from tapas_gmm.master_project.master_converter import (
     ScalarConverter,
     TransformConverter,
 )
-from tapas_gmm.master_project.master_data_def import State, StateSpace, StateType, Task
-from tapas_gmm.master_project.master_observation import HRLPolicyObservation
+from tapas_gmm.master_project.master_definitions import (
+    State,
+    StateSpace,
+    StateType,
+    Task,
+)
+from tapas_gmm.master_project.master_observation import MasterObservation
 
 state_list = State.list_by_state_space(StateSpace.STATIC)
-task_list = Task.list_by_action_space(StateSpace.STATIC)
+task_list = Task.get_tasks_in_task_space(StateSpace.STATIC)
 normalized = True
 
 
