@@ -106,7 +106,7 @@ class RolloutBuffer:
                 current_episode_length = 0
 
                 # TODO: Remove hardcoded 50 as success threshold
-                episode_success.append(1 if reward >= 50 else 0)
+                episode_success.append(1 if reward >= 50.0 else 0)
 
         return (
             np.sum(episode_rewards),
@@ -208,9 +208,9 @@ class Agent:
         if not self.buffer.health():
             raise UserWarning("RolloutBuffer is not in sync. Agent can't learn.")
         if verbose:
-            total_reward, episode_legth, success_rate = self.buffer.stats()
+            total_reward, episode_length, success_rate = self.buffer.stats()
             print(
-                f"Total Reward: {total_reward} \t Episode Length: {episode_legth} \t Success Rate \t {success_rate}"
+                f"Total Reward: {total_reward} \t Episode Length: {episode_length} \t Success Rate \t {success_rate}"
             )
             print("Called learning on new batch. Updating gradients of the agent!")
 
@@ -239,9 +239,12 @@ class Agent:
             for start in range(0, self.config.batch_size, self.config.mini_batch_size):
                 end = start + self.config.mini_batch_size
                 mb_idx = indices[start:end]
+                mb_idx_list = mb_idx.tolist()  # turn Tensor → Python list of ints
+                mb_obs = [old_obs[i] for i in mb_idx_list]
+                mb_goal = [old_goal[i] for i in mb_idx_list]
 
-                mb_obs = old_obs[mb_idx]
-                mb_goal = old_goal[mb_idx]
+                # mb_obs = old_obs[mb_idx]
+                # mb_goal = old_goal[mb_idx]
                 mb_actions = old_actions[mb_idx]
                 mb_logprobs = old_logprobs[mb_idx]
                 mb_advantages = advantages[mb_idx]

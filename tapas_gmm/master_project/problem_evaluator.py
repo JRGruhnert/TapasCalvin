@@ -121,10 +121,6 @@ class Evaluator:
                 total += 1.0 * scale
         return total / len(prev)
 
-    # TODO: ppo batch
-    # TODO: network object init
-    # TODO: Config loading
-    # TODO: Config gmmpolicy loading
     def is_terminal(
         self,
         obs: Observation,
