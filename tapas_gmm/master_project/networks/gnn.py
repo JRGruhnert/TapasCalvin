@@ -4,7 +4,7 @@ from torch_geometric.data import Batch, HeteroData
 from torch_geometric.nn import global_max_pool, global_mean_pool
 from torch_geometric.nn import GATv2Conv, LayerNorm, GINConv, GINEConv
 from torch_geometric.nn.aggr import AttentionalAggregation
-from tapas_gmm.master_project.master_observation import Observation
+from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.base import GnnBase
 from tapas_gmm.master_project.networks.master_modules import (
     GinActionMlp,

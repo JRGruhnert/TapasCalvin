@@ -14,12 +14,12 @@ from tapas_gmm.env import Environment
 from tapas_gmm.env.calvin import CalvinConfig, Calvin
 
 from tapas_gmm.env.environment import BaseEnvironmentConfig
-from tapas_gmm.master_project.master_definitions import StateSpace
-from tapas_gmm.master_project.problem_sampler import sample_pre_condition
+from tapas_gmm.master_project.definitions import StateSpace
+from tapas_gmm.master_project.sampler import sample_pre_condition
 from tapas_gmm.policy import PolicyEnum
 from tapas_gmm.policy.manual_policy import ManualCalvinPolicy
 from tapas_gmm.dataset.scene import SceneDataset, SceneDatasetConfig
-from tapas_gmm.master_project.master_observation import Observation
+from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.utils.argparse import parse_and_build_config
 from tapas_gmm.utils.misc import (
     DataNamingConfig,

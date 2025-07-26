@@ -7,9 +7,9 @@ from torch import nn
 import numpy as np
 from tapas_gmm.master_project.networks import Network, import_network
 from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.master_project.master_observation import Observation
+from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.base import ActorCriticBase
-from tapas_gmm.master_project.master_definitions import State, Task
+from tapas_gmm.master_project.definitions import State, Task
 
 
 @dataclass

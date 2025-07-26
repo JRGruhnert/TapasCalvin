@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from omegaconf import OmegaConf, SCMode
 
-from tapas_gmm.master_project.master_definitions import (
+from tapas_gmm.master_project.definitions import (
     RewardMode,
     StateSpace,
     TaskSpace,
 )
-from tapas_gmm.master_project.master_environment import MasterEnv, MasterEnvConfig
-from tapas_gmm.master_project.master_agent import Agent, AgentConfig
+from tapas_gmm.master_project.environment import MasterEnv, MasterEnvConfig
+from tapas_gmm.master_project.agent import Agent, AgentConfig
 from tapas_gmm.utils.argparse import parse_and_build_config
 
 

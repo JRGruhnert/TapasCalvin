@@ -1,4 +1,4 @@
-from tapas_gmm.master_project.master_agent import AgentConfig
+from tapas_gmm.master_project.agent import AgentConfig
 from tapas_gmm.master_project.networks import Network
 
 baseline_v1 = AgentConfig(

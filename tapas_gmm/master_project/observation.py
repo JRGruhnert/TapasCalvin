@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from tapas_gmm.master_project.master_definitions import (
+from tapas_gmm.master_project.definitions import (
     State,
     Task,
     _origin_ee_tp_pose,
@@ -93,56 +93,33 @@ def _to_rlbench_format(obs: CalvinObservation) -> SceneObservation:  # type: ign
     return obs
 
 
+def tapas_format(obs: CalvinObservation, task: Task) -> SceneObservation:  # type: ignore
+    # This is a hack for changing the ee_pose to the origin for reversed models
+    # It does nothing for standard models
+    if task.value.reversed:
+        obs.ee_pose = _origin_ee_tp_pose
+    return _to_rlbench_format(obs)
+
+
 class Observation:
+    __slots__ = "_states"
+
     def __init__(
         self,
         obs: CalvinObservation,
     ):
-        self._obs = obs
-        self._pose_states: dict[State, float | np.ndarray] = {
-            State.EE_Pose: obs.ee_pose,
-            **{State.from_string(f"{k}_pose"): v for k, v in obs.object_poses.items()},
-        }
+        self._states: dict[State, np.ndarray] = {}
+        self._states[State.EE_Transform] = obs.ee_pose[:3].astype(np.float32)
+        self._states[State.EE_Quat] = obs.ee_pose[-4:].astype(np.float32)
+        self._states[State.EE_State] = np.array([obs.ee_state], dtype=np.float32)
+        for k, pose in obs.object_poses.items():
+            self._states[State.from_string(f"{k}_euler")] = pose[:3].astype(np.float32)
+            self._states[State.from_string(f"{k}_quat")] = pose[-4:].astype(np.float32)
 
-        self._euler_states: dict[State, float | np.ndarray] = {
-            State.EE_Transform: obs.ee_pose[:3],
-            **{
-                State.from_string(f"{k}_euler"): v[:3]
-                for k, v in obs.object_poses.items()
-            },
-        }
-
-        self._quat_states: dict[State, float | np.ndarray] = {
-            State.EE_Quat: obs.ee_pose[-4:],
-            **{
-                State.from_string(f"{k}_quat"): v[-4:]
-                for k, v in obs.object_poses.items()
-            },
-        }
-
-        self._scalar_states: dict[State, float] = {
-            State.EE_State: obs.ee_state,
-            **{State.from_string(k): v for k, v in obs.object_states.items()},
-        }
-
-        self._states: dict[State, float | np.ndarray] = {
-            **self._pose_states,
-            **self._euler_states,
-            **self._quat_states,
-            **self._scalar_states,
-        }
+        for k, val in obs.object_states.items():
+            self._states[State.from_string(k)] = np.array([val], dtype=np.float32)
 
     @property
-    def states(self) -> dict[State, float | np.ndarray]:
+    def states(self) -> dict[State, np.ndarray]:
         """Returns the scalar states of the observation."""
         return self._states
-
-    def tapas_format(self, task: Task) -> SceneObservation:  # type: ignore
-        # This is a hack for changing the ee_pose to the origin for reversed models
-        # It does nothing for standard models
-        if task.value.reversed:
-            self._obs.ee_pose = _origin_ee_tp_pose
-        return _to_rlbench_format(self._obs)
-
-    def update_ee_pose(self, ee_pose: np.ndarray):
-        self._obs.ee_pose = ee_pose

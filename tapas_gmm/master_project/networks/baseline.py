@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from tapas_gmm.master_project.networks.base import BaselineBase
-from tapas_gmm.master_project.master_observation import Observation
+from tapas_gmm.master_project.observation import Observation
 
 
 class BaselineV1(BaselineBase):

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tapas_gmm.master_project.networks.baseline import ActorCriticBase
-from tapas_gmm.master_project.master_definitions import StateType
+from tapas_gmm.master_project.definitions import StateType
 from tapas_gmm.master_project.networks.master_modules import (
     TransformEncoder,
     QuaternionEncoder,

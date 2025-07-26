@@ -1,15 +1,11 @@
 from dataclasses import dataclass
 import itertools
 import random
-from typing import Dict, List
-
-from loguru import logger
+from typing import Dict
 import numpy as np
 
-from tapas_gmm.master_project.master_definitions import (
-    TaskSpace,
+from tapas_gmm.master_project.definitions import (
     State,
-    StateSpace,
     StateType,
 )
 
@@ -62,9 +58,7 @@ class Sampler:
         )
 
         door_states = [
-            scene_dict.get(
-                State.Slide_State, door_states[0]
-            ),  # Update only if key exists
+            scene_dict.get(State.Slide_State, door_states[0]),
             scene_dict.get(State.Drawer_State, door_states[1]),  # Same for index 1
         ]
         button_states = [scene_dict.get(State.Button_State, button_states[0])]
@@ -95,15 +89,7 @@ class Sampler:
         for state in list(State):
             if state in self.states:
                 if state.value.type == StateType.Scalar:
-                    # TODO: Change that by adding a model that opens the gripper or something
-                    if (
-                        state != State.EE_State
-                        and state != State.Switch_State
-                        and state != State.Lightbulb_State
-                        and state != State.Red_State
-                        and state != State.Blue_State
-                        and state != State.Pink_State
-                    ):
+                    if state != State.EE_State:
                         scene_dict[state] = self.sample_from_values(
                             [state.value.min, state.value.max]
                         )
@@ -114,8 +100,7 @@ class Sampler:
                     pass
                     # raise NotImplementedError("Not Supported.")
                 if state.value.type == StateType.Pose:
-                    pass
-                    # raise NotImplementedError("Not Implemented so far.")
+                    raise NotImplementedError("Not Implemented so far.")
 
         # Hack to make light states depending on button and switch states
         # if State.Switch_State in scene_dict:

@@ -8,12 +8,12 @@ from omegaconf import DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
 from tapas_gmm.env.calvin import Calvin
-from tapas_gmm.master_project.problem_sampler import (
+from tapas_gmm.master_project.sampler import (
     _get_gaussians_from_model,
     sample_pre_condition,
 )
 from tapas_gmm.policy.gmm import GMMPolicy
-from tapas_gmm.master_project.master_converter import (
+from tapas_gmm.master_project.converter import (
     StateConverter,
     P_C_GaussianConverter,
     P_C_Converter,
@@ -23,7 +23,7 @@ from tapas_gmm.master_project.master_converter import (
 import wandb
 from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
 from tapas_gmm.policy import import_policy
-from tapas_gmm.master_project.master_observation import Observation
+from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.policy.policy import Policy, PolicyConfig
 from tapas_gmm.utils.argparse import parse_and_build_config
 from tapas_gmm.utils.config import value_not_set

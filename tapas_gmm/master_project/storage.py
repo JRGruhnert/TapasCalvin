@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import pathlib
 from loguru import logger
 import numpy as np
-from tapas_gmm.master_project.master_definitions import State, Task
+from tapas_gmm.master_project.definitions import State, Task
 from tapas_gmm.policy import import_policy
 from tapas_gmm.policy.gmm import GMMPolicy, GMMPolicyConfig
 from tapas_gmm.policy.models.tpgmm import TPGMM, AutoTPGMMConfig, ModelType, TPGMMConfig

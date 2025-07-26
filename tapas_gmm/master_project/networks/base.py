@@ -3,9 +3,9 @@ import torch.nn as nn
 from torch.distributions import Categorical
 from abc import ABC, abstractmethod
 from torch_geometric.data import Batch, HeteroData
-from tapas_gmm.master_project.master_converter import Converter
-from tapas_gmm.master_project.master_definitions import State, StateType, Task
-from tapas_gmm.master_project.master_observation import Observation
+from tapas_gmm.master_project.converter import Converter
+from tapas_gmm.master_project.definitions import State, StateType, Task
+from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.master_modules import (
     QuaternionEncoder,
     ScalarEncoder,
@@ -69,7 +69,7 @@ class ActorCriticBase(nn.Module, ABC):
         dist = Categorical(logits=logits)
         action = dist.sample()  # shape: [B]
         logprob = dist.log_prob(action)  # shape: [B]
-        return action, logprob, value
+        return action.detach(), logprob.detach(), value.detach()
 
     def evaluate(
         self,

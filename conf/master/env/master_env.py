@@ -1,5 +1,5 @@
-from tapas_gmm.master_project.master_definitions import StateSpace, TaskSpace
-from tapas_gmm.master_project.master_environment import MasterEnvConfig
+from tapas_gmm.master_project.definitions import StateSpace, TaskSpace
+from tapas_gmm.master_project.environment import MasterEnvConfig
 from conf.master.env.evaluator import evaluator
 from conf.master.env.storage import storage
 from conf.master.env.sampler import sampler

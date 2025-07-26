@@ -3,14 +3,14 @@ from typing import Dict
 
 import numpy as np
 import torch
-from tapas_gmm.master_project.master_converter import Converter
-from tapas_gmm.master_project.master_definitions import (
+from tapas_gmm.master_project.converter import Converter
+from tapas_gmm.master_project.definitions import (
     RewardMode,
     State,
     StateType,
     Task,
 )
-from tapas_gmm.master_project.master_observation import Observation
+from tapas_gmm.master_project.observation import Observation
 
 
 @dataclass
@@ -67,23 +67,35 @@ class Evaluator:
         self.prev_dist: Dict[State, torch.Tensor] = {}
         self.last: Observation = None
         self.goal: Observation = None
+        self.terminal = False
 
     def reset(self, obs: Observation, goal: Observation):
         self.prev_dist = self.converter.dict_distance(obs, goal)
         self.steps_left = self.config.allowed_steps
         self.last = obs
         self.goal = goal
+        self.terminal = False
 
     def evaluate(self, obs: Observation) -> tuple[float, bool]:
+        if self.terminal:
+            raise UserWarning(
+                "Episode already ended. Please reset the evaluator with the new goal and state."
+            )
         # Compute distances to goal
         current_dist = self.converter.dict_distance(obs, self.goal)
 
         if self.config.reward_mode is RewardMode.SPARSE:
-            terminal = self.is_terminal(obs, self.states, current_dist)
-            if self.steps_left == 1 and not terminal:
-                return self.config.min_reward, terminal
-            else:
+            terminal = self.is_terminal(obs, current_dist)
+            if terminal:  # Success
+                self.terminal = terminal
                 return self.config.max_reward, terminal
+            else:
+                if self.steps_left == 1:  # Failure
+                    self.terminal = terminal
+                    return self.config.min_reward, True
+                else:  # Normal Step
+                    self.terminal = terminal
+                    return self.config.min_reward, False
         if self.config.reward_mode is RewardMode.ONOFF:
             raise NotImplementedError("Reward Mode not implemented.")
         if self.config.reward_mode is RewardMode.RANGE:
@@ -124,12 +136,11 @@ class Evaluator:
     def is_terminal(
         self,
         obs: Observation,
-        active_states: list[State],
         dist: Dict[State, torch.Tensor],
     ) -> bool:
         ##### Checking if goal is reached
         goal_reached = True
-        for state in active_states:
+        for state in self.states:
             state_type = state.value.type
             if state_type == StateType.Transform and state is not State.EE_Transform:
                 goal_value = self.goal.states[state]

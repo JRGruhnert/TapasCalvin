@@ -3,12 +3,12 @@ import numpy as np
 import torch
 import numpy as np
 
-from tapas_gmm.master_project.master_definitions import (
+from tapas_gmm.master_project.definitions import (
     StateType,
     Task,
     State,
 )
-from tapas_gmm.master_project.master_observation import Observation
+from tapas_gmm.master_project.observation import Observation
 
 
 class StateConverter(ABC):
@@ -252,8 +252,6 @@ class Converter:
         values = {}
         for key, converter in self.converter.items():
             val = converter.value(obs.states[key])
-            if isinstance(val, float):
-                val = np.array([val])
             values[key] = torch.from_numpy(val).float()
         return values
 
@@ -261,24 +259,16 @@ class Converter:
         self,
         obs: Observation,
     ) -> dict[StateType, torch.Tensor]:
-        # Initialize groups
-        transform_values = []
-        quaternion_values = []
-        scalar_values = []
-        for key, converter in self.converter.items():
-            val = converter.value(obs.states[key])
-            if key.value.type == StateType.Transform:
-                transform_values.append(val)
-            elif key.value.type == StateType.Quaternion:
-                quaternion_values.append(val)
-            elif key.value.type == StateType.Scalar:
-                scalar_values.append(np.array([val]))
+        grouped = {t: [] for t in StateType}
 
-        # Stack each group (assumes all shapes in group match!)
+        for key, converter in self.converter.items():
+            value = converter.value(obs.states[key])
+            grouped[key.value.type].append(value)
+
         return {
-            StateType.Transform: torch.from_numpy(np.stack(transform_values)).float(),
-            StateType.Quaternion: torch.from_numpy(np.stack(quaternion_values)).float(),
-            StateType.Scalar: torch.from_numpy(np.stack(scalar_values)).float(),
+            t: torch.from_numpy(np.stack(vals)).float()
+            for t, vals in grouped.items()
+            if vals  # only include non-empty
         }
 
     def tensor_combined_values(self, current: Observation) -> torch.Tensor:
