@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import os
 import re
-from typing import Any, Type
 import torch
 from torch import nn
 import numpy as np
@@ -34,7 +33,9 @@ class AgentConfig:
     entropy_coef: float = 0.01  # Weight on the entropy bonus to encourage exploration
     value_coef: float = 0.5  # Weight on the critic (value) loss vs. the policy loss
     max_grad_norm: float = 0.5  # Threshold for clipping gradient norms
-    target_kl: float = 0.02  # (Optional) early stopping if KL divergence gets too large
+    target_kl: float | None = (
+        None  # (Optional) early stopping if KL divergence gets too large
+    )
 
 
 class RolloutBuffer:
@@ -116,7 +117,6 @@ class RolloutBuffer:
 
 
 class Agent:
-
     def __init__(
         self,
         config: AgentConfig,
@@ -145,6 +145,10 @@ class Agent:
         self.directory_path = config.saving_path + config.name + "/"
         if not os.path.exists(self.directory_path):
             os.makedirs(self.directory_path)
+
+        self.log_path = self.directory_path + "logs/"
+        if not os.path.exists(self.log_path):
+            os.makedirs(self.log_path)
 
     def act(self, obs: Observation, goal: Observation) -> int:
         if self.waiting_feedback:
@@ -300,7 +304,7 @@ class Agent:
         self.policy_old.load_state_dict(self.policy_new.state_dict())
 
         if self.config.save_stats:
-            self.buffer.save(self.config.saving_path + "logs/", self.current_epoch)
+            self.buffer.save(self.log_path, self.current_epoch)
         # clear buffer
         self.buffer.clear()
 

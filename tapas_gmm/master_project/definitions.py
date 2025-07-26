@@ -29,6 +29,12 @@ class RewardMode(Enum):
     ONOFF = 2
 
 
+class SuccessMode(Enum):
+    AREA = 0
+    POSITION = 2
+    PRECISE = 3
+
+
 class TaskSpace(Enum):
     SMALL = 0
     ALL = 1

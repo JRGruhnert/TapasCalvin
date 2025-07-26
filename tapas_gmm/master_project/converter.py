@@ -17,20 +17,20 @@ class StateConverter(ABC):
         self.max = state.value.max
         self.normalized = normalized
 
-    def clamp(self, x: np.ndarray | float) -> np.ndarray:
+    def clamp(self, x: np.ndarray) -> np.ndarray:
         return np.clip(x, self.min, self.max)
 
     @abstractmethod
-    def value(self, current: np.ndarray | float) -> float | np.ndarray:
+    def value(self, current: np.ndarray) -> float | np.ndarray:
         """Return the (optionally normalized) raw feature value."""
         pass
 
     @abstractmethod
-    def distance(self, current: np.ndarray | float, goal: np.ndarray | float) -> float:
+    def distance(self, current: np.ndarray, goal: np.ndarray) -> float:
         """Return the (optionally normalized) difference to the goal."""
         pass
 
-    def normalize(self, x: np.ndarray | float) -> float:
+    def normalize(self, x: np.ndarray) -> float:
         """
         Normalize a value x to the range [0, 1] based on min and max.
         """
@@ -39,22 +39,22 @@ class StateConverter(ABC):
 
 class ScalarConverter(StateConverter):
 
-    def value(self, current: float) -> float:
+    def value(self, current: np.ndarray) -> np.ndarray:
         clamped = self.clamp(current)
         if not self.normalized:
             return clamped
         else:
             return self.normalize(clamped)
 
-    def distance(self, current: float, goal: float) -> float:
+    def distance(self, current: np.ndarray, goal: np.ndarray) -> float:
         cl_curr = self.clamp(current)
         cl_goal = self.clamp(goal)
         if not self.normalized:
-            return abs(cl_goal - cl_curr)
+            return abs(cl_goal - cl_curr).item()
         else:
             norm_curr = self.normalize(cl_curr)
             norm_goal = self.normalize(cl_goal)
-            return abs(norm_goal - norm_curr)
+            return abs(norm_goal - norm_curr).item()
 
 
 class TransformConverter(StateConverter):

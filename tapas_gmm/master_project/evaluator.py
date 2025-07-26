@@ -8,6 +8,7 @@ from tapas_gmm.master_project.definitions import (
     RewardMode,
     State,
     StateType,
+    SuccessMode,
     Task,
 )
 from tapas_gmm.master_project.observation import Observation
@@ -17,6 +18,7 @@ from tapas_gmm.master_project.observation import Observation
 class EvaluatorConfig:
     allowed_steps: int = 18
     reward_mode: RewardMode = RewardMode.SPARSE
+    success_mode: SuccessMode = SuccessMode.POSITION
     max_reward: float = 100.0
     min_reward: float = 0.0
     success_threshold: Dict[StateType, float] = field(
@@ -81,16 +83,20 @@ class Evaluator:
             raise UserWarning(
                 "Episode already ended. Please reset the evaluator with the new goal and state."
             )
+        self.steps_left -= 1
         # Compute distances to goal
         current_dist = self.converter.dict_distance(obs, self.goal)
 
+        # NOTE: Replace prev_dist when other reward modes implemented
+        # For sparse its not needed
+        self.prev_dist = current_dist
         if self.config.reward_mode is RewardMode.SPARSE:
             terminal = self.is_terminal(obs, current_dist)
             if terminal:  # Success
                 self.terminal = terminal
                 return self.config.max_reward, terminal
             else:
-                if self.steps_left == 1:  # Failure
+                if self.steps_left == 0:  # Failure
                     self.terminal = terminal
                     return self.config.min_reward, True
                 else:  # Normal Step
@@ -100,9 +106,6 @@ class Evaluator:
             raise NotImplementedError("Reward Mode not implemented.")
         if self.config.reward_mode is RewardMode.RANGE:
             raise NotImplementedError("Reward Mode not implemented.")
-
-        self.prev_dist = current_dist
-        self.steps_left -= 1
 
     def difference_reward(
         self,
@@ -142,18 +145,35 @@ class Evaluator:
         goal_reached = True
         for state in self.states:
             state_type = state.value.type
-            if state_type == StateType.Transform and state is not State.EE_Transform:
-                goal_value = self.goal.states[state]
-                goal_surface = self.check_surface(goal_value)
-                next_value = obs.states[state]
-                next_surface = self.check_surface(next_value)
-                if goal_surface != next_surface:
-                    goal_reached = False
-                    break
-            else:  # Scalars and EE States
-                if dist[state] > self.config.success_threshold[state_type]:
-                    goal_reached = False
-                    break
+            if self.config.success_mode is SuccessMode.AREA:
+                if (
+                    state_type is StateType.Transform
+                    and state is not State.EE_Transform
+                ):
+                    goal_value = self.goal.states[state]
+                    goal_surface = self.check_surface(goal_value)
+                    next_value = obs.states[state]
+                    next_surface = self.check_surface(next_value)
+                    if goal_surface != next_surface:
+                        goal_reached = False
+                        break
+                elif state_type is StateType.Quaternion:
+                    pass  # Ignores Rotation
+                else:  # Scalars and EE States
+                    if dist[state] > self.config.success_threshold[state_type]:
+                        goal_reached = False
+                        break
+            elif self.config.success_mode is SuccessMode.POSITION:
+                if state_type is StateType.Quaternion:
+                    pass  # Ignores Rotation
+                else:  # Scalars and EE States
+                    if dist[state] > self.config.success_threshold[state_type]:
+                        goal_reached = False
+                        break
+            else:
+                raise NotImplementedError(
+                    f"Success Mode {self.config.success_mode.name} is not implemented yet."
+                )
         return goal_reached
 
     def check_surface(self, transform) -> str | None:
