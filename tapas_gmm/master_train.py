@@ -14,6 +14,7 @@ from tapas_gmm.utils.argparse import parse_and_build_config
 
 @dataclass
 class MasterConfig:
+    tag: str
     agent: AgentConfig
     env: MasterEnvConfig
     reward_mode: RewardMode = RewardMode.SPARSE
@@ -34,12 +35,12 @@ def train_agent(config: MasterConfig):
     stop_training = False
     while not stop_training:  # Training loop
         terminal = False
+        batch_rdy = False
         obs, goal = env.reset()
-        while not terminal:
+        while not terminal and not batch_rdy:
             task_id = agent.act(obs, goal)
             reward, terminal, obs = env.step(task_id)
             batch_rdy = agent.feedback(reward, terminal)
-
         if batch_rdy:
             train_start_time = datetime.now().replace(microsecond=0)
             stop_training = agent.learn(verbose=config.verbose)
@@ -48,8 +49,8 @@ def train_agent(config: MasterConfig):
                 "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
             )
             print(f"Time: {train_end_time}")
-            print(f"Batch Duration: {batch_start_time - train_start_time}")
-            print(f"Train Duration: {train_start_time - train_end_time}")
+            print(f"Batch Duration: {train_start_time - batch_start_time}")
+            print(f"Train Duration: {train_end_time - train_start_time}")
             print(f"Elapsed Time: {train_end_time - start_time}")
             print(
                 "--------------------------------------------------------------------------------------------"
@@ -74,15 +75,8 @@ def train_agent(config: MasterConfig):
 def entry_point():
 
     _, dict_config = parse_and_build_config(data_load=False, need_task=False)
-    agent_suffix = (
-        dict_config.reward_mode.name
-        + "_"
-        + dict_config.task_space.name
-        + "_"
-        + dict_config.state_space.name
-    )
-    dict_config.agent.name += agent_suffix
-    print("Hey")
+
+    dict_config.agent.name = dict_config.tag
     dict_config.env.evaluator.reward_mode = dict_config.reward_mode
     dict_config.env.task_space = dict_config.task_space
     dict_config.env.state_space = dict_config.state_space

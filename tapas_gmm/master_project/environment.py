@@ -10,7 +10,7 @@ from tapas_gmm.master_project.definitions import (
     convert_to_states,
     convert_to_tasks,
 )
-from tapas_gmm.master_project.observation import Observation, tapas_format
+from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.evaluator import (
     Evaluator,
     EvaluatorConfig,
@@ -64,20 +64,18 @@ class MasterEnv:
         return self.tasks, self.states, self.policy_storage.task_parameter()
 
     def reset(self) -> tuple[Observation, Observation]:
-        rnd_obs, _, _, _ = self.env.reset(settle_time=0)
+        calvin_rnd, _, _, _ = self.env.reset(settle_time=0)
         ### Sampling goal and current state
-        scene_obs = self.sampler.sample_pre_condition(rnd_obs.scene_obs)
+        scene_obs = self.sampler.sample_pre_condition(calvin_rnd.scene_obs)
         scene_goal = self.sampler.sample_post_condition(scene_obs)
         # Reset environment twice to get CalvinObservation (maybe find a better way)
-        self.calvin_obs, _, _, _ = self.env.reset(
-            scene_obs, static=False, settle_time=50
-        )
+        # NOTE do not switch order of resets!!
         calvin_goal, _, _, _ = self.env.reset(scene_goal, static=False, settle_time=50)
-        self.obs = Observation(self.calvin_obs)
+        calvin_obs, _, _, _ = self.env.reset(scene_obs, static=False, settle_time=50)
+        self.obs = Observation(calvin_obs)
         goal = Observation(calvin_goal)
         self.evaluator.reset(self.obs, goal)
         return self.obs, goal
-        # Reset agent internally
 
     def step(self, task_id: int) -> tuple[float, bool, Observation]:
         task = Task.get_enum_by_index(task_id)
@@ -87,13 +85,13 @@ class MasterEnv:
         policy.reset_episode(self.env)
         # Batch prediction for the given observation
         try:
-            prediction, _ = policy.predict(tapas_format(self.calvin_obs, task))
+            prediction, _ = policy.predict(self.obs.tapas_format(task))
             for action in prediction:
                 ee_action = np.concatenate((action.ee, action.gripper))
-                self.calvin_obs, _, _, _ = self.env.step(
+                calvin_obs, _, _, _ = self.env.step(
                     ee_action, self.config.debug_vis, viz_dict
                 )
-            self.obs = Observation(self.calvin_obs)
+                self.obs = Observation(calvin_obs)
         except FloatingPointError:
             # At some point the model crashes.
             # Have to debug if its because of bad input but seems to be not relevant for training

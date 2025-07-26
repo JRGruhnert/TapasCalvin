@@ -18,7 +18,7 @@ from tapas_gmm.master_project.observation import Observation
 class EvaluatorConfig:
     allowed_steps: int = 18
     reward_mode: RewardMode = RewardMode.SPARSE
-    success_mode: SuccessMode = SuccessMode.POSITION
+    success_mode: SuccessMode = SuccessMode.AREA
     max_reward: float = 100.0
     min_reward: float = 0.0
     success_threshold: Dict[StateType, float] = field(
@@ -86,7 +86,6 @@ class Evaluator:
         self.steps_left -= 1
         # Compute distances to goal
         current_dist = self.converter.dict_distance(obs, self.goal)
-
         # NOTE: Replace prev_dist when other reward modes implemented
         # For sparse its not needed
         self.prev_dist = current_dist
@@ -94,14 +93,17 @@ class Evaluator:
             terminal = self.is_terminal(obs, current_dist)
             if terminal:  # Success
                 self.terminal = terminal
-                return self.config.max_reward, terminal
+                # print(f"success {self.steps_left}")
+                return self.config.max_reward, self.terminal
             else:
                 if self.steps_left == 0:  # Failure
-                    self.terminal = terminal
-                    return self.config.min_reward, True
+                    self.terminal = True
+                    # print(f"failure {self.steps_left}")
+                    return self.config.min_reward, self.terminal
                 else:  # Normal Step
-                    self.terminal = terminal
-                    return self.config.min_reward, False
+                    self.terminal = False
+                    # print(f"normal {self.steps_left}")
+                    return self.config.min_reward, self.terminal
         if self.config.reward_mode is RewardMode.ONOFF:
             raise NotImplementedError("Reward Mode not implemented.")
         if self.config.reward_mode is RewardMode.RANGE:

@@ -22,8 +22,8 @@ class AgentConfig:
     saving_path: str = "results/"
 
     save_stats = True
-    batch_size: int = 2048
-    mini_batch_size: int = 64  # 64 # How many steps to use in each mini-batch
+    batch_size: int = 8
+    mini_batch_size: int = 4  # 64 # How many steps to use in each mini-batch
     n_epochs: int = 50  # How many passes over the collected batch per update
     lr_actor: float = 0.0006  # Step size for actor optimizer
     lr_critic: float = 0.0003  # Step size for critic optimizer
@@ -40,20 +40,20 @@ class AgentConfig:
 
 class RolloutBuffer:
     def __init__(self):
-        self.actions = []
-        self.obs = []
-        self.goal = []
-        self.logprobs = []
-        self.rewards = []
-        self.state_values = []
-        self.is_terminals = []
+        self.actions: list[torch.Tensor] = []
+        self.obs: list[Observation] = []
+        self.goal: list[Observation] = []
+        self.logprobs: list[torch.Tensor] = []
+        self.rewards: list[float] = []
+        self.values: list[torch.Tensor] = []
+        self.terminals: list[bool] = []
 
     def clear(self):
         self.actions.clear()
         self.logprobs.clear()
         self.rewards.clear()
-        self.state_values.clear()
-        self.is_terminals.clear()
+        self.values.clear()
+        self.terminals.clear()
         self.obs.clear()
         self.goal.clear()
 
@@ -64,8 +64,8 @@ class RolloutBuffer:
             len(self.goal),
             len(self.logprobs),
             len(self.rewards),
-            len(self.state_values),
-            len(self.is_terminals),
+            len(self.values),
+            len(self.terminals),
         ]
         return all(l == lengths[0] for l in lengths)
 
@@ -76,15 +76,11 @@ class RolloutBuffer:
         file_path = path + f"stats_epoch{epoch}.npy"
         data = {}
 
-        data["actions"] = (
-            torch.stack(self.actions).cpu().numpy()
-            if isinstance(self.actions[0], torch.Tensor)
-            else np.array(self.actions)
-        )
+        data["actions"] = torch.stack(self.actions).cpu().numpy()
         data["logprobs"] = torch.tensor(self.logprobs).cpu().numpy()
+        data["values"] = torch.tensor(self.values).cpu().numpy()
         data["rewards"] = np.array(self.rewards)
-        data["state_values"] = torch.tensor(self.state_values).cpu().numpy()
-        data["is_terminals"] = np.array(self.is_terminals)
+        data["terminals"] = np.array(self.terminals)
 
         np.save(file_path, data)
 
@@ -96,7 +92,7 @@ class RolloutBuffer:
 
         current_episode_reward = 0
         current_episode_length = 0
-        for _, (reward, terminal) in enumerate(zip(self.rewards, self.is_terminals)):
+        for _, (reward, terminal) in enumerate(zip(self.rewards, self.terminals)):
             current_episode_reward += reward
             current_episode_length += 1
 
@@ -164,7 +160,7 @@ class Agent:
         self.buffer.goal.append(goal)
         self.buffer.actions.append(action)
         self.buffer.logprobs.append(action_logprob)
-        self.buffer.state_values.append(state_val)
+        self.buffer.values.append(state_val)
         self.waiting_feedback = True
         return action.item()
 
@@ -176,7 +172,7 @@ class Agent:
             )
 
         self.buffer.rewards.append(reward)
-        self.buffer.is_terminals.append(terminal)
+        self.buffer.terminals.append(terminal)
         self.waiting_feedback = False
         return self.buffer.has_batch(self.config.batch_size)
 
@@ -214,12 +210,13 @@ class Agent:
         if verbose:
             total_reward, episode_length, success_rate = self.buffer.stats()
             print(
-                f"Total Reward: {total_reward} \t Episode Length: {episode_length} \t Success Rate \t {success_rate}"
+                f"Total Reward: {total_reward} \t Episode Length: {episode_length} \t Success Rate: {success_rate}"
             )
+
             print("Called learning on new batch. Updating gradients of the agent!")
 
         advantages, rewards = self.compute_gae(
-            self.buffer.rewards, self.buffer.state_values, self.buffer.is_terminals
+            self.buffer.rewards, self.buffer.values, self.buffer.terminals
         )
 
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)

@@ -30,7 +30,7 @@ class StateConverter(ABC):
         """Return the (optionally normalized) difference to the goal."""
         pass
 
-    def normalize(self, x: np.ndarray) -> float:
+    def normalize(self, x: np.ndarray) -> float | np.ndarray:
         """
         Normalize a value x to the range [0, 1] based on min and max.
         """
@@ -160,7 +160,6 @@ class IgnoreConverter(StateConverter):
 
 
 class Converter:
-
     def __init__(
         self,
         tasks: list[Task],

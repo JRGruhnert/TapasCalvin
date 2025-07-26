@@ -59,7 +59,7 @@ class Sampler:
 
         door_states = [
             scene_dict.get(State.Slide_State, door_states[0]),
-            scene_dict.get(State.Drawer_State, door_states[1]),  # Same for index 1
+            scene_dict.get(State.Drawer_State, door_states[1]),
         ]
         button_states = [scene_dict.get(State.Button_State, button_states[0])]
         switch_states = [scene_dict.get(State.Switch_State, switch_states[0])]
@@ -85,21 +85,19 @@ class Sampler:
 
     def sample_pre_condition(self, scene_obs: np.ndarray) -> np.ndarray:
         scene_dict: Dict[State, np.ndarray | float] = {}
-
         for state in list(State):
             if state in self.states:
-                if state.value.type == StateType.Scalar:
-                    if state != State.EE_State:
-                        scene_dict[state] = self.sample_from_values(
-                            [state.value.min, state.value.max]
-                        )
+                if state.value.type is StateType.Scalar:
+                    scene_dict[state] = self.sample_from_values(
+                        [state.value.min, state.value.max]
+                    )
                 if (
-                    state.value.type == StateType.Transform
-                    or state.value.type == StateType.Quaternion
+                    state.value.type is StateType.Transform
+                    or state.value.type is StateType.Quaternion
                 ):
                     pass
                     # raise NotImplementedError("Not Supported.")
-                if state.value.type == StateType.Pose:
+                if state.value.type is StateType.Pose:
                     raise NotImplementedError("Not Implemented so far.")
 
         # Hack to make light states depending on button and switch states
@@ -109,10 +107,10 @@ class Sampler:
         #    else:
         #        scene_dict[State.Lightbulb_State] = 0.0
         if State.Button_State in scene_dict:
-            if scene_dict[State.Button_State] > 0.0:
-                scene_dict[State.Led_State] = 1.0
+            if scene_dict[State.Button_State] > State.Button_State.value.min:
+                scene_dict[State.Led_State] = State.Led_State.value.max
             else:
-                scene_dict[State.Led_State] = 0.0
+                scene_dict[State.Led_State] = State.Led_State.value.min
 
         return self.update_scene_obs(scene_dict, scene_obs)
 
