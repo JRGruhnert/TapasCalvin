@@ -1,11 +1,11 @@
+from dataclasses import dataclass
 import pathlib
-from typing import Dict
-
 from loguru import logger
-from tapas_gmm.master_project.master_definitions import Task, TaskSpace
+import numpy as np
+from tapas_gmm.master_project.master_definitions import State, Task
 from tapas_gmm.policy import import_policy
 from tapas_gmm.policy.gmm import GMMPolicy, GMMPolicyConfig
-from tapas_gmm.policy.models.tpgmm import AutoTPGMMConfig, ModelType, TPGMMConfig
+from tapas_gmm.policy.models.tpgmm import TPGMM, AutoTPGMMConfig, ModelType, TPGMMConfig
 from tapas_gmm.utils.select_gpu import device
 
 
@@ -75,15 +75,64 @@ def _get_config(reversed: bool) -> GMMPolicyConfig:
     )
 
 
-class PolicyStorage:
-    def __init__(self, task_space: TaskSpace):
-        self._policy_storage: Dict[Task, GMMPolicy] = {
-            task: _load_policy(task)
-            for task in Task.get_tasks_in_task_space(task_space)
+@dataclass
+class StorageConfig:
+    pass
+
+
+class Storage:
+    def __init__(self, config: StorageConfig, tasks: list[Task], states: list[State]):
+        self.config = config
+        self.tasks = tasks
+        self.states = states
+        self.policy_storage: dict[Task, GMMPolicy] = {
+            task: _load_policy(task) for task in self.tasks
         }
 
+    def task_parameter(self) -> dict[Task, dict[State, np.ndarray]]:
+        task_param_dict: dict[Task, dict[State, np.ndarray]] = {}
+        for task in self.tasks:
+            task_param_dict[task] = self.get_tp_from_task(task)
+        return task_param_dict
+
+    def get_tp_from_task(
+        self,
+        task: Task,
+        split_pose: bool = True,
+    ) -> dict[State, np.ndarray]:
+        tpgmm: TPGMM = self.get_policy(task).model
+        result: dict[State, np.ndarray] = {}
+        for _, segment in enumerate(tpgmm.segment_frames):
+            for _, frame_idx in enumerate(segment):
+                if split_pose:
+                    transform_key, quaternion_key = State.get_tp_by_index(
+                        frame_idx, True
+                    )
+                    if transform_key in self.states:
+                        if frame_idx == 0:
+                            # Zero means its the ee_pose
+                            result[transform_key] = task.value.ee_hrl_start[:3]
+                        else:
+                            result[transform_key] = task.value.obj_start[:3]
+                    if quaternion_key in self.states:
+                        if frame_idx == 0:
+                            # Zero means its the ee_pose
+                            result[quaternion_key] = task.value.ee_hrl_start[-4:]
+                        else:
+                            result[quaternion_key] = task.value.obj_start[-4:]
+                else:
+                    pose_key = State.get_tp_by_index(frame_idx, False)
+                    if frame_idx == 0:
+                        # Zero means its the ee_pose
+                        result[pose_key] = task.value.ee_hrl_start
+                    else:
+                        result[pose_key] = task.value.obj_start
+        for key, value in task.value.precondition.items():
+            result[key] = value
+        return result
+
     def get_policy(self, task: Task):
-        policy = self._policy_storage.get(task)
+        policy = self.policy_storage.get(task)
         if policy is None:
             raise ValueError(f"No policy found for task: {task}")
         return policy

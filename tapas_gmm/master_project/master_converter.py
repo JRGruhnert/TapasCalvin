@@ -1,26 +1,14 @@
 from abc import ABC, abstractmethod
-from functools import cached_property
-from typing import Dict
-from loguru import logger
 import numpy as np
 import torch
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 
 from tapas_gmm.master_project.master_definitions import (
-    TaskSpace,
-    StateInfo,
-    StateSpace,
     StateType,
     Task,
     State,
 )
-from tapas_gmm.master_project.master_helper import HRLHelper
-from tapas_gmm.master_project.master_observation import MasterObservation
-from tapas_gmm.master_project.master_tapas_policy import PolicyStorage
-from tapas_gmm.policy.gmm import GMMPolicy
-from tapas_gmm.policy.models.tpgmm import TPGMM, Gaussian
-from scipy.stats import chi2
+from tapas_gmm.master_project.master_observation import Observation
 
 
 class StateConverter(ABC):
@@ -171,77 +159,80 @@ class IgnoreConverter(StateConverter):
         return 0.0
 
 
-class NodeConverter:
+class Converter:
+
     def __init__(
         self,
-        state_list: list[State],
-        task_list: list[Task],
+        tasks: list[Task],
+        states: list[State],
+        task_parameter: dict[Task, dict[State, np.ndarray]] = None,
         normalized: bool = True,
     ):
         """
         Initialize the converter with a goal observation.
         """
-        self.tasks = task_list
-        self.states = state_list
-        self.converter: Dict[State, StateConverter] = {}
+        self.tasks = tasks
+        self.states = states
+        self.tps = task_parameter
+        self.converter: dict[State, StateConverter] = {}
         self.ignore_converter = IgnoreConverter()
-        for state in state_list:
-            if state.value.state_type == StateType.Transform:
+        for state in states:
+            if state.value.type == StateType.Transform:
                 self.converter[state] = TransformConverter(state, normalized)
-            elif state.value.state_type == StateType.Quat:
+            elif state.value.type == StateType.Quaternion:
                 self.converter[state] = QuaternionConverter(state, normalized)
-            elif state.value.state_type == StateType.Scalar:
+            elif state.value.type == StateType.Scalar:
                 self.converter[state] = ScalarConverter(state, normalized)
             else:
-                raise ValueError(f"Unsupported state type: {state.value.state_type}")
+                raise ValueError(f"Unsupported state type: {state.value.type}")
 
     def dict_distance(
         self,
-        current: MasterObservation,
-        goal: MasterObservation,
-    ) -> Dict[State, torch.Tensor]:
+        current: Observation,
+        goal: Observation,
+    ) -> dict[State, torch.Tensor]:
         """
         Compute the distance for each state in the observation.
         Returns a dictionary mapping each state to its distance tensor.
         """
         distances = {}
         for key, converter in self.converter.items():
-            dist = converter.distance(current.split_states[key], goal.split_states[key])
+            dist = converter.distance(current.states[key], goal.states[key])
             distances[key] = torch.tensor(dist).float()
         return distances
 
     def tensor_dict_distance(
         self,
-        current: MasterObservation,
-        goal: MasterObservation,
-    ) -> Dict[StateType, torch.Tensor]:
+        current: Observation,
+        goal: Observation,
+    ) -> dict[StateType, torch.Tensor]:
         # Initialize groups
         transform_values = []
         quaternion_values = []
         scalar_values = []
         for key, converter in self.converter.items():
-            val = converter.distance(current.split_states[key], goal.split_states[key])
-            if key.value.state_type == StateType.Transform:
+            val = converter.distance(current.states[key], goal.states[key])
+            if key.value.type == StateType.Transform:
                 transform_values.append(np.array([val]))
-            elif key.value.state_type == StateType.Quat:
+            elif key.value.type == StateType.Quaternion:
                 quaternion_values.append(np.array([val]))
-            elif key.value.state_type == StateType.Scalar:
+            elif key.value.type == StateType.Scalar:
                 scalar_values.append(np.array([val]))
 
         # Stack each group (assumes all shapes in group match!)
         return {
             StateType.Transform: torch.from_numpy(np.stack(transform_values)).float(),
-            StateType.Quat: torch.from_numpy(np.stack(quaternion_values)).float(),
+            StateType.Quaternion: torch.from_numpy(np.stack(quaternion_values)).float(),
             StateType.Scalar: torch.from_numpy(np.stack(scalar_values)).float(),
         }
 
     def tensor_combined_distance(
-        self, current: MasterObservation, goal: MasterObservation
+        self, current: Observation, goal: Observation
     ) -> torch.Tensor:
         # Convert all values to numpy arrays and concatenate
         values = []
         for key, converter in self.converter.items():
-            val = converter.distance(current.split_states[key], goal.split_states[key])
+            val = converter.distance(current.states[key], goal.states[key])
             val = np.asarray(val).flatten()  # Ensures it's an array and flattens it
             values.append(val)
 
@@ -250,49 +241,51 @@ class NodeConverter:
         result_1d = torch.from_numpy(flat_array).float()
         return result_1d.unsqueeze(0)
 
-    def dict_values(
+    def tensor_state_dict_values(
         self,
-        obs: MasterObservation,
-    ) -> Dict[State, float | np.ndarray]:
+        obs: Observation,
+    ) -> dict[State, torch.Tensor]:
         """
         Compute the value for each state in the observation.
         Returns a dictionary mapping each state to its value.
         """
         values = {}
         for key, converter in self.converter.items():
-            val = converter.value(obs.split_states[key])
-            values[key] = val
+            val = converter.value(obs.states[key])
+            if isinstance(val, float):
+                val = np.array([val])
+            values[key] = torch.from_numpy(val).float()
         return values
 
-    def tensor_dict_values(
+    def tensor_type_dict_values(
         self,
-        obs: MasterObservation,
-    ) -> Dict[StateType, torch.Tensor]:
+        obs: Observation,
+    ) -> dict[StateType, torch.Tensor]:
         # Initialize groups
         transform_values = []
         quaternion_values = []
         scalar_values = []
         for key, converter in self.converter.items():
-            val = converter.value(obs.split_states[key])
-            if key.value.state_type == StateType.Transform:
+            val = converter.value(obs.states[key])
+            if key.value.type == StateType.Transform:
                 transform_values.append(val)
-            elif key.value.state_type == StateType.Quat:
+            elif key.value.type == StateType.Quaternion:
                 quaternion_values.append(val)
-            elif key.value.state_type == StateType.Scalar:
+            elif key.value.type == StateType.Scalar:
                 scalar_values.append(np.array([val]))
 
         # Stack each group (assumes all shapes in group match!)
         return {
             StateType.Transform: torch.from_numpy(np.stack(transform_values)).float(),
-            StateType.Quat: torch.from_numpy(np.stack(quaternion_values)).float(),
+            StateType.Quaternion: torch.from_numpy(np.stack(quaternion_values)).float(),
             StateType.Scalar: torch.from_numpy(np.stack(scalar_values)).float(),
         }
 
-    def tensor_combined_values(self, current: MasterObservation) -> torch.Tensor:
+    def tensor_combined_values(self, current: Observation) -> torch.Tensor:
         # Convert all values to numpy arrays and concatenate
         values = []
         for key, converter in self.converter.items():
-            val = converter.value(current.split_states[key])
+            val = converter.value(current.states[key])
             val = np.asarray(val).flatten()  # Ensures it's an array and flattens it
             values.append(val)
 
@@ -303,84 +296,28 @@ class NodeConverter:
 
     def tensor_task_distance(
         self,
-        current: MasterObservation,
+        current: Observation,
     ) -> torch.Tensor:
         features: list[np.ndarray] = []
         for task in self.tasks:
             task_features: list[float] = []
-            tp_dict = HRLHelper.get_tp_from_task(
-                task, split_pose=True, active_states=self.states
-            )
+            task_tps = self.tps[task]
             for key, converter in self.converter.items():
-                if key in tp_dict:
+                if key in task_tps:
                     # Use the task-specific value if available
-                    task_value = converter.distance(
-                        current.split_states[key], tp_dict[key]
-                    )
+                    task_value = converter.distance(current.states[key], task_tps[key])
                 else:
                     # Empty value if not specified
                     task_value = self.ignore_converter.distance(
-                        current.split_states[key], current.split_states[key]
+                        current.states[key], current.states[key]
                     )
 
                 task_features.append(task_value)
             features.append(np.array(task_features))
         return torch.from_numpy(np.stack(features, axis=0)).float()
 
-
-class EdgeConverter:
-    def __init__(
-        self,
-        active_states: list[State],
-        active_tasks: list[Task],
-        policy_storage: PolicyStorage,
-    ):
-        """
-        Initialize the edge converter with a list of active states and tasks.
-        """
-        self.active_states = active_states
-        self.active_tasks = active_tasks
-        self.policy_storage = policy_storage
-
-    def _get_tp_from_task(
-        self,
-        task: Task,
-        split_pose: bool,
-        active_states: list[State],
-    ) -> Dict[State, np.ndarray]:
-        tpgmm: TPGMM = self.policy_storage.get_policy(task).tpgmm
-        result: Dict[State, np.ndarray] = {}
-        for _, segment in enumerate(tpgmm.segment_frames):
-            for _, frame_idx in enumerate(segment):
-                if split_pose:
-                    transform_key, quaternion_key = State.get_tp_by_index(
-                        frame_idx, True
-                    )
-                    if transform_key in active_states:
-                        if frame_idx == 0:
-                            # Zero means its the ee_pose
-                            result[transform_key] = task.value.ee_hrl_start[:3]
-                        else:
-                            result[transform_key] = task.value.obj_start[:3]
-                    if quaternion_key in active_states:
-                        if frame_idx == 0:
-                            # Zero means its the ee_pose
-                            result[quaternion_key] = task.value.ee_hrl_start[-4:]
-                        else:
-                            result[quaternion_key] = task.value.obj_start[-4:]
-                else:
-                    pose_key = State.get_tp_by_index(frame_idx, False)
-                    if frame_idx == 0:
-                        # Zero means its the ee_pose
-                        result[pose_key] = task.value.ee_hrl_start
-                    else:
-                        result[pose_key] = task.value.obj_start
-        for key, value in task.value.precondition.items():
-            result[key] = value
-        return result
-
     def state_state_edges(self, full: bool) -> torch.Tensor:
-        num_states = len(self.active_states)
+        num_states = len(self.states)
         if not full:
             # Only connects edges with same index
             # (therefore being the same state but with different value)
@@ -395,21 +332,21 @@ class EdgeConverter:
     def state_task_edges(self, full: bool) -> torch.Tensor:
         if not full:
             edge_list = []
-            for task_idx, task in enumerate(self.active_tasks):
-                tp_dict = self._get_tp_from_task(task, True, self.active_states)
-                for state_idx, state in enumerate(self.active_states):
-                    if state in tp_dict:
+            for task_idx, task in enumerate(self.tasks):
+                task_tps = self.tps[task]
+                for state_idx, state in enumerate(self.states):
+                    if state in task_tps:
                         # connect B-node b_idx to C-node c_idx
                         edge_list.append((state_idx, task_idx))
             return torch.tensor(edge_list, dtype=torch.long).t()
         else:
             src = (
-                torch.arange(len(self.active_states))
+                torch.arange(len(self.states))
                 .unsqueeze(1)
-                .repeat(1, len(self.active_tasks))
+                .repeat(1, len(self.tasks))
                 .flatten()
             )
-            dst = torch.arange(len(self.active_tasks)).repeat(len(self.active_states))
+            dst = torch.arange(len(self.tasks)).repeat(len(self.states))
             return torch.stack([src, dst], dim=0)
 
     def state_state_attr(self) -> torch.Tensor:
@@ -422,8 +359,9 @@ class EdgeConverter:
         edge_attr = (src == dst).to(torch.float).unsqueeze(-1)  # shape [E, 1]
         return edge_attr
 
-    def state_task_attr(self) -> torch.Tensor:
+    def state_task_attr(self, weighted: bool = False) -> torch.Tensor:
         # Fully connected edge index
+        # TODO: Implement weighted
         full_edge_index = self.state_task_edges(full=True)  # shape [2, E]
 
         # Sparse (actual) edge index

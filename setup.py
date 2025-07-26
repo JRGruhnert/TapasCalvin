@@ -70,13 +70,13 @@ setuptools.setup(
             "tapas-bc = tapas_gmm.behavior_cloning:entry_point",
             "tapas-collect-rlbench = tapas_gmm.collect_data_rlbench:entry_point",
             "tapas-embed = tapas_gmm.embed_trajectories:entry_point",
-            "tapas-collect = tapas_gmm.master_collect_data:entry_point",
-            "tapas-eval = tapas_gmm.master_evaluate:entry_point",
-            "hrl-train = tapas_gmm.master_train_hrl:entry_point",
-            "hrl-eval = tapas_gmm.master_evaluate_hrl:entry_point",
-            "hrl-plot = tapas_gmm.master_plot:entry_point",
             "tapas-kp-encode = tapas_gmm.kp_encode_trajectories:entry_point",
             "tapas-pretrain = tapas_gmm.pretrain:entry_point",
+            "tapas-collect = tapas_gmm.tapas_collect:entry_point",
+            "tapas-eval = tapas_gmm.tapas_eval:entry_point",
+            "master-train = tapas_gmm.master_train:entry_point",
+            "master-eval = tapas_gmm.master_eval:entry_point",
+            "master-plot = tapas_gmm.master_plot:entry_point",
         ]
     },
 )

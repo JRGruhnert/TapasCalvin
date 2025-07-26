@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from tapas_gmm.master_project.master_converter import (
-    NodeConverter,
+    Converter,
     QuaternionConverter,
     ScalarConverter,
     TransformConverter,
@@ -13,10 +13,10 @@ from tapas_gmm.master_project.master_definitions import (
     StateType,
     Task,
 )
-from tapas_gmm.master_project.master_observation import MasterObservation
+from tapas_gmm.master_project.master_observation import Observation
 
-state_list = State.list_by_state_space(StateSpace.STATIC)
-task_list = Task.get_tasks_in_task_space(StateSpace.STATIC)
+state_list = State.list_by_state_space(StateSpace.SMALL)
+task_list = Task.get_tasks_in_task_space(StateSpace.SMALL)
 normalized = True
 
 
@@ -37,11 +37,11 @@ def test_converter(
     exp_value: float | np.ndarray,
     exp_dist: float | np.ndarray,
 ) -> None:
-    if state.value.state_type == StateType.Scalar:
+    if state.value.type == StateType.Scalar:
         converter = ScalarConverter(state=state, normalized=normalized)
         assert converter.value(value) == exp_value
         assert converter.distance(value, goal) == exp_dist
-    elif state.value.state_type in [StateType.Transform, StateType.Quat]:
+    elif state.value.type in [StateType.Transform, StateType.Quaternion]:
         converter = TransformConverter(state=state, normalized=normalized)
         assert converter.value(value) == exp_value
         assert converter.distance(value, goal) == exp_dist

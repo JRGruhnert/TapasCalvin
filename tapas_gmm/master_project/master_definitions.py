@@ -30,30 +30,28 @@ class RewardMode(Enum):
 
 
 class TaskSpace(Enum):
-    SMALL = "small"
-    STATIC = "static"
-    DYNAMIC = "dynamic"
-    UNUSED = "unused"
+    SMALL = 0
+    ALL = 1
 
 
 class StateSpace(Enum):
-    STATIC = 0
-    DYNAMIC = 1
+    SMALL = 0
+    ALL = 1
     UNUSED = 2
 
 
 class StateType(Enum):
     Pose = 0
     Transform = 1
-    Quat = 2
+    Quaternion = 2
     Scalar = 3
 
 
 @dataclass
 class StateInfo:
     identifier: str
-    state_type: StateType
-    state_space: StateSpace = StateSpace.UNUSED
+    type: StateType
+    space: StateSpace = StateSpace.UNUSED
     min: float | np.ndarray = np.array([-1.0, -1.0, -1.0])
     max: float | np.ndarray = np.array([1.0, 1.0, 1.0])
 
@@ -110,216 +108,198 @@ class State(Enum):
                     break
         return results
 
-    @classmethod
-    def count_by_state_space(cls, space_type: StateSpace) -> int:
-        count = 0
-        for member in cls:
-            state_info = member.value
-            if state_info.state_space.value <= space_type.value:
-                count += 1
-        return count
-
-    @classmethod
-    def list_by_state_space(cls, space_type: StateSpace) -> List["State"]:
-        states = []
-        for member in cls:
-            state_info = member.value
-            if state_info.state_space.value <= space_type.value:
-                states.append(member)
-        return states
-
     EE_Pose = StateInfo(
         identifier="ee_pose",
-        state_type=StateType.Pose,
+        type=StateType.Pose,
     )
     Slide_Pose = StateInfo(
         identifier="base__slide_pose",
-        state_type=StateType.Pose,
+        type=StateType.Pose,
     )
     Drawer_Pose = StateInfo(
         identifier="base__drawer_pose",
-        state_type=StateType.Pose,
+        type=StateType.Pose,
     )
     Button_Pose = StateInfo(
         identifier="base__button_pose",
-        state_type=StateType.Pose,
+        type=StateType.Pose,
     )
     Switch_Pose = StateInfo(
         identifier="base__switch_pose",
-        state_type=StateType.Pose,
+        type=StateType.Pose,
     )
     Lightbulb_Pose = StateInfo(
         identifier="lightbulb_pose",
-        state_type=StateType.Pose,
+        type=StateType.Pose,
     )
     Led_Pose = StateInfo(
         identifier="led_pose",
-        state_type=StateType.Pose,
+        type=StateType.Pose,
     )
     Red_Pose = StateInfo(
         identifier="block_red_pose",
-        state_type=StateType.Pose,
+        type=StateType.Pose,
     )
     Blue_Pose = StateInfo(
         identifier="block_blue_pose",
-        state_type=StateType.Pose,
+        type=StateType.Pose,
     )
     Pink_Pose = StateInfo(
         identifier="block_pink_pose",
-        state_type=StateType.Pose,
+        type=StateType.Pose,
     )
     EE_Transform = StateInfo(
         identifier="ee_euler",
-        state_type=StateType.Transform,
-        state_space=StateSpace.STATIC,
+        type=StateType.Transform,
+        space=StateSpace.SMALL,
     )
     Slide_Transform = StateInfo(
         identifier="base__slide_euler",
-        state_type=StateType.Transform,
+        type=StateType.Transform,
     )
     Drawer_Transform = StateInfo(
         identifier="base__drawer_euler",
-        state_type=StateType.Transform,
+        type=StateType.Transform,
     )
     Button_Transform = StateInfo(
         identifier="base__button_euler",
-        state_type=StateType.Transform,
+        type=StateType.Transform,
     )
     Switch_Transform = StateInfo(
         identifier="base__switch_euler",
-        state_type=StateType.Transform,
+        type=StateType.Transform,
     )
     Lightbulb_Transform = StateInfo(
         identifier="lightbulb_euler",
-        state_type=StateType.Transform,
+        type=StateType.Transform,
     )
     Led_Transform = StateInfo(
         identifier="led_euler",
-        state_type=StateType.Transform,
+        type=StateType.Transform,
     )
     Red_Transform = StateInfo(
         identifier="block_red_euler",
-        state_type=StateType.Transform,
-        state_space=StateSpace.DYNAMIC,
+        type=StateType.Transform,
+        space=StateSpace.ALL,
     )
     Blue_Transform = StateInfo(
         identifier="block_blue_euler",
-        state_type=StateType.Transform,
-        state_space=StateSpace.DYNAMIC,
+        type=StateType.Transform,
+        space=StateSpace.ALL,
     )
     Pink_Transform = StateInfo(
         identifier="block_pink_euler",
-        state_type=StateType.Transform,
-        state_space=StateSpace.DYNAMIC,
+        type=StateType.Transform,
+        space=StateSpace.ALL,
     )
     EE_Quat = StateInfo(
         identifier="ee_quat",
-        state_type=StateType.Quat,
-        state_space=StateSpace.STATIC,
+        type=StateType.Quaternion,
+        space=StateSpace.SMALL,
     )
     Slide_Quat = StateInfo(
         identifier="base__slide_quat",
-        state_type=StateType.Quat,
+        type=StateType.Quaternion,
     )
     Drawer_Quat = StateInfo(
         identifier="base__drawer_quat",
-        state_type=StateType.Quat,
+        type=StateType.Quaternion,
     )
     Button_Quat = StateInfo(
         identifier="base__button_quat",
-        state_type=StateType.Quat,
+        type=StateType.Quaternion,
     )
     Switch_Quat = StateInfo(
         identifier="base__switch_quat",
-        state_type=StateType.Quat,
+        type=StateType.Quaternion,
     )
     Lightbulb_Quat = StateInfo(
         identifier="lightbulb_quat",
-        state_type=StateType.Quat,
+        type=StateType.Quaternion,
     )
     Led_Quat = StateInfo(
         identifier="led_quat",
-        state_type=StateType.Quat,
+        type=StateType.Quaternion,
     )
     Red_Quat = StateInfo(
         identifier="block_red_quat",
-        state_type=StateType.Quat,
+        type=StateType.Quaternion,
         # state_space=StateSpace.DYNAMIC,
     )
     Blue_Quat = StateInfo(
         identifier="block_blue_quat",
-        state_type=StateType.Quat,
+        type=StateType.Quaternion,
         # state_space=StateSpace.DYNAMIC,
     )
     Pink_Quat = StateInfo(
         identifier="block_pink_quat",
-        state_type=StateType.Quat,
+        type=StateType.Quaternion,
         # state_space=StateSpace.DYNAMIC,
     )
     EE_State = StateInfo(
         identifier="ee_state",
-        state_type=StateType.Scalar,
+        type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        state_space=StateSpace.STATIC,
+        space=StateSpace.SMALL,
     )  # Gripper
     Slide_State = StateInfo(
         identifier="base__slide",
-        state_type=StateType.Scalar,
+        type=StateType.Scalar,
         min=0.0,
         max=0.28,
-        state_space=StateSpace.STATIC,
+        space=StateSpace.SMALL,
     )
     Drawer_State = StateInfo(
         identifier="base__drawer",
-        state_type=StateType.Scalar,
+        type=StateType.Scalar,
         min=0.0,
         max=0.22,
-        state_space=StateSpace.STATIC,
+        space=StateSpace.SMALL,
     )
     Button_State = StateInfo(
         identifier="base__button",
-        state_type=StateType.Scalar,
+        type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        state_space=StateSpace.STATIC,
+        space=StateSpace.SMALL,
     )
     Switch_State = StateInfo(
         identifier="base__switch",
-        state_type=StateType.Scalar,
+        type=StateType.Scalar,
         min=0.0,
         max=0.088,
     )
     Lightbulb_State = StateInfo(
         identifier="lightbulb",
-        state_type=StateType.Scalar,
+        type=StateType.Scalar,
         min=0.0,
         max=1.0,
     )
     Led_State = StateInfo(
         identifier="led",
-        state_type=StateType.Scalar,
+        type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        state_space=StateSpace.STATIC,
+        space=StateSpace.SMALL,
     )
     Red_State = StateInfo(
         identifier="block_red",
-        state_type=StateType.Scalar,
+        type=StateType.Scalar,
         min=0.0,
         max=1.0,
         # state_space=StateSpace.DYNAMIC,
     )
     Blue_State = StateInfo(
         identifier="block_blue",
-        state_type=StateType.Scalar,
+        type=StateType.Scalar,
         min=0.0,
         max=1.0,
         # state_space=StateSpace.DYNAMIC,
     )
     Pink_State = StateInfo(
         identifier="block_pink",
-        state_type=StateType.Scalar,
+        type=StateType.Scalar,
         min=0.0,
         max=1.0,
         # state_space=StateSpace.DYNAMIC,
@@ -329,7 +309,7 @@ class State(Enum):
 @dataclass
 class TaskInfo:
     precondition: Dict[State, float | np.ndarray]
-    action_space: TaskSpace = TaskSpace.STATIC
+    space: TaskSpace = TaskSpace.SMALL
     reversed: bool = False
     ee_tp_start: np.ndarray = _origin_ee_tp_pose
     obj_start: np.ndarray = _origin_obj_tp_pose
@@ -355,7 +335,7 @@ class Task(Enum):
         count = 0
         for member in cls:
             model_info = member.value
-            if model_info.action_space == action_space:
+            if model_info.space == action_space:
                 count += 1
         return count
 
@@ -364,7 +344,7 @@ class Task(Enum):
         tasks = []
         for member in cls:
             model_info = member.value
-            if model_info.action_space == task_space:
+            if model_info.space == task_space:
                 tasks.append(member)
         return tasks
 
@@ -488,3 +468,19 @@ class Task(Enum):
             State.Slide_State: State.Slide_State.value.max,
         },
     )
+
+
+def convert_to_states(state_space: StateSpace) -> List[State]:
+    states = []
+    for member in State:
+        if member.value.space.value <= state_space.value:
+            states.append(member)
+    return states
+
+
+def convert_to_tasks(task_space: TaskSpace) -> List[Task]:
+    states = []
+    for member in Task:
+        if member.value.space.value <= task_space.value:
+            states.append(member)
+    return states

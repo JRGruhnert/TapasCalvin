@@ -1,10 +1,9 @@
-from enum import Enum
-from loguru import logger
 import numpy as np
 import torch
 
 from tapas_gmm.master_project.master_definitions import (
     State,
+    Task,
     _origin_ee_tp_pose,
 )
 from tapas_gmm.utils.observation import (
@@ -94,11 +93,12 @@ def _to_rlbench_format(obs: CalvinObservation) -> SceneObservation:  # type: ign
     return obs
 
 
-class MasterObservation(object):
+class Observation:
     def __init__(
         self,
         obs: CalvinObservation,
     ):
+        self._obs = obs
         self._pose_states: dict[State, float | np.ndarray] = {
             State.EE_Pose: obs.ee_pose,
             **{State.from_string(f"{k}_pose"): v for k, v in obs.object_poses.items()},
@@ -125,62 +125,24 @@ class MasterObservation(object):
             **{State.from_string(k): v for k, v in obs.object_states.items()},
         }
 
-        self._pose_keys = list(self._pose_states.keys())
-        self._euler_keys = list(self._euler_states.keys())
-        self._quat_keys = list(self._quat_states.keys())
-        self._scalar_keys = list(self._scalar_states.keys())
-
-        self._obs: CalvinObservation = obs
-
-    @property
-    def normal_states(self) -> dict[State, float | np.ndarray]:
-        """Returns the normal states of the observation."""
-        return {**self._pose_states, **self._scalar_states}
+        self._states: dict[State, float | np.ndarray] = {
+            **self._pose_states,
+            **self._euler_states,
+            **self._quat_states,
+            **self._scalar_states,
+        }
 
     @property
-    def split_states(self) -> dict[State, float | np.ndarray]:
-        """Returns the split states of the observation."""
-        return {**self._euler_states, **self._quat_states, **self._scalar_states}
-
-    @property
-    def normal_keys(self) -> list[State]:
-        """Returns the keys of the normal states."""
-        return self._pose_keys + self._scalar_keys
-
-    @property
-    def split_keys(self) -> list[State]:
-        """Returns the keys of the split states."""
-        return self._euler_keys + self._quat_keys + self._scalar_keys
-
-    @property
-    def transform_states(self) -> dict[State, np.ndarray]:
-        """Returns the euler states of the observation."""
-        return self._euler_states
-
-    @property
-    def quat_states(self) -> dict[State, np.ndarray]:
-        """Returns the quaternion states of the observation."""
-        return self._quat_states
-
-    @property
-    def pose_states(self) -> dict[State, np.ndarray]:
-        """Returns the pose states of the observation."""
-        return self._pose_states
-
-    @property
-    def scalar_states(self) -> dict[State, float]:
+    def states(self) -> dict[State, float | np.ndarray]:
         """Returns the scalar states of the observation."""
-        return self._scalar_states
+        return self._states
 
-    @property
-    def tapas_format(self) -> SceneObservation:  # type: ignore
+    def tapas_format(self, task: Task) -> SceneObservation:  # type: ignore
+        # This is a hack for changing the ee_pose to the origin for reversed models
+        # It does nothing for standard models
+        if task.value.reversed:
+            self._obs.ee_pose = _origin_ee_tp_pose
         return _to_rlbench_format(self._obs)
 
     def update_ee_pose(self, ee_pose: np.ndarray):
         self._obs.ee_pose = ee_pose
-
-
-# TODO: Reversed model starting position check because it does illegal things
-# TODO: Disable Switch difference
-# TODO: Evaluate reward
-# TODO: Print Goal State on screen

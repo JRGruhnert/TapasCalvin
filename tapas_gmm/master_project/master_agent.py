@@ -1,36 +1,29 @@
-from dataclasses import dataclass, field
-from abc import ABC, abstractmethod
-from typing import Dict
+from dataclasses import dataclass
+import os
+import re
+from typing import Any, Type
 import torch
 from torch import nn
 import numpy as np
-from tapas_gmm.master_project.master_gnn import GNN_PPO, GNN_PPO2, GNN_PPO3
-from tapas_gmm.master_project.master_scorer import Scorer, ScorerConfig
+from tapas_gmm.master_project.networks import Network, import_network
 from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.master_project.master_old_gnn import HRL_GNN, HRL_GNN2
-from tapas_gmm.master_project.master_graph import Graph
-from tapas_gmm.master_project.master_observation import MasterObservation
-from tapas_gmm.master_project.master_baseline import ActorCriticBase, PPOActorCritic
-from tapas_gmm.master_project.master_converter import NodeConverter
-from tapas_gmm.master_project.master_definitions import (
-    TaskSpace,
-    State,
-    StateSpace,
-    StateType,
-    Task,
-    RewardMode,
-)
+from tapas_gmm.master_project.master_observation import Observation
+from tapas_gmm.master_project.networks.base import ActorCriticBase
+from tapas_gmm.master_project.master_definitions import State, Task
 
 
 @dataclass
 class AgentConfig:
-    task_space: TaskSpace = TaskSpace.STATIC
-    state_space: StateSpace = StateSpace.DYNAMIC
-    scorer: ScorerConfig = None
-    reward_mode: RewardMode = RewardMode.SPARSE
-    batch_size: int = (
-        2048  # 2048 1024 How many steps to collect before updating the policy
-    )
+    name: str
+    network: Network
+    # Default values
+    early_stop: int = 10  # None if no early stop else the epoch number
+    max_epoch: int = 50
+    saving_freq: int = 5  # Saving frequence of trained model
+    saving_path: str = "results/"
+
+    save_stats = True
+    batch_size: int = 2048
     mini_batch_size: int = 64  # 64 # How many steps to use in each mini-batch
     n_epochs: int = 50  # How many passes over the collected batch per update
     lr_actor: float = 0.0006  # Step size for actor optimizer
@@ -42,21 +35,13 @@ class AgentConfig:
     value_coef: float = 0.5  # Weight on the critic (value) loss vs. the policy loss
     max_grad_norm: float = 0.5  # Threshold for clipping gradient norms
     target_kl: float = 0.02  # (Optional) early stopping if KL divergence gets too large
-    graph_gin_based: bool = True
 
 
 class RolloutBuffer:
     def __init__(self):
         self.actions = []
-        self.obs_dict = {
-            k: [] for k in [StateType.Transform, StateType.Quat, StateType.Scalar]
-        }
-
-        self.goal_dict = {
-            k: [] for k in [StateType.Transform, StateType.Quat, StateType.Scalar]
-        }
-
-        self.c = []
+        self.obs = []
+        self.goal = []
         self.logprobs = []
         self.rewards = []
         self.state_values = []
@@ -68,38 +53,33 @@ class RolloutBuffer:
         self.rewards.clear()
         self.state_values.clear()
         self.is_terminals.clear()
-        self.c.clear()
+        self.obs.clear()
+        self.goal.clear()
 
-        for k in self.obs_dict:
-            self.obs_dict[k].clear()
-        for k in self.goal_dict:
-            self.goal_dict[k].clear()
+    def health(self):
+        lengths = [
+            len(self.actions),
+            len(self.obs),
+            len(self.goal),
+            len(self.logprobs),
+            len(self.rewards),
+            len(self.state_values),
+            len(self.is_terminals),
+        ]
+        return all(l == lengths[0] for l in lengths)
 
-    def store_dicts(
-        self, obs: dict[StateType, torch.Tensor], goal: dict[StateType, torch.Tensor]
-    ):
-        for k, v in obs.items():
-            self.obs_dict[k].append(v)
-        for k, v in goal.items():
-            self.goal_dict[k].append(v)
+    def has_batch(self, batch_size: int):
+        return len(self.actions) == batch_size
 
-    def save_as_npy(self, path: str, batch_num: int):
-        file_path = path + f"rollout_buffer_{batch_num}.npy"
+    def save(self, path: str, epoch: int):
+        file_path = path + f"stats_epoch{epoch}.npy"
         data = {}
-
-        for k, v_list in self.obs_dict.items():
-            data[f"obs_{k.name}"] = torch.stack(v_list).cpu().numpy()
-
-        for k, v_list in self.goal_dict.items():
-            data[f"goal_{k.name}"] = torch.stack(v_list).cpu().numpy()
 
         data["actions"] = (
             torch.stack(self.actions).cpu().numpy()
             if isinstance(self.actions[0], torch.Tensor)
             else np.array(self.actions)
         )
-        if self.c:
-            data["c"] = torch.stack(self.c).cpu().numpy()
         data["logprobs"] = torch.tensor(self.logprobs).cpu().numpy()
         data["rewards"] = np.array(self.rewards)
         data["state_values"] = torch.tensor(self.state_values).cpu().numpy()
@@ -107,41 +87,94 @@ class RolloutBuffer:
 
         np.save(file_path, data)
 
+    def stats(self) -> tuple[float, float, float]:
+        # Calculate episode statistics
+        episode_rewards = []
+        episode_lengths_batch = []
+        episode_success = []
 
-class Agent(ABC):
+        current_episode_reward = 0
+        current_episode_length = 0
+        for _, (reward, terminal) in enumerate(zip(self.rewards, self.is_terminals)):
+            current_episode_reward += reward
+            current_episode_length += 1
+
+            if terminal:
+                episode_rewards.append(current_episode_reward)
+                episode_lengths_batch.append(current_episode_length)
+                current_episode_reward = 0
+                current_episode_length = 0
+
+                # TODO: Remove hardcoded 50 as success threshold
+                episode_success.append(1 if reward >= 50 else 0)
+
+        return (
+            np.sum(episode_rewards),
+            np.mean(episode_lengths_batch),
+            np.sum(episode_success) / len(episode_success),
+        )
+
+
+class Agent:
 
     def __init__(
         self,
         config: AgentConfig,
+        tasks: list[Task],
+        states: list[State],
+        task_parameter: dict[Task, dict[State, np.ndarray]],
     ):
         # Hyperparameters
         self.config = config
-
+        Net = import_network(config.network)
         # Initialize the agent
-        self.policy_new: ActorCriticBase = None
-        self.policy_old: ActorCriticBase = None
-        self.optimizer: torch.optim.Adam = None
         self.mse_loss = nn.MSELoss()
         self.buffer = RolloutBuffer()
-        self.state_dim = State.count_by_state_space(self.config.state_space)
-        self.action_dim = Task.count_by_action_space(self.config.task_space)
-        self.active_states = State.list_by_state_space(config.state_space)
-        self.active_tasks = Task.get_tasks_in_task_space(config.task_space)
-        self.scorer = Scorer(
-            self.config.scorer,
-            self.active_states,
-            self.active_tasks,
+        self.policy_new: ActorCriticBase = Net(tasks, states, task_parameter)
+        self.policy_old: ActorCriticBase = Net(tasks, states, task_parameter)
+        self.optimizer = torch.optim.Adam(
+            self.policy_new.parameters(),
+            lr=self.config.lr_actor,
         )
 
-    @abstractmethod
-    def act(self, current: MasterObservation, goal: MasterObservation) -> int:
-        pass
+        # Internal flags and counter
+        self.waiting_feedback = False
+        self.current_epoch = 0
 
-    def save_buffer(self, path: str, batch_num: int):
-        """
-        Save the current buffer to a .npz file.
-        """
-        self.buffer.save_as_npy(path, batch_num)
+        ### Directory path for the agent (specified by name)
+        self.directory_path = config.saving_path + config.name + "/"
+        if not os.path.exists(self.directory_path):
+            os.makedirs(self.directory_path)
+
+    def act(self, obs: Observation, goal: Observation) -> int:
+        if self.waiting_feedback:
+            raise UserWarning(
+                "The agent hasn't recieved any feedback of previous action yet. "
+                "Learning will not work without feedback. Please call feedback() fafter every act() call."
+            )
+
+        with torch.no_grad():
+            action, action_logprob, state_val = self.policy_old.act(obs, goal)
+
+        self.buffer.obs.append(obs)
+        self.buffer.goal.append(goal)
+        self.buffer.actions.append(action)
+        self.buffer.logprobs.append(action_logprob)
+        self.buffer.state_values.append(state_val)
+        self.waiting_feedback = True
+        return action.item()
+
+    def feedback(self, reward: float, terminal: bool):
+        if not self.waiting_feedback:
+            raise UserWarning(
+                "The agent is recieving feedback without any action taken. "
+                "Learning will not work without actions. Is this correct?"
+            )
+
+        self.buffer.rewards.append(reward)
+        self.buffer.is_terminals.append(terminal)
+        self.waiting_feedback = False
+        return self.buffer.has_batch(self.config.batch_size)
 
     def compute_gae(
         self,
@@ -171,38 +204,24 @@ class Agent(ABC):
             returns, dtype=torch.float32
         )
 
-    @abstractmethod
-    def call_evaluate(
-        self,
-        obs: dict[StateType, torch.Tensor],
-        goal: dict[StateType, torch.Tensor],
-        action: torch.Tensor,
-        c: torch.Tensor = None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        pass
+    def learn(self, verbose: bool = False) -> bool:
+        if not self.buffer.health():
+            raise UserWarning("RolloutBuffer is not in sync. Agent can't learn.")
+        if verbose:
+            total_reward, episode_legth, success_rate = self.buffer.stats()
+            print(
+                f"Total Reward: {total_reward} \t Episode Length: {episode_legth} \t Success Rate \t {success_rate}"
+            )
+            print("Called learning on new batch. Updating gradients of the agent!")
 
-    def update(self):
         advantages, rewards = self.compute_gae(
             self.buffer.rewards, self.buffer.state_values, self.buffer.is_terminals
         )
 
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-        # convert list to tensor
-        old_obs = {
-            k: torch.stack(v, dim=0).detach().to(device)
-            for k, v in self.buffer.obs_dict.items()
-        }
-        old_goal = {
-            k: torch.stack(v, dim=0).detach().to(device)
-            for k, v in self.buffer.goal_dict.items()
-        }
-
-        if len(self.buffer.c) == 0:
-            # No C‑nodes in this batch—create an “empty batch” of shape [0, D]
-            old_c = None
-        else:
-            old_c = torch.stack(self.buffer.c, dim=0).detach().to(device)
+        old_obs = self.buffer.obs
+        old_goal = self.buffer.goal
 
         old_actions = (
             torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
@@ -221,41 +240,17 @@ class Agent(ABC):
                 end = start + self.config.mini_batch_size
                 mb_idx = indices[start:end]
 
-                mb_obs = {k: v[mb_idx] for k, v in old_obs.items()}
-                mb_goal = {k: v[mb_idx] for k, v in old_goal.items()}
+                mb_obs = old_obs[mb_idx]
+                mb_goal = old_goal[mb_idx]
                 mb_actions = old_actions[mb_idx]
                 mb_logprobs = old_logprobs[mb_idx]
                 mb_advantages = advantages[mb_idx]
                 mb_rewards = rewards[mb_idx]
 
-                if old_c is None:
-                    # Evaluate policy
-                    logprobs, state_values, dist_entropy = self.call_evaluate(
-                        mb_obs, mb_goal, mb_actions
-                    )
-                else:
-                    # For now I loop over the minibatch
-                    # Here is optimization potential but for this project it shouldnt matter that much
-                    logprobs_list = []
-                    state_values_list = []
-                    dist_entropy_list = []
-
-                    for i in range(mb_idx.shape[0]):
-                        obs_i = {k: v[mb_idx[i]] for k, v in old_obs.items()}
-                        goal_i = {k: v[mb_idx[i]] for k, v in old_goal.items()}
-
-                        logprob_i, value_i, entropy_i = self.call_evaluate(
-                            obs_i, goal_i, mb_actions[i], old_c[mb_idx[i]]
-                        )
-
-                        logprobs_list.append(logprob_i.unsqueeze(0))
-                        state_values_list.append(value_i.unsqueeze(0))
-                        dist_entropy_list.append(entropy_i)
-
-                    # Concatenate tensors to simulate a batch
-                    logprobs = torch.cat(logprobs_list, dim=0)
-                    state_values = torch.cat(state_values_list, dim=0)
-                    dist_entropy = torch.stack(dist_entropy_list).mean()
+                # Evaluate policy
+                logprobs, state_values, dist_entropy = self.policy_new.evaluate(
+                    mb_obs, mb_goal, mb_actions
+                )
 
                 state_values = torch.squeeze(state_values)
 
@@ -288,121 +283,87 @@ class Agent(ABC):
                 self.optimizer.step()
 
                 # Optional KL early stopping
-                # if self.parameters.target_kl is not None:
-                #    with torch.no_grad():
-                #        kl = (mb_logprobs - logprobs).mean()
-                #        if kl > self.parameters.target_kl:
-                #            print(f"Early stopping at epoch {epoch} due to KL={kl:.4f}")
-                #            early_stop = True
-                #            break  # break minibatch loop
+                if self.config.target_kl is not None:
+                    with torch.no_grad():
+                        kl = (mb_logprobs - logprobs).mean()
+                        if kl > self.config.target_kl:
+                            print(f"Early stopping at epoch {epoch} due to KL={kl:.4f}")
+                            early_stop = True
+                            break  # break minibatch loop
             if early_stop:
                 break
 
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy_new.state_dict())
 
+        if self.config.save_stats:
+            self.buffer.save(self.config.saving_path + "logs/", self.current_epoch)
         # clear buffer
         self.buffer.clear()
 
-    def save(self, path: str):
+        # Update Epoch
+        self.current_epoch += 1
+
+        if self.current_epoch == self.config.max_epoch:
+            return True
+
+        if (
+            self.config.early_stop is not None
+            and self.current_epoch >= self.config.early_stop
+        ):
+            # TODO: Currently just False cause early stop is not implemented
+            return False
+
+        return False  # No early stopping
+
+    def save(self, verbose: bool = False):
         """
         Save the model to the specified path.
         """
-        torch.save(self.policy_old.state_dict(), path)
+        saving_in = self.current_epoch % self.config.saving_freq
+        if saving_in == 0:
+            if verbose:
+                print("Saving Checkpoint!")
+            checkpoint_path = self.directory_path + "model_cp_epoch{}.pth".format(
+                self.current_epoch,
+            )
+            torch.save(self.policy_old.state_dict(), checkpoint_path)
+        else:
+            if verbose:
+                print(f"Next saving of Checkpoint in {saving_in} epochs.")
 
-    def load(self, path: str):
+    def load(self, external_path: str = None):
         """
         Load the model from the specified path.
         """
+        if external_path is not None:
+            # Load from provided path
+            checkpoint_path = external_path
+            match = re.search(r"epoch(\d+)", os.path.basename(checkpoint_path))
+            self.current_epoch = int(match.group(1)) if match else 0
+        else:
+            # Search for the latest checkpoint in the directory
+            files = os.listdir(self.directory_path)
+            checkpoints = [
+                f for f in files if re.match(r"model_cp_epoch(\d+)\.pth$", f)
+            ]
+            if not checkpoints:
+                raise FileNotFoundError("No checkpoint found in directory.")
+
+            # Get highest-numbered checkpoint
+            latest_checkpoint = max(
+                checkpoints, key=lambda f: int(re.search(r"epoch(\d+)", f).group(1))
+            )
+            self.current_epoch = int(
+                re.search(r"epoch(\d+)", latest_checkpoint).group(1)
+            )
+            checkpoint_path = os.path.join(self.directory_path, latest_checkpoint)
+
+        print(f"Loading checkpoint from {checkpoint_path} (epoch {self.current_epoch})")
+
         self.policy_old.load_state_dict(
-            torch.load(path, map_location=lambda storage, _: storage)
+            torch.load(checkpoint_path, map_location=lambda storage, _: storage)
         )
         self.policy_new.load_state_dict(
-            torch.load(path, map_location=lambda storage, _: storage)
+            torch.load(checkpoint_path, map_location=lambda storage, _: storage)
         )
-
-    def step(
-        self,
-        obs: MasterObservation,
-    ) -> tuple[float, bool]:
-        reward, terminal = self.scorer.reward(obs)
-        self.buffer.rewards.append(reward)
-        self.buffer.is_terminals.append(terminal)
-
-
-class PPOAgent(Agent):
-    def __init__(self, parameters: AgentConfig):
-        super().__init__(parameters)
-        self.policy_new: PPOActorCritic = PPOActorCritic(
-            self.state_dim, self.action_dim
-        )
-        self.policy_old: PPOActorCritic = PPOActorCritic(
-            self.state_dim, self.action_dim
-        )
-        self.policy_old.load_state_dict(self.policy_new.state_dict())
-        self.optimizer = torch.optim.Adam(
-            self.policy_new.parameters(),
-            lr=self.config.lr_actor,
-        )
-
-    def act(self, obs: MasterObservation, goal: MasterObservation) -> int:
-        obs_dict = self.converter.tensor_dict_values(obs)
-        goal_dict = self.converter.tensor_dict_values(goal)
-
-        with torch.no_grad():
-            action, action_logprob, state_val = self.policy_old.act(obs_dict, goal_dict)
-
-        self.buffer.store_dicts(obs_dict, goal_dict)
-        self.buffer.actions.append(action)
-        self.buffer.logprobs.append(action_logprob)
-        self.buffer.state_values.append(state_val)
-
-        return action.item()
-
-    def call_evaluate(
-        self,
-        obs: dict[StateType, torch.Tensor],
-        goal: dict[StateType, torch.Tensor],
-        action: torch.Tensor,
-        c: torch.Tensor = None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        return self.policy_new.evaluate(obs, goal, action)
-
-
-class GNNAgent(Agent):
-    def __init__(self, parameters: AgentConfig):
-        super().__init__(parameters)
-        self.graph = Graph(
-            action_space=self.config.task_space,
-            state_space=self.config.state_space,
-            gin_like=self.config.graph_gin_based,
-        )
-        self.policy_new: GNN_PPO3 = GNN_PPO3(self.state_dim, self.action_dim)
-        self.policy_old: GNN_PPO3 = GNN_PPO3(self.state_dim, self.action_dim)
-        self.policy_old.load_state_dict(self.policy_new.state_dict())
-        self.optimizer = torch.optim.Adam(
-            self.policy_new.parameters(),
-            lr=self.config.lr_actor,
-        )
-
-    def act(self, current: MasterObservation, goal: MasterObservation) -> int:
-        self.graph.update(current, goal)
-        with torch.no_grad():
-            action, action_logprob, state_val = self.policy_old.act(self.graph)
-
-        self.buffer.c.append(self.graph.c)
-        self.buffer.store_dicts(self.graph.b, self.graph.a)
-        self.buffer.actions.append(action)
-        self.buffer.logprobs.append(action_logprob)
-        self.buffer.state_values.append(state_val)
-        return action.item()
-
-    def call_evaluate(
-        self,
-        obs: dict[StateType, torch.Tensor],
-        goal: dict[StateType, torch.Tensor],
-        action: torch.Tensor,
-        c: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        self.graph.overwrite(goal, obs, c)
-        return self.policy_new.evaluate(self.graph, action)

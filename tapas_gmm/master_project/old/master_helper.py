@@ -12,7 +12,7 @@ from tapas_gmm.master_project.master_definitions import (
 )
 
 from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.master_project.master_observation import MasterObservation
+from tapas_gmm.master_project.master_observation import Observation
 from tapas_gmm.policy import import_policy
 from tapas_gmm.policy.gmm import GMMPolicy, GMMPolicyConfig
 from tapas_gmm.policy.models.tpgmm import (
@@ -23,22 +23,10 @@ from tapas_gmm.policy.models.tpgmm import (
     TPGMMConfig,
 )
 
-
+"""
 @dataclass(frozen=True)
 class HRLHelper:
-    """Utility class for returning meaningful model sets."""
 
-    @classmethod
-    def convert_observation(
-        cls, task: Task, obs: MasterObservation
-    ) -> MasterObservation:
-        if task.value.reversed:
-            obs.update_ee_pose(
-                _origin_ee_tp_pose,
-            )
-        return obs
-
-    @classmethod
     @classmethod
     def _get_gaussians_from_model(cls, tpgmm: AutoTPGMM) -> Dict[int, Gaussian]:
         result: Dict[int, Gaussian] = {}
@@ -64,3 +52,4 @@ class HRLHelper:
                         mu_on_tangent=True, as_np=False
                     )
         return result
+"""

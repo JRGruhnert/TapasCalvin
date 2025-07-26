@@ -2,14 +2,14 @@ from loguru import logger
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from tapas_gmm.master_project.master_baseline import ActorCriticBase
+from tapas_gmm.master_project.networks.baseline import ActorCriticBase
 from tapas_gmm.master_project.master_definitions import StateType
-from tapas_gmm.master_project.master_modules import (
+from tapas_gmm.master_project.networks.master_modules import (
     TransformEncoder,
     QuaternionEncoder,
     ScalarEncoder,
 )
-from tapas_gmm.master_project.master_graph import GraphData
+from tapas_gmm.master_project.old.master_graph import GraphData
 from torch_geometric.nn import GATv2Conv
 
 
@@ -28,7 +28,7 @@ class HRL_GNN(ActorCriticBase):
         self.encoder_obs = nn.ModuleDict(
             {
                 StateType.Transform.name: TransformEncoder(h_dim_encoder),
-                StateType.Quat.name: QuaternionEncoder(h_dim_encoder),
+                StateType.Quaternion.name: QuaternionEncoder(h_dim_encoder),
                 StateType.Scalar.name: ScalarEncoder(h_dim_encoder),
             }
         )
@@ -36,7 +36,7 @@ class HRL_GNN(ActorCriticBase):
         self.encoder_goal = nn.ModuleDict(
             {
                 StateType.Transform.name: TransformEncoder(h_dim_encoder),
-                StateType.Quat.name: QuaternionEncoder(h_dim_encoder),
+                StateType.Quaternion.name: QuaternionEncoder(h_dim_encoder),
                 StateType.Scalar.name: ScalarEncoder(h_dim_encoder),
             }
         )

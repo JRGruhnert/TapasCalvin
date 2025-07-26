@@ -15,11 +15,11 @@ from tapas_gmm.env.calvin import CalvinConfig, Calvin
 
 from tapas_gmm.env.environment import BaseEnvironmentConfig
 from tapas_gmm.master_project.master_definitions import StateSpace
-from tapas_gmm.master_project.master_env_sample import sample_pre_condition
+from tapas_gmm.master_project.problem_sampler import sample_pre_condition
 from tapas_gmm.policy import PolicyEnum
 from tapas_gmm.policy.manual_policy import ManualCalvinPolicy
 from tapas_gmm.dataset.scene import SceneDataset, SceneDatasetConfig
-from tapas_gmm.master_project.master_observation import MasterObservation
+from tapas_gmm.master_project.master_observation import Observation
 from tapas_gmm.utils.argparse import parse_and_build_config
 from tapas_gmm.utils.misc import (
     DataNamingConfig,
@@ -108,7 +108,7 @@ def main(config: Config) -> None:
                     ee_delta = env.compute_ee_delta(obs, next_obs)
                     obs.action = torch.Tensor(ee_delta)
                     obs.reward = torch.Tensor([step_reward])
-                    replay_memory.add_observation(MasterObservation(obs).tapas_format)
+                    replay_memory.add_observation(Observation(obs).tapas_format)
 
                     obs = next_obs
                     timesteps += 1
@@ -120,7 +120,7 @@ def main(config: Config) -> None:
                         replay_memory.save_current_traj()
 
                         obs, _, policy_done, _ = env.reset(
-                            sample_pre_condition(obs.scene_obs, StateSpace.DYNAMIC)
+                            sample_pre_condition(obs.scene_obs, StateSpace.ALL)
                         )
                         keyboard_obs.reset()
                         policy.reset_episode(env)
@@ -137,7 +137,7 @@ def main(config: Config) -> None:
                         replay_memory.reset_current_traj()
 
                         obs, _, _, _ = env.reset(
-                            sample_pre_condition(obs.scene_obs, StateSpace.DYNAMIC)
+                            sample_pre_condition(obs.scene_obs, StateSpace.ALL)
                         )
                         # logger.debug(obs.scene_obs)
                         keyboard_obs.reset()

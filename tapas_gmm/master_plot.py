@@ -1,21 +1,23 @@
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
 import os
 from pathlib import Path
 import pandas as pd
-from typing import Dict, List, Tuple
+from typing import Dict
 
 
 class RolloutAnalyzer:
-    def __init__(self, data_path: str):
+    def __init__(self, path: str):
         """
         Initialize analyzer with path to directory containing .npy files
 
         Args:
             data_path: Path to directory containing rollout_buffer_*.npy files
         """
-        self.data_path = data_path
+        self.data_path = path + "logs/"
+        self.save_path = path
         self.batch_data = {}
         self.summary_stats = {}
 
@@ -238,8 +240,9 @@ class RolloutAnalyzer:
 
         print("=" * 80)
 
-    def plot_training_progress(self, save_path: str = None):
+    def plot_training_progress(self, name: str):
         """Create comprehensive plots of training progress"""
+        file_path = self.save_path + name
         if not self.summary_stats:
             self.compute_summary_stats()
 
@@ -320,12 +323,12 @@ class RolloutAnalyzer:
 
         plt.tight_layout()
 
-        if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches="tight")
-            print(f"Plot saved to {save_path}")
+        plt.savefig(file_path, dpi=300, bbox_inches="tight")
+        print(f"Plot saved to {file_path}")
 
-    def export_summary_csv(self, save_path: str):
+    def export_summary_csv(self, name: str):
         """Export summary statistics to CSV for further analysis"""
+        file_path = self.save_path + name
         if not self.summary_stats:
             self.compute_summary_stats()
 
@@ -334,35 +337,26 @@ class RolloutAnalyzer:
             self.summary_stats["batch_summaries"], orient="index"
         )
         df.index.name = "batch"
-        df.to_csv(save_path)
-        print(f"Summary exported to {save_path}")
-
-
-# Usage example
-def analyze_rollouts(data_path: str):
-    """
-    Convenience function to run full analysis
-
-    Args:
-        data_path: Path to directory containing rollout_buffer_*.npy files
-    """
-    analyzer = RolloutAnalyzer(data_path)
-    analyzer.load_all_batches()
-    analyzer.print_analysis()
-    analyzer.plot_training_progress(save_path=data_path + "training_plots.png")
-    analyzer.export_summary_csv(save_path=data_path + "training_summary.csv")
-
-    return analyzer
+        df.to_csv(file_path)
+        print(f"Summary exported to {file_path}")
 
 
 def entry_point():
-    # Example usage
-    data_path = "results/gnn/run_8/logs/"
-    analyzer = analyze_rollouts(data_path)
+    parser = argparse.ArgumentParser(description="Analyze rollout results.")
+    parser.add_argument(
+        "--agent",
+        type=str,
+        required=True,
+        help="Path to the directory containing rollout logs",
+    )
 
-    # Access summary statistics
-    # print(analyzer.summary_stats["overall"])
-    # print(analyzer.summary_stats["batch_summaries"])
+    args = parser.parse_args()
+    default = f"results/{args.agent}/"
+    analyzer = RolloutAnalyzer(default)
+    analyzer.load_all_batches()
+    analyzer.print_analysis()
+    analyzer.plot_training_progress(name="training_plots.png")
+    analyzer.export_summary_csv(name="training_summary.csv")
 
 
 if __name__ == "__main__":
