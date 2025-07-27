@@ -4,6 +4,7 @@ from tapas_gmm.master_train import MasterConfig
 
 
 config = MasterConfig(
+    tag="gnn1_1",
     env=env,
     agent=gnn_v1,
 )
