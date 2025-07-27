@@ -126,8 +126,8 @@ class Agent:
         # Initialize the agent
         self.mse_loss = nn.MSELoss()
         self.buffer = RolloutBuffer()
-        self.policy_new: ActorCriticBase = Net(tasks, states, task_parameter)
-        self.policy_old: ActorCriticBase = Net(tasks, states, task_parameter)
+        self.policy_new: ActorCriticBase = Net(tasks, states, task_parameter).to(device)
+        self.policy_old: ActorCriticBase = Net(tasks, states, task_parameter).to(device)
         self.optimizer = torch.optim.Adam(
             self.policy_new.parameters(),
             lr=self.config.lr_actor,
