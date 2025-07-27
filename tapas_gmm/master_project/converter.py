@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from functools import cached_property
 import numpy as np
 import torch
 import numpy as np
@@ -305,42 +306,60 @@ class Converter:
             features.append(np.array(task_features))
         return torch.from_numpy(np.stack(features, axis=0)).float()
 
-    def state_state_edges(self, full: bool) -> torch.Tensor:
+    @cached_property
+    def state_state_sparse(self) -> torch.Tensor:
         num_states = len(self.states)
-        if not full:
-            # Only connects edges with same index
-            # (therefore being the same state but with different value)
-            src = torch.arange(num_states)
-            dst = torch.arange(num_states)
-        else:
-            # Fully connected Graph
-            src = torch.arange(num_states).unsqueeze(1).repeat(1, num_states).flatten()
-            dst = torch.arange(num_states).repeat(num_states)
+        indices = torch.arange(num_states)
+        return torch.stack([indices, indices], dim=0)
+
+    @cached_property
+    def task_task_sparse(self) -> torch.Tensor:
+        num_tasks = len(self.tasks)
+        indices = torch.arange(num_tasks)
+        return torch.stack([indices, indices], dim=0)
+
+    @cached_property
+    def task_task_sparse(self) -> torch.Tensor:
+        num_tasks = len(self.tasks)
+        indices = torch.arange(num_tasks)
+        return torch.stack([indices, indices], dim=0)
+
+    @cached_property
+    def task_single(self) -> torch.Tensor:
+        num_tasks = len(self.tasks)
+        indices = torch.arange(num_tasks)
+        torch.stack([indices, torch.zeros_like(indices)], dim=0)
+
+    @cached_property
+    def state_state_full(self) -> torch.Tensor:
+        num_states = len(self.states)
+        src = torch.arange(num_states).unsqueeze(1).repeat(1, num_states).flatten()
+        dst = torch.arange(num_states).repeat(num_states)
         return torch.stack([src, dst], dim=0)
 
-    def state_task_edges(self, full: bool) -> torch.Tensor:
-        if not full:
-            edge_list = []
-            for task_idx, task in enumerate(self.tasks):
-                task_tps = self.tps[task]
-                for state_idx, state in enumerate(self.states):
-                    if state in task_tps:
-                        # connect B-node b_idx to C-node c_idx
-                        edge_list.append((state_idx, task_idx))
-            return torch.tensor(edge_list, dtype=torch.long).t()
-        else:
-            src = (
-                torch.arange(len(self.states))
-                .unsqueeze(1)
-                .repeat(1, len(self.tasks))
-                .flatten()
-            )
-            dst = torch.arange(len(self.tasks)).repeat(len(self.states))
-            return torch.stack([src, dst], dim=0)
+    @cached_property
+    def state_task_sparse(self) -> torch.Tensor:
+        edge_list = []
+        for task_idx, task in enumerate(self.tasks):
+            task_tps = self.tps[task]
+            for state_idx, state in enumerate(self.states):
+                if state in task_tps:
+                    # connect B-node b_idx to C-node c_idx
+                    edge_list.append((state_idx, task_idx))
+        return torch.tensor(edge_list, dtype=torch.long).t()
 
+    @cached_property
+    def state_task_full(self) -> torch.Tensor:
+        num_states = len(self.states)
+        num_tasks = len(self.tasks)
+        src = torch.arange(num_states).unsqueeze(1).repeat(1, num_tasks).flatten()
+        dst = torch.arange(num_tasks).repeat(num_states)
+        return torch.stack([src, dst], dim=0)
+
+    @cached_property
     def state_state_attr(self) -> torch.Tensor:
         # Build edge_index using ab_edges()
-        edge_index = self.state_state_edges(True)  # shape [2, E]
+        edge_index = self.state_state_full  # shape [2, E]
         src = edge_index[0]  # [E]
         dst = edge_index[1]  # [E]
 
@@ -348,22 +367,33 @@ class Converter:
         edge_attr = (src == dst).to(torch.float).unsqueeze(-1)  # shape [E, 1]
         return edge_attr
 
-    def state_task_attr(self, weighted: bool = False) -> torch.Tensor:
-        # Fully connected edge index
-        # TODO: Implement weighted
-        full_edge_index = self.state_task_edges(full=True)  # shape [2, E]
+    @cached_property
+    def state_task_attr(self) -> torch.Tensor:
+        full = self.state_task_full  # [2, E]
+        sparse = self.state_task_sparse  # [2, E_sparse]
 
-        # Sparse (actual) edge index
-        sparse_edge_index = self.state_task_edges(full=False)  # shape [2, E_sparse]
+        # Convert sparse edges to a flat index for fast lookup
+        num_tasks = len(self.tasks)
+        sparse_flat = sparse[0] * num_tasks + sparse[1]  # shape [E_sparse]
+        full_flat = full[0] * num_tasks + full[1]  # shape [E]
 
-        # Build set of valid (state_idx, task_idx) from sparse edges
-        sparse_edge_set = set((s.item(), t.item()) for s, t in sparse_edge_index.t())
+        # Check which full edges are in sparse
+        is_in_sparse = torch.isin(full_flat, sparse_flat)
 
-        # Create attribute tensor: 1 if (s, t) in sparse, else 0
-        attrs = [
-            1.0 if (s.item(), t.item()) in sparse_edge_set else 0.0
-            for s, t in full_edge_index.t()
-        ]
-        edge_attr = torch.tensor(attrs, dtype=torch.float).unsqueeze(-1)  # shape [E, 1]
+        edge_attr = is_in_sparse.float().unsqueeze(-1)  # shape [E, 1]
+        return edge_attr
 
+    def state_task_attr_weighted(self, current: Observation) -> torch.Tensor:
+        full = self.state_task_full  # shape [2, E]
+        state_indices = full[0]  # [E]
+        task_indices = full[1]  # [E]
+
+        # Get [num_tasks, num_states] distance matrix
+        dist_matrix = self.tensor_task_distance(
+            current
+        )  # shape [num_tasks, num_states]
+
+        # Get the distance for each (state, task) pair in the edge list
+        edge_weights = dist_matrix[task_indices, state_indices]  # [E]
+        edge_attr = edge_weights.unsqueeze(-1)  # [E, 1]
         return edge_attr

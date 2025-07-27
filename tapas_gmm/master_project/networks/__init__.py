@@ -6,6 +6,7 @@ class Network(Enum):
     GNNV1 = "gnnv1"
     GNNV2 = "gnnv2"
     GNNV3 = "gnnv3"
+    GNNV4 = "gnnv4"
 
 
 def get_network(env_str):
@@ -21,6 +22,8 @@ def import_network(network_type):
         from tapas_gmm.master_project.networks.gnn import GnnV2 as Net
     elif network_type is Network.GNNV3:
         from tapas_gmm.master_project.networks.gnn import GnnV3 as Net
+    elif network_type is Network.GNNV4:
+        from tapas_gmm.master_project.networks.gnn import GnnV4 as Net
     else:
         raise ValueError("Invalid network")
 

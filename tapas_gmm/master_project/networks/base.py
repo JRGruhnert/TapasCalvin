@@ -12,6 +12,9 @@ from tapas_gmm.master_project.networks.master_modules import (
     TransformEncoder,
 )
 from tapas_gmm.utils.select_gpu import device
+import networkx as nx
+import matplotlib.pyplot as plt
+from torch_geometric.utils import to_networkx
 
 
 class ActorCriticBase(nn.Module, ABC):
@@ -22,7 +25,7 @@ class ActorCriticBase(nn.Module, ABC):
         tps: dict[Task, list[State]],
     ):
         super().__init__()
-        self.converter = Converter(tasks, states, tps)
+        self.cnv = Converter(tasks, states, tps)
         self.tasks = tasks
         self.states = states
         self.dim_state = len(states)
@@ -90,8 +93,8 @@ class BaselineBase(ActorCriticBase):
         obs: list[Observation],
         goal: list[Observation],
     ):
-        obs_dicts = [self.converter.tensor_type_dict_values(o) for o in obs]
-        goal_dicts = [self.converter.tensor_type_dict_values(g) for g in goal]
+        obs_dicts = [self.cnv.tensor_type_dict_values(o) for o in obs]
+        goal_dicts = [self.cnv.tensor_type_dict_values(g) for g in goal]
 
         keys = obs_dicts[0].keys()
 
@@ -120,5 +123,12 @@ class GnnBase(ActorCriticBase, ABC):
         data = []
         for o, g in zip(obs, goal):
             data.append(self.to_data(o, g))
+
+        # G = to_networkx(data[0], to_undirected=True)
+        # nx.draw(G, with_labels=True)
+        # G = to_networkx(data[0])
+        # pos = nx.spring_layout(G)  # layout algorithm
+        # nx.draw(G, pos, with_labels=True, node_color="lightblue", edge_color="gray")
+        # plt.show()
 
         return Batch.from_data_list(data).to(device)

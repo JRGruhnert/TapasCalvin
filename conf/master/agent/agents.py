@@ -20,3 +20,9 @@ gnn_v3 = AgentConfig(
     name="gnn_v3",
     network=Network.GNNV3,
 )
+
+
+gnn_v4 = AgentConfig(
+    name="gnn_v4",
+    network=Network.GNNV4,
+)
