@@ -10,7 +10,7 @@ from tapas_gmm.master_project.definitions import (
     convert_to_states,
     convert_to_tasks,
 )
-from tapas_gmm.master_project.observation import Observation
+from tapas_gmm.master_project.observation import Observation, tapas_format
 from tapas_gmm.master_project.evaluator import (
     Evaluator,
     EvaluatorConfig,
@@ -71,8 +71,10 @@ class MasterEnv:
         # Reset environment twice to get CalvinObservation (maybe find a better way)
         # NOTE do not switch order of resets!!
         calvin_goal, _, _, _ = self.env.reset(scene_goal, static=False, settle_time=50)
-        calvin_obs, _, _, _ = self.env.reset(scene_obs, static=False, settle_time=50)
-        self.obs = Observation(calvin_obs)
+        self.calvin_obs, _, _, _ = self.env.reset(
+            scene_obs, static=False, settle_time=50
+        )
+        self.obs = Observation(self.calvin_obs)
         goal = Observation(calvin_goal)
         self.evaluator.reset(self.obs, goal)
         return self.obs, goal
@@ -85,13 +87,13 @@ class MasterEnv:
         policy.reset_episode(self.env)
         # Batch prediction for the given observation
         try:
-            prediction, _ = policy.predict(self.obs.tapas_format(task))
+            prediction, _ = policy.predict(tapas_format(self.calvin_obs, task))
             for action in prediction:
                 ee_action = np.concatenate((action.ee, action.gripper))
-                calvin_obs, _, _, _ = self.env.step(
+                self.calvin_obs, _, _, _ = self.env.step(
                     ee_action, self.config.debug_vis, viz_dict
                 )
-                self.obs = Observation(calvin_obs)
+                self.obs = Observation(self.calvin_obs)
         except FloatingPointError:
             # At some point the model crashes.
             # Have to debug if its because of bad input but seems to be not relevant for training

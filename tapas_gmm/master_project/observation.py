@@ -94,14 +94,13 @@ def _to_rlbench_format(obs: CalvinObservation) -> SceneObservation:  # type: ign
 
 
 class Observation:
-    __slots__ = ("_obs", "_states")
+    __slots__ = "_states"
 
     def __init__(
         self,
         obs: CalvinObservation,
     ):
 
-        self._obs = obs
         self._states: dict[State, np.ndarray] = {}
         self._states[State.EE_Transform] = obs.ee_pose[:3].astype(np.float32)
         self._states[State.EE_Quat] = obs.ee_pose[-4:].astype(np.float32)
@@ -118,9 +117,10 @@ class Observation:
         """Returns the scalar states of the observation."""
         return self._states
 
-    def tapas_format(self, task: Task) -> SceneObservation:  # type: ignore
-        # This is a hack for changing the ee_pose to the origin for reversed models
-        # It does nothing for standard models
-        if task.value.reversed:
-            self._obs.ee_pose = _origin_ee_tp_pose
-        return _to_rlbench_format(self._obs)
+
+def tapas_format(obs: CalvinObservation, task: Task) -> SceneObservation:  # type: ignore
+    # This is a hack for changing the ee_pose to the origin for reversed models
+    # It does nothing for standard models
+    if task.value.reversed:
+        obs.ee_pose = _origin_ee_tp_pose
+    return _to_rlbench_format(obs)
