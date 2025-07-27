@@ -210,7 +210,7 @@ class Agent:
         if verbose:
             total_reward, episode_length, success_rate = self.buffer.stats()
             print(
-                f"Total Reward: {total_reward} \t Episode Length: {episode_length} \t Success Rate: {success_rate}"
+                f"Total Reward: {total_reward} \t Episode Length: {episode_length:.2f} \t Success Rate: {success_rate:.2f}"
             )
 
             print("Called learning on new batch. Updating gradients of the agent!")
@@ -309,8 +309,8 @@ class Agent:
         self.buffer.clear()
 
         # Update Epoch
-        self.save(verbose)
         self.current_epoch += 1
+        self.save(verbose)
         if self.current_epoch == self.config.max_epoch:
             return True
 
@@ -327,7 +327,7 @@ class Agent:
         """
         Save the model to the specified path.
         """
-        if self.current_epoch % self.config.saving_freq == 1:
+        if self.current_epoch % self.config.saving_freq == 0:
             if verbose:
                 print("Saving Checkpoint!")
             checkpoint_path = self.directory_path + "model_cp_epoch_{}.pth".format(
