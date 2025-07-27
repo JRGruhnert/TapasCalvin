@@ -73,7 +73,7 @@ class RolloutBuffer:
         return len(self.actions) == batch_size
 
     def save(self, path: str, epoch: int):
-        file_path = path + f"stats_epoch{epoch}.npy"
+        file_path = path + f"stats_epoch_{epoch}.npy"
         data = {}
 
         data["actions"] = torch.stack(self.actions).cpu().numpy()
@@ -309,8 +309,8 @@ class Agent:
         self.buffer.clear()
 
         # Update Epoch
+        self.save(verbose)
         self.current_epoch += 1
-
         if self.current_epoch == self.config.max_epoch:
             return True
 
@@ -327,17 +327,13 @@ class Agent:
         """
         Save the model to the specified path.
         """
-        saving_in = self.current_epoch % self.config.saving_freq
-        if saving_in == 0:
+        if self.current_epoch % self.config.saving_freq == 1:
             if verbose:
                 print("Saving Checkpoint!")
-            checkpoint_path = self.directory_path + "model_cp_epoch{}.pth".format(
+            checkpoint_path = self.directory_path + "model_cp_epoch_{}.pth".format(
                 self.current_epoch,
             )
             torch.save(self.policy_old.state_dict(), checkpoint_path)
-        else:
-            if verbose:
-                print(f"Next saving of Checkpoint in {saving_in} epochs.")
 
     def load(self, external_path: str = None):
         """
@@ -346,23 +342,23 @@ class Agent:
         if external_path is not None:
             # Load from provided path
             checkpoint_path = external_path
-            match = re.search(r"epoch(\d+)", os.path.basename(checkpoint_path))
+            match = re.search(r"epoch_(\d+)", os.path.basename(checkpoint_path))
             self.current_epoch = int(match.group(1)) if match else 0
         else:
             # Search for the latest checkpoint in the directory
             files = os.listdir(self.directory_path)
             checkpoints = [
-                f for f in files if re.match(r"model_cp_epoch(\d+)\.pth$", f)
+                f for f in files if re.match(r"model_cp_epoch_(\d+)\.pth$", f)
             ]
             if not checkpoints:
                 raise FileNotFoundError("No checkpoint found in directory.")
 
             # Get highest-numbered checkpoint
             latest_checkpoint = max(
-                checkpoints, key=lambda f: int(re.search(r"epoch(\d+)", f).group(1))
+                checkpoints, key=lambda f: int(re.search(r"epoch_(\d+)", f).group(1))
             )
             self.current_epoch = int(
-                re.search(r"epoch(\d+)", latest_checkpoint).group(1)
+                re.search(r"epoch_(\d+)", latest_checkpoint).group(1)
             )
             checkpoint_path = os.path.join(self.directory_path, latest_checkpoint)
 
