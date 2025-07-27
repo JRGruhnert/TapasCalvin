@@ -16,16 +16,18 @@ class AgentConfig:
     name: str
     network: Network
     # Default values
-    early_stop: int = 10  # None if no early stop else the epoch number
-    max_epoch: int = 50
+    early_stop: int | None = 10  # None if no early stop else the epoch number
+    early_stop_patience: int = 5
+    max_batches: int = 50
     saving_freq: int = 5  # Saving frequence of trained model
     saving_path: str = "results/"
 
     save_stats = True
     batch_size: int = 2048
     mini_batch_size: int = 64  # 64 # How many steps to use in each mini-batch
-    n_epochs: int = 50  # How many passes over the collected batch per update
-    lr_actor: float = 0.0006  # Step size for actor optimizer
+    learning_epochs: int = 50  # How many passes over the collected batch per update
+    lr_annealing: bool = True
+    lr_actor: float = 0.001  # Step size for actor optimizer
     lr_critic: float = 0.0003  # Step size for critic optimizer
     gamma: float = 0.99  # How much future rewards are worth today
     gae_lambda: float = 0.95  # Bias/variance trade‑off in advantage estimation
@@ -123,7 +125,7 @@ class Agent:
         # Hyperparameters
         self.config = config
         Net = import_network(config.network)
-        # Initialize the agent
+        ### Initialize the agent
         self.mse_loss = nn.MSELoss()
         self.buffer = RolloutBuffer()
         self.policy_new: ActorCriticBase = Net(tasks, states, task_parameter).to(device)
@@ -133,9 +135,12 @@ class Agent:
             lr=self.config.lr_actor,
         )
 
-        # Internal flags and counter
-        self.waiting_feedback = False
-        self.current_epoch = 0
+        ### Internal flags and counter
+        self.waiting_feedback: bool = False
+        self.current_epoch: int = 0
+        # For early stopping
+        self.best_reward = 0
+        self.epochs_since_improvement = 0
 
         ### Directory path for the agent (specified by name)
         self.directory_path = config.saving_path + config.name + "/"
@@ -207,8 +212,9 @@ class Agent:
     def learn(self, verbose: bool = False) -> bool:
         if not self.buffer.health():
             raise UserWarning("RolloutBuffer is not in sync. Agent can't learn.")
+        total_reward, episode_length, success_rate = self.buffer.stats()
         if verbose:
-            total_reward, episode_length, success_rate = self.buffer.stats()
+
             print(
                 f"Total Reward: {total_reward} \t Episode Length: {episode_length:.2f} \t Success Rate: {success_rate:.3f}"
             )
@@ -217,18 +223,26 @@ class Agent:
                 f"Called learning on new batch (Batch {self.current_epoch}). Updating gradients of the agent!"
             )
 
+        ### Check for early stop (Plateau reached)
+        if total_reward > self.best_reward + 1e-2:  # small threshold
+            self.best_reward = total_reward
+            self.epochs_since_improvement = 0
+        else:
+            self.epochs_since_improvement += 1
+
+        if self.epochs_since_improvement >= self.config.early_stop_patience:
+            print("Aborting Training cause of no improvement.")
+            return True
+
+        ### Preprocess batch values
         advantages, rewards = self.compute_gae(
             self.buffer.rewards, self.buffer.values, self.buffer.terminals
         )
-
         advantages = advantages.to(device)
         rewards = rewards.to(device)
-
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
         old_obs = self.buffer.obs
         old_goal = self.buffer.goal
-
         old_actions = (
             torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
         )
@@ -236,9 +250,21 @@ class Agent:
             torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
         )
 
-        early_stop = False
-        # Optimize policy for K epochs
-        for epoch in range(self.config.n_epochs):
+        ### Learning Rate Annealing
+        if self.config.lr_annealing:
+            progress = self.current_epoch / self.config.max_batches
+            new_lr = self.config.lr_actor * (1.0 - progress)
+
+            for param_group in self.optimizer.param_groups:
+                param_group["lr"] = new_lr
+            if verbose:
+                print(
+                    f"[Epoch {self.current_epoch}] Base LR: {new_lr:.6f} (progress={progress:.2f})"
+                )
+
+        ### Training loop for network
+        kl_divergence_stop = False
+        for epoch in range(self.config.learning_epochs):
             # Shuffle indices for minibatch
             indices = torch.randperm(self.config.batch_size)
 
@@ -246,6 +272,8 @@ class Agent:
                 end = start + self.config.mini_batch_size
                 mb_idx = indices[start:end]
                 mb_idx_list = mb_idx.tolist()  # turn Tensor → Python list of ints
+                # Decided to save observations as objects instead of tensors
+                # Makes it easier to convert it based on network later on
                 mb_obs = [old_obs[i] for i in mb_idx_list]
                 mb_goal = [old_goal[i] for i in mb_idx_list]
 
@@ -260,7 +288,6 @@ class Agent:
                 logprobs, state_values, dist_entropy = self.policy_new.evaluate(
                     mb_obs, mb_goal, mb_actions
                 )
-
                 state_values = torch.squeeze(state_values)
 
                 # Ratios
@@ -277,13 +304,14 @@ class Agent:
                     * mb_advantages
                 )
 
-                # PPO loss
+                # Calculate loss
                 loss: torch.Tensor = (
                     -torch.min(surr1, surr2)
                     + self.config.value_coef * self.mse_loss(state_values, mb_rewards)
                     - self.config.entropy_coef * dist_entropy
                 )
 
+                ### Update gradients on mini-batch
                 self.optimizer.zero_grad()
                 loss.mean().backward()
                 nn.utils.clip_grad_norm_(
@@ -297,45 +325,46 @@ class Agent:
                         kl = (mb_logprobs - logprobs).mean()
                         if kl > self.config.target_kl:
                             print(f"Early stopping at epoch {epoch} due to KL={kl:.4f}")
-                            early_stop = True
+                            kl_divergence_stop = True
                             break  # break minibatch loop
-            if early_stop:
+            if kl_divergence_stop:
                 break
 
-        # Copy new weights into old policy
+        ### Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy_new.state_dict())
 
+        # Saves batch values
         if self.config.save_stats:
             self.buffer.save(self.log_path, self.current_epoch)
-        # clear buffer
+
+        # Clear buffer
         self.buffer.clear()
 
         # Update Epoch
         self.current_epoch += 1
-        self.save(verbose)
-        if self.current_epoch == self.config.max_epoch:
+
+        ### Regular saving based on saving frequence
+        if self.current_epoch % self.config.saving_freq == 0:
+            self.save(verbose)
+
+        ### Stop Training
+        if self.current_epoch == self.config.max_batches:
+            print("Stopping Training cause of max epoch reached.")
             return True
 
-        if (
-            self.config.early_stop is not None
-            and self.current_epoch >= self.config.early_stop
-        ):
-            # TODO: Currently just False cause early stop is not implemented
-            return False
-
-        return False  # No early stopping
+        ### Continue Training otherwise
+        return False
 
     def save(self, verbose: bool = False):
         """
         Save the model to the specified path.
         """
-        if self.current_epoch % self.config.saving_freq == 0:
-            if verbose:
-                print("Saving Checkpoint!")
-            checkpoint_path = self.directory_path + "model_cp_epoch_{}.pth".format(
-                self.current_epoch,
-            )
-            torch.save(self.policy_old.state_dict(), checkpoint_path)
+        if verbose:
+            print("Saving Checkpoint!")
+        checkpoint_path = self.directory_path + "model_cp_epoch_{}.pth".format(
+            self.current_epoch,
+        )
+        torch.save(self.policy_old.state_dict(), checkpoint_path)
 
     def load(self, external_path: str = None):
         """
