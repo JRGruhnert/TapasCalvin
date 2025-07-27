@@ -106,7 +106,7 @@ class GnnV1(GnnBase):
         ]
         obs_tensor = torch.stack(obs_encoded, dim=0)  # [num_states, feature_size]
         goal_tensor = torch.stack(goal_encoded, dim=0)  # [num_states, feature_size]
-        task_tensor = self.converter.tensor_task_distance(obs)
+        task_tensor = self.converter.tensor_task_distance(obs).to(device)
 
         data = HeteroData()
         data["goal"].x = goal_tensor
@@ -115,14 +115,18 @@ class GnnV1(GnnBase):
 
         data[("goal", "goal-obs", "obs")].edge_index = self.converter.state_state_edges(
             full=True
-        )
+        ).to(device)
 
         data[("obs", "obs-task", "task")].edge_index = self.converter.state_task_edges(
             full=False
-        )
+        ).to(device)
 
-        data[("goal", "goal-obs", "obs")].edge_attr = self.converter.state_state_attr()
-        data[("obs", "obs-task", "task")].edge_attr = self.converter.state_task_attr()
+        data[("goal", "goal-obs", "obs")].edge_attr = (
+            self.converter.state_state_attr().to(device)
+        )
+        data[("obs", "obs-task", "task")].edge_attr = (
+            self.converter.state_task_attr().to(device)
+        )
         return data
 
 
