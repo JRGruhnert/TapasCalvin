@@ -219,6 +219,9 @@ class Agent:
             self.buffer.rewards, self.buffer.values, self.buffer.terminals
         )
 
+        advantages = advantages.to(device)
+        rewards = rewards.to(device)
+
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         old_obs = self.buffer.obs
@@ -259,7 +262,7 @@ class Agent:
                 state_values = torch.squeeze(state_values)
 
                 # Ratios
-                ratios = torch.exp(logprobs - mb_logprobs.detach())
+                ratios = torch.exp(old_logprobs - mb_logprobs.detach().to(device))
 
                 # Surrogate loss
                 surr1 = ratios * mb_advantages
