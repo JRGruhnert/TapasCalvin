@@ -6,6 +6,7 @@ from torch_geometric.nn import GATv2Conv, LayerNorm, GINConv, GINEConv
 from torch_geometric.nn.aggr import AttentionalAggregation
 from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.base import GnnBase
+from tapas_gmm.utils.select_gpu import device
 from tapas_gmm.master_project.networks.master_modules import (
     GinActionMlp,
     GinStateMlp,
@@ -96,10 +97,12 @@ class GnnV1(GnnBase):
         goal_dict = self.converter.tensor_state_dict_values(goal)
         obs_dict = self.converter.tensor_state_dict_values(obs)
         obs_encoded = [
-            self.encoder_obs[k.value.type.name](v) for k, v in obs_dict.items()
+            self.encoder_obs[k.value.type.name](v.to(device))
+            for k, v in obs_dict.items()
         ]
         goal_encoded = [
-            self.encoder_goal[k.value.type.name](v) for k, v in goal_dict.items()
+            self.encoder_goal[k.value.type.name](v.to(device))
+            for k, v in goal_dict.items()
         ]
         obs_tensor = torch.stack(obs_encoded, dim=0)  # [num_states, feature_size]
         goal_tensor = torch.stack(goal_encoded, dim=0)  # [num_states, feature_size]
@@ -184,10 +187,12 @@ class GnnV2(GnnBase):
         goal_dict = self.converter.tensor_state_dict_values(goal)
         obs_dict = self.converter.tensor_state_dict_values(obs)
         obs_encoded = [
-            self.encoder_obs[k.value.type.name](v) for k, v in obs_dict.items()
+            self.encoder_obs[k.value.type.name](v.to(device))
+            for k, v in obs_dict.items()
         ]
         goal_encoded = [
-            self.encoder_goal[k.value.type.name](v) for k, v in goal_dict.items()
+            self.encoder_goal[k.value.type.name](v.to(device))
+            for k, v in goal_dict.items()
         ]
         obs_tensor = torch.stack(obs_encoded, dim=0)  # [num_states, feature_size]
         goal_tensor = torch.stack(goal_encoded, dim=0)  # [num_states, feature_size]
@@ -286,10 +291,12 @@ class GnnV3(GnnBase):
         goal_dict = self.converter.tensor_state_dict_values(goal)
         obs_dict = self.converter.tensor_state_dict_values(obs)
         obs_encoded = [
-            self.encoder_obs[k.value.type.name](v) for k, v in obs_dict.items()
+            self.encoder_obs[k.value.type.name](v.to(device))
+            for k, v in obs_dict.items()
         ]
         goal_encoded = [
-            self.encoder_goal[k.value.type.name](v) for k, v in goal_dict.items()
+            self.encoder_goal[k.value.type.name](v.to(device))
+            for k, v in goal_dict.items()
         ]
         obs_tensor = torch.stack(obs_encoded, dim=0)  # [num_states, feature_size]
         goal_tensor = torch.stack(goal_encoded, dim=0)  # [num_states, feature_size]
