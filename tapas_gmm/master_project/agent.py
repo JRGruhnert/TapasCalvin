@@ -210,10 +210,12 @@ class Agent:
         if verbose:
             total_reward, episode_length, success_rate = self.buffer.stats()
             print(
-                f"Total Reward: {total_reward} \t Episode Length: {episode_length:.2f} \t Success Rate: {success_rate:.2f}"
+                f"Total Reward: {total_reward} \t Episode Length: {episode_length:.2f} \t Success Rate: {success_rate:.3f}"
             )
 
-            print("Called learning on new batch. Updating gradients of the agent!")
+            print(
+                f"Called learning on new batch (Batch {self.current_epoch}). Updating gradients of the agent!"
+            )
 
         advantages, rewards = self.compute_gae(
             self.buffer.rewards, self.buffer.values, self.buffer.terminals
