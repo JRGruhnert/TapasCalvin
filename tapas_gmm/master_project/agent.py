@@ -22,8 +22,8 @@ class AgentConfig:
     saving_path: str = "results/"
 
     save_stats = True
-    batch_size: int = 2048
-    mini_batch_size: int = 64  # 64 # How many steps to use in each mini-batch
+    batch_size: int = 8
+    mini_batch_size: int = 4  # 64 # How many steps to use in each mini-batch
     n_epochs: int = 50  # How many passes over the collected batch per update
     lr_actor: float = 0.0006  # Step size for actor optimizer
     lr_critic: float = 0.0003  # Step size for critic optimizer
