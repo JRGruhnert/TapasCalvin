@@ -5,10 +5,10 @@ from tapas_gmm.master_train import MasterConfig
 
 
 config = MasterConfig(
-    tag="baselinev1_1",
+    tag="baselinev1_2",
     env=env,
     agent=baseline_v1,
     reward_mode=RewardMode.SPARSE,
     task_space=TaskSpace.SMALL,
-    state_space=StateSpace.SMALL,
+    state_space=StateSpace.ALL,
 )
