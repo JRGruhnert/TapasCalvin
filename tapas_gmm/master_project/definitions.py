@@ -162,14 +162,17 @@ class State(Enum):
     Slide_Transform = StateInfo(
         identifier="base__slide_euler",
         type=StateType.Transform,
+        space=StateSpace.SMALL,
     )
     Drawer_Transform = StateInfo(
         identifier="base__drawer_euler",
         type=StateType.Transform,
+        space=StateSpace.SMALL,
     )
     Button_Transform = StateInfo(
         identifier="base__button_euler",
         type=StateType.Transform,
+        space=StateSpace.SMALL,
     )
     Switch_Transform = StateInfo(
         identifier="base__switch_euler",
@@ -182,6 +185,7 @@ class State(Enum):
     Led_Transform = StateInfo(
         identifier="led_euler",
         type=StateType.Transform,
+        space=StateSpace.SMALL,
     )
     Red_Transform = StateInfo(
         identifier="block_red_euler",

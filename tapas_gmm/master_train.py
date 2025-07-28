@@ -2,11 +2,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from omegaconf import OmegaConf, SCMode
 
-from tapas_gmm.master_project.definitions import (
-    RewardMode,
-    StateSpace,
-    TaskSpace,
-)
 from tapas_gmm.master_project.environment import MasterEnv, MasterEnvConfig
 from tapas_gmm.master_project.agent import Agent, AgentConfig
 from tapas_gmm.utils.argparse import parse_and_build_config
@@ -17,9 +12,6 @@ class MasterConfig:
     tag: str
     agent: AgentConfig
     env: MasterEnvConfig
-    reward_mode: RewardMode = RewardMode.SPARSE
-    task_space: TaskSpace = TaskSpace.SMALL
-    state_space: StateSpace = StateSpace.SMALL
     verbose: bool = True
 
 
@@ -77,9 +69,6 @@ def entry_point():
     _, dict_config = parse_and_build_config(data_load=False, need_task=False)
 
     dict_config.agent.name = dict_config.tag
-    dict_config.env.evaluator.reward_mode = dict_config.reward_mode
-    dict_config.env.task_space = dict_config.task_space
-    dict_config.env.state_space = dict_config.state_space
 
     config = OmegaConf.to_container(
         dict_config, resolve=True, structured_config_mode=SCMode.INSTANTIATE

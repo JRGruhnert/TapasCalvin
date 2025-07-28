@@ -360,8 +360,7 @@ class GnnV4(GnnBase):
 
         self.state_task_gin = GINEConv(
             nn=state_task_mlp,
-            train_eps=True,
-            edge_dim=1,
+            edge_dim=2,
         )
 
         self.actor_gin = GINConv(

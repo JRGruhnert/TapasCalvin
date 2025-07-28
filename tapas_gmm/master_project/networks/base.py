@@ -1,3 +1,4 @@
+import pandas as pd
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
@@ -128,7 +129,13 @@ class GnnBase(ActorCriticBase, ABC):
         # nx.draw(G, with_labels=True)
         # G = to_networkx(data[0])
         # pos = nx.spring_layout(G)  # layout algorithm
-        # nx.draw(G, pos, with_labels=True, node_color="lightblue", edge_color="gray")
+        # nx.draw(G, with_labels=True, node_color="lightblue", edge_color="gray")
         # plt.show()
+        # Convert edge list to DataFrame
+        # edges = pd.DataFrame(G.edges(), columns=["source", "target"])
 
+        # Save to CSV
+        # edges.to_csv("graph_edges.csv", index=False)
+        # nodes = pd.DataFrame.from_dict(dict(G.nodes(data=True)), orient="index")
+        # nodes.to_csv("graph_nodes.csv")
         return Batch.from_data_list(data)

@@ -287,6 +287,7 @@ class Converter:
     def tensor_task_distance(
         self,
         current: Observation,
+        pad: bool = False,
     ) -> torch.Tensor:
         features: list[np.ndarray] = []
         for task in self.tasks:
@@ -301,7 +302,6 @@ class Converter:
                     task_value = self.ignore_converter.distance(
                         current.states[key], current.states[key]
                     )
-
                 task_features.append(task_value)
             features.append(np.array(task_features))
         return torch.from_numpy(np.stack(features, axis=0)).float()
@@ -311,24 +311,6 @@ class Converter:
         num_states = len(self.states)
         indices = torch.arange(num_states)
         return torch.stack([indices, indices], dim=0)
-
-    @cached_property
-    def task_task_sparse(self) -> torch.Tensor:
-        num_tasks = len(self.tasks)
-        indices = torch.arange(num_tasks)
-        return torch.stack([indices, indices], dim=0)
-
-    @cached_property
-    def task_task_sparse(self) -> torch.Tensor:
-        num_tasks = len(self.tasks)
-        indices = torch.arange(num_tasks)
-        return torch.stack([indices, indices], dim=0)
-
-    @cached_property
-    def task_single(self) -> torch.Tensor:
-        num_tasks = len(self.tasks)
-        indices = torch.arange(num_tasks)
-        return torch.stack([indices, torch.zeros_like(indices)], dim=0)
 
     @cached_property
     def state_state_full(self) -> torch.Tensor:
@@ -344,7 +326,6 @@ class Converter:
             task_tps = self.tps[task]
             for state_idx, state in enumerate(self.states):
                 if state in task_tps:
-                    # connect B-node b_idx to C-node c_idx
                     edge_list.append((state_idx, task_idx))
         return torch.tensor(edge_list, dtype=torch.long).t()
 
@@ -355,6 +336,18 @@ class Converter:
         src = torch.arange(num_states).unsqueeze(1).repeat(1, num_tasks).flatten()
         dst = torch.arange(num_tasks).repeat(num_states)
         return torch.stack([src, dst], dim=0)
+
+    @cached_property
+    def task_task_sparse(self) -> torch.Tensor:
+        num_tasks = len(self.tasks)
+        indices = torch.arange(num_tasks)
+        return torch.stack([indices, indices], dim=0)
+
+    @cached_property
+    def task_single(self) -> torch.Tensor:
+        num_tasks = len(self.tasks)
+        indices = torch.arange(num_tasks)
+        return torch.stack([indices, torch.zeros_like(indices)], dim=0)
 
     @cached_property
     def state_state_attr(self) -> torch.Tensor:
@@ -383,17 +376,39 @@ class Converter:
         edge_attr = is_in_sparse.float().unsqueeze(-1)  # shape [E, 1]
         return edge_attr
 
+    def tensor_task_distance(
+        self,
+        current: Observation,
+        pad: bool = False,
+    ) -> torch.Tensor:
+        features: list[np.ndarray] = []
+        for task in self.tasks:
+            task_features: list[np.ndarray] = []
+            task_tps = self.tps[task]
+            for key, converter in self.converter.items():
+                if key in task_tps:
+                    val = converter.distance(current.states[key], task_tps[key])
+                    task_value = np.array([val, 1.0]) if pad else np.array(val)
+                else:
+                    val = self.ignore_converter.distance(
+                        current.states[key], current.states[key]
+                    )
+                    task_value = np.array([val, 0.0]) if pad else np.array(val)
+
+                task_features.append(task_value)
+            # Ensure consistent 2D shape: [num_states, feature_dim]
+            task_features = np.stack(task_features, axis=0)  # shape: [num_states, 2]
+            features.append(task_features)
+
+        features = np.stack(features, axis=0)  # shape: [num_tasks, num_states, 2]
+        return torch.from_numpy(features).float()
+
     def state_task_attr_weighted(self, current: Observation) -> torch.Tensor:
-        full = self.state_task_full  # shape [2, E]
+        full = self.state_task_full  # [2, E]
         state_indices = full[0]  # [E]
         task_indices = full[1]  # [E]
 
-        # Get [num_tasks, num_states] distance matrix
-        dist_matrix = self.tensor_task_distance(
-            current
-        )  # shape [num_tasks, num_states]
-
-        # Get the distance for each (state, task) pair in the edge list
-        edge_weights = dist_matrix[task_indices, state_indices]  # [E]
-        edge_attr = edge_weights.unsqueeze(-1)  # [E, 1]
+        dist_matrix = self.tensor_task_distance(current, pad=True)  # [T, S, 2]
+        # Now safely get edge attributes for (task, state) pairs: [E, 2]
+        edge_attr = dist_matrix[task_indices, state_indices]  # [E, 2]
         return edge_attr

@@ -93,6 +93,10 @@ class Storage:
         task_param_dict: dict[Task, dict[State, np.ndarray]] = {}
         for task in self.tasks:
             task_param_dict[task] = self.get_tp_from_task(task)
+        for key, value in task_param_dict.items():
+            print(key.name)
+            for key1 in value.keys():
+                print(key1.name)
         return task_param_dict
 
     def get_tp_from_task(
