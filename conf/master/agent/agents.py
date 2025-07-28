@@ -40,3 +40,10 @@ gnn_v4 = AgentConfig(
     lr_actor=0.0005,
     early_stop_patience=10,
 )
+
+gnn_v5 = AgentConfig(
+    name="gnn_v5",
+    network=Network.GNNV5,
+    lr_actor=0.0005,
+    early_stop_patience=10,
+)
