@@ -14,15 +14,21 @@ gnn_v1 = AgentConfig(
 gnn_v2 = AgentConfig(
     name="gnn_v2",
     network=Network.GNNV2,
+    early_stop=None,
+    early_stop_patience=10,
 )
 
 gnn_v3 = AgentConfig(
     name="gnn_v3",
     network=Network.GNNV3,
+    early_stop=None,
+    early_stop_patience=10,
 )
 
 
 gnn_v4 = AgentConfig(
     name="gnn_v4",
     network=Network.GNNV4,
+    early_stop=None,
+    early_stop_patience=10,
 )

@@ -178,7 +178,7 @@ class GnnV2(GnnBase):
         pooled = torch.cat(
             [
                 max_pool.max(dim=1).values.unsqueeze(-1),
-                mean_pool.mean(dim=1).values.unsqueeze(-1),
+                mean_pool.mean(dim=1).unsqueeze(-1),
             ],
             dim=1,
         )  # [B,2]
@@ -208,16 +208,12 @@ class GnnV2(GnnBase):
         data["obs"].x = obs_tensor
         data["task"].x = task_tensor
 
-        data[("goal", "goal-obs", "obs")].edge_index = self.cnv.state_state_edges(
-            full=False
-        )
-        data[("obs", "obs-task", "task")].edge_index = self.cnv.state_task_edges(
-            full=False
-        )
+        data[("goal", "goal-obs", "obs")].edge_index = self.cnv.state_state_full
+        data[("obs", "obs-task", "task")].edge_index = self.cnv.state_task_full
 
-        data[("goal", "goal-obs", "obs")].edge_attr = self.cnv.state_state_attr()
-        data[("obs", "obs-task", "task")].edge_attr = self.cnv.state_task_attr()
-        return data
+        data[("goal", "goal-obs", "obs")].edge_attr = self.cnv.state_state_attr
+        data[("obs", "obs-task", "task")].edge_attr = self.cnv.state_task_attr
+        return data.to(device)
 
 
 class GnnV3(GnnBase):
