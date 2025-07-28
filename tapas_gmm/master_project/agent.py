@@ -16,7 +16,6 @@ class AgentConfig:
     name: str
     network: Network
     # Default values
-    early_stop: int | None = 10  # None if no early stop else the epoch number
     early_stop_patience: int = 5
     max_batches: int = 50
     saving_freq: int = 5  # Saving frequence of trained model
