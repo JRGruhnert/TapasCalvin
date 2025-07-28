@@ -1,20 +1,19 @@
 from conf.master.env.master_env import env_2
 from tapas_gmm.master_project.agent import AgentConfig
+from tapas_gmm.master_project.definitions import RewardMode, StateSpace, TaskSpace
 from tapas_gmm.master_project.networks import Network
 from tapas_gmm.master_train import MasterConfig
 
 
 # USING RELU
-gnn_v3_1 = AgentConfig(
-    name="gnn_v3",
-    network=Network.GNNV3,
-    lr_actor=0.0003,
-    early_stop_patience=10,
+agent = AgentConfig(
+    name="baseline_v3",
+    network=Network.BASELINEV1,
 )
 
 
 config = MasterConfig(
-    tag="gnn3_1",
+    tag="baselinev1_3",
     env=env_2,
-    agent=gnn_v3_1,
+    agent=agent,
 )

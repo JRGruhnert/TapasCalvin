@@ -1,6 +1,12 @@
 from conf.master.env.master_env import env_1
-from conf.master.agent.agents import gnn_v1
+from tapas_gmm.master_project.agent import AgentConfig
+from tapas_gmm.master_project.networks import Network
 from tapas_gmm.master_train import MasterConfig
+
+gnn_v1 = AgentConfig(
+    name="gnn_v1",
+    network=Network.GNNV1,
+)
 
 
 config = MasterConfig(
