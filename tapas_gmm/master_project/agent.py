@@ -210,8 +210,9 @@ class Agent:
         )
 
     def learn(self, verbose: bool = False) -> bool:
-        if not self.buffer.health():
-            raise UserWarning("RolloutBuffer is not in sync. Agent can't learn.")
+        assert self.buffer.health(), "Rollout buffer not in sync"
+        assert len(self.buffer.obs) == self.config.batch_size, "Batch size mismatch"
+
         total_reward, episode_length, success_rate = self.buffer.stats()
         if verbose:
 
@@ -238,6 +239,11 @@ class Agent:
         advantages, rewards = self.compute_gae(
             self.buffer.rewards, self.buffer.values, self.buffer.terminals
         )
+
+        # Check shapes
+        assert advantages.shape[0] == self.config.batch_size, "Advantage shape mismatch"
+        assert rewards.shape[0] == self.config.batch_size, "Reward shape mismatch"
+
         advantages = advantages.to(device)
         rewards = rewards.to(device)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
@@ -288,6 +294,13 @@ class Agent:
                 logprobs, state_values, dist_entropy = self.policy_new.evaluate(
                     mb_obs, mb_goal, mb_actions
                 )
+
+                assert logprobs.shape == mb_logprobs.shape, "Logprobs shape mismatch"
+                assert (
+                    state_values.shape == mb_rewards.shape
+                ), "Value prediction shape mismatch"
+                assert dist_entropy.dim() == 0, "Entropy must be scalar"
+
                 state_values = torch.squeeze(state_values)
 
                 # Ratios
