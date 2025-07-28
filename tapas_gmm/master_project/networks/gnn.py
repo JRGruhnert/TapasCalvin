@@ -229,9 +229,9 @@ class GnnV3(GnnBase):
         self.state_gin = GINEConv(
             nn=nn.Sequential(
                 nn.Linear(self.dim_encoder, dim_mlp),
-                nn.Tanh(),
+                nn.LeakyReLU(),
                 nn.Linear(dim_mlp, self.dim_state),
-                nn.Tanh(),
+                nn.LeakyReLU(),
             ),
             train_eps=True,
             edge_dim=1,
@@ -240,7 +240,7 @@ class GnnV3(GnnBase):
         self.action_gin = GINEConv(
             nn=nn.Sequential(
                 nn.Linear(self.dim_state, self.dim_state // 2),
-                nn.Tanh(),
+                nn.LeakyReLU(),
                 nn.Linear(self.dim_state // 2, 1),
             ),
             train_eps=True,
@@ -328,27 +328,27 @@ class GnnV4(GnnBase):
 
         state_state_mlp = nn.Sequential(
             nn.Linear(self.dim_encoder, self.dim_encoder),
-            nn.Tanh(),
+            nn.LeakyReLU(),
             nn.Linear(self.dim_encoder, self.dim_encoder),
-            nn.Tanh(),
+            nn.LeakyReLU(),
         )
 
         state_task_mlp = nn.Sequential(
             nn.Linear(self.dim_encoder, self.dim_encoder),
-            nn.Tanh(),
+            nn.LeakyReLU(),
             nn.Linear(self.dim_encoder, self.dim_encoder),
-            nn.Tanh(),
+            nn.LeakyReLU(),
         )
 
         task_actor_mlp = nn.Sequential(
             nn.Linear(self.dim_encoder, self.dim_encoder // 2),
-            nn.Tanh(),
+            nn.LeakyReLU(),
             nn.Linear(self.dim_encoder // 2, 1),
         )
 
         task_critic_mlp = nn.Sequential(
             nn.Linear(self.dim_encoder, self.dim_encoder // 2),
-            nn.Tanh(),
+            nn.LeakyReLU(),
             nn.Linear(self.dim_encoder // 2, 1),
         )
 
