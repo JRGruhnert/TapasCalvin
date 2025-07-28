@@ -328,7 +328,7 @@ class Converter:
     def task_single(self) -> torch.Tensor:
         num_tasks = len(self.tasks)
         indices = torch.arange(num_tasks)
-        torch.stack([indices, torch.zeros_like(indices)], dim=0)
+        return torch.stack([indices, torch.zeros_like(indices)], dim=0)
 
     @cached_property
     def state_state_full(self) -> torch.Tensor:

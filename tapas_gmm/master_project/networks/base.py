@@ -131,4 +131,4 @@ class GnnBase(ActorCriticBase, ABC):
         # nx.draw(G, pos, with_labels=True, node_color="lightblue", edge_color="gray")
         # plt.show()
 
-        return Batch.from_data_list(data).to(device)
+        return Batch.from_data_list(data)
