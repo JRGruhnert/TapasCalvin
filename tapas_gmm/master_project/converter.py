@@ -188,7 +188,7 @@ class Converter:
 
     def dict_distance(
         self,
-        current: Observation,
+        obs: Observation,
         goal: Observation,
     ) -> dict[State, torch.Tensor]:
         """
@@ -197,13 +197,13 @@ class Converter:
         """
         distances = {}
         for key, converter in self.converter.items():
-            dist = converter.distance(current.states[key], goal.states[key])
+            dist = converter.distance(obs.states[key], goal.states[key])
             distances[key] = torch.tensor(dist).float()
         return distances
 
     def tensor_dict_distance(
         self,
-        current: Observation,
+        obs: Observation,
         goal: Observation,
     ) -> dict[StateType, torch.Tensor]:
         # Initialize groups
@@ -211,7 +211,7 @@ class Converter:
         quaternion_values = []
         scalar_values = []
         for key, converter in self.converter.items():
-            val = converter.distance(current.states[key], goal.states[key])
+            val = converter.distance(obs.states[key], goal.states[key])
             if key.value.type == StateType.Transform:
                 transform_values.append(np.array([val]))
             elif key.value.type == StateType.Quaternion:
@@ -227,12 +227,12 @@ class Converter:
         }
 
     def tensor_combined_distance(
-        self, current: Observation, goal: Observation
+        self, obs: Observation, goal: Observation
     ) -> torch.Tensor:
         # Convert all values to numpy arrays and concatenate
         values = []
         for key, converter in self.converter.items():
-            val = converter.distance(current.states[key], goal.states[key])
+            val = converter.distance(obs.states[key], goal.states[key])
             val = np.asarray(val).flatten()  # Ensures it's an array and flattens it
             values.append(val)
 
@@ -286,8 +286,7 @@ class Converter:
 
     def tensor_task_distance(
         self,
-        current: Observation,
-        pad: bool = False,
+        obs: Observation,
     ) -> torch.Tensor:
         features: list[np.ndarray] = []
         for task in self.tasks:
@@ -296,11 +295,11 @@ class Converter:
             for key, converter in self.converter.items():
                 if key in task_tps:
                     # Use the task-specific value if available
-                    task_value = converter.distance(current.states[key], task_tps[key])
+                    task_value = converter.distance(obs.states[key], task_tps[key])
                 else:
                     # Empty value if not specified
                     task_value = self.ignore_converter.distance(
-                        current.states[key], current.states[key]
+                        obs.states[key], obs.states[key]
                     )
                 task_features.append(task_value)
             features.append(np.array(task_features))

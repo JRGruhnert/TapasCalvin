@@ -129,10 +129,15 @@ class Agent:
         self.buffer = RolloutBuffer()
         self.policy_new: ActorCriticBase = Net(tasks, states, task_parameter).to(device)
         self.policy_old: ActorCriticBase = Net(tasks, states, task_parameter).to(device)
-        self.optimizer = torch.optim.Adam(
+        self.optimizer = torch.optim.AdamW(
             self.policy_new.parameters(),
             lr=self.config.lr_actor,
         )
+
+        for name, param in self.policy_new.named_parameters():
+            print(
+                f"Name: {name}, Shape: {param.shape}, Requires grad: {param.requires_grad}"
+            )
 
         ### Internal flags and counter
         self.waiting_feedback: bool = False
@@ -326,6 +331,16 @@ class Agent:
                 ### Update gradients on mini-batch
                 self.optimizer.zero_grad()
                 loss.mean().backward()
+                for name, param in self.policy_new.named_parameters():
+                    if param.grad is None:
+                        print(
+                            f"Parameter '{name}' has NO gradient (not used or disconnected)!"
+                        )
+                    else:
+                        print(
+                            f"Parameter '{name}' has gradient, mean abs grad: {param.grad.abs().mean().item():.6f}"
+                        )
+
                 nn.utils.clip_grad_norm_(
                     self.policy_new.parameters(), self.config.max_grad_norm
                 )

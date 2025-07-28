@@ -11,19 +11,6 @@ gnn_v1 = AgentConfig(
     network=Network.GNNV1,
 )
 
-gnn_v2_1 = AgentConfig(
-    name="gnn_v2",
-    network=Network.GNNV2,
-    early_stop_patience=10,
-)
-
-gnn_v2_2 = AgentConfig(
-    name="gnn_v2",
-    network=Network.GNNV2,
-    lr_actor=0.0002,
-    early_stop_patience=10,
-    lr_annealing=False,
-)
 
 gnn_v3_1 = AgentConfig(
     name="gnn_v3",

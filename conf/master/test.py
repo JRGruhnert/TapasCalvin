@@ -1,16 +1,18 @@
-from conf.master.env.master_env import env_1
 from tapas_gmm.master_project.agent import AgentConfig
+
 from tapas_gmm.master_project.networks import Network
 from tapas_gmm.master_train import MasterConfig
+from conf.master.env.master_env import env_1
 
-gnn_v2_1 = AgentConfig(
-    name="gnn_v2",
+agent = AgentConfig(
+    name="test",
     network=Network.GNNV2,
-    early_stop_patience=10,
+    batch_size=8,
+    mini_batch_size=4,
 )
 
 config = MasterConfig(
-    tag="gnn2_1",
+    tag="test",
     env=env_1,
-    agent=gnn_v2_1,
+    agent=agent,
 )
