@@ -4,8 +4,11 @@ import matplotlib.pyplot as plt
 import glob
 import os
 from pathlib import Path
+from omegaconf import OmegaConf, SCMode
 import pandas as pd
 from typing import Dict
+
+from tapas_gmm.utils.argparse import parse_and_build_config
 
 
 class RolloutAnalyzer:
@@ -24,7 +27,7 @@ class RolloutAnalyzer:
     def load_all_batches(self) -> Dict[int, Dict]:
         """Load all rollout buffer files and return combined data"""
         # Find all rollout buffer files
-        pattern = os.path.join(self.data_path, "rollout_buffer_*.npy")
+        pattern = os.path.join(self.data_path, "stats_epoch_*.npy")
         files = glob.glob(pattern)
 
         if not files:
@@ -64,10 +67,10 @@ class RolloutAnalyzer:
 
         for batch_num, data in self.batch_data.items():
             rewards = data["rewards"]
-            values = data["state_values"]
+            values = data["values"]
             actions = data["actions"]
             logprobs = data["logprobs"]
-            terminals = data["is_terminals"]
+            terminals = data["terminals"]
 
             # Collect all data
             all_rewards.extend(rewards)
@@ -342,16 +345,16 @@ class RolloutAnalyzer:
 
 
 def entry_point():
-    parser = argparse.ArgumentParser(description="Analyze rollout results.")
-    parser.add_argument(
-        "--agent",
-        type=str,
-        required=True,
-        help="Path to the directory containing rollout logs",
+
+    _, dict_config = parse_and_build_config(data_load=False, need_task=False)
+
+    dict_config.agent.name = dict_config.tag
+
+    config = OmegaConf.to_container(
+        dict_config, resolve=True, structured_config_mode=SCMode.INSTANTIATE
     )
 
-    args = parser.parse_args()
-    default = f"results/{args.agent}/"
+    default = f"results/{dict_config.agent.name}/"
     analyzer = RolloutAnalyzer(default)
     analyzer.load_all_batches()
     analyzer.print_analysis()
