@@ -51,9 +51,9 @@ class GinStateMlp(nn.Module):
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
-            nn.Tanh(),
+            nn.LeakyReLU(),
             nn.Linear(hidden_dim, output_dim),
-            nn.Tanh(),
+            nn.LeakyReLU(),
         )
 
     def forward(self, s):
@@ -65,7 +65,7 @@ class GinActionMlp(nn.Module):
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, input_dim // 2),
-            nn.Tanh(),
+            nn.LeakyReLU(),
             nn.Linear(input_dim // 2, 1),
         )
 
