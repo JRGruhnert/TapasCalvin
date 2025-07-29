@@ -25,8 +25,8 @@ class AgentConfig:
     batch_size: int = 2048
     mini_batch_size: int = 64  # 64 # How many steps to use in each mini-batch
     learning_epochs: int = 50  # How many passes over the collected batch per update
-    lr_annealing: bool = True
-    lr_actor: float = 0.001  # Step size for actor optimizer
+    lr_annealing: bool = False
+    lr_actor: float = 0.0003  # Step size for actor optimizer
     lr_critic: float = 0.0003  # Step size for critic optimizer
     gamma: float = 0.99  # How much future rewards are worth today
     gae_lambda: float = 0.95  # Bias/variance trade‑off in advantage estimation
@@ -133,11 +133,8 @@ class Agent:
             self.policy_new.parameters(),
             lr=self.config.lr_actor,
         )
-
-        for name, param in self.policy_new.named_parameters():
-            print(
-                f"Name: {name}, Shape: {param.shape}, Requires grad: {param.requires_grad}"
-            )
+        print("Using network:", config.network)
+        print("Type:", self.policy_new)
 
         ### Internal flags and counter
         self.waiting_feedback: bool = False
