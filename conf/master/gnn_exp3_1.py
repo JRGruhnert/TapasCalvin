@@ -8,8 +8,6 @@ from tapas_gmm.master_train import MasterConfig
 gnn_v3_1 = AgentConfig(
     name="gnn_v3",
     network=Network.GNNV3,
-    lr_actor=0.0003,
-    early_stop_patience=10,
 )
 
 

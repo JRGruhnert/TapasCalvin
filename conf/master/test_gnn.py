@@ -6,7 +6,7 @@ from conf.master.env.master_env import env_1
 
 agent = AgentConfig(
     name="test",
-    network=Network.GNNV2,
+    network=Network.GNNV4,
     batch_size=8,
     mini_batch_size=4,
 )
