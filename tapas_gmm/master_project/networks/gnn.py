@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch_geometric.data import Batch, HeteroData
 from torch_geometric.nn import global_max_pool, global_mean_pool
 from torch_geometric.nn import GATv2Conv, LayerNorm, GINConv, GINEConv
-from torch_geometric.nn.aggr import AttentionalAggregation
 from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.base import GnnBase
 from tapas_gmm.utils.select_gpu import device
@@ -25,6 +25,18 @@ class GnnV1(GnnBase):
     ):
         super().__init__(*args, **kwargs)
 
+        task_actor_mlp = nn.Sequential(
+            nn.Linear(self.dim_encoder, self.dim_encoder // 2),
+            nn.LeakyReLU(),
+            nn.Linear(self.dim_encoder // 2, 1),
+        )
+
+        task_critic_mlp = nn.Sequential(
+            nn.Linear(self.dim_encoder, self.dim_encoder // 2),
+            nn.LeakyReLU(),
+            nn.Linear(self.dim_encoder // 2, 1),
+        )
+
         self.gat1 = GATv2Conv(
             (self.dim_encoder, self.dim_encoder),
             self.dim_state,
@@ -42,26 +54,13 @@ class GnnV1(GnnBase):
             add_self_loops=False,
         )
 
-        self.norm1 = LayerNorm(self.dim_state)
-        self.norm2 = LayerNorm(dim_gat_out)
-        self.actor = nn.Sequential(
-            # nn.BatchNorm1d(gat_out),
-            nn.Linear(dim_gat_out, dim_head),
-            nn.Tanh(),
-            nn.Linear(dim_head, 1),
+        self.actor_gin = GINConv(
+            nn=task_actor_mlp,
         )
 
-        self.critic = nn.Sequential(
-            # nn.BatchNorm1d(gat_out),
-            nn.Linear(dim_gat_out, dim_head),
-            nn.Tanh(),
-            nn.Linear(dim_head, 1),
+        self.critic_gin = GINConv(
+            nn=task_critic_mlp,
         )
-
-        self.critic_readout = AttentionalAggregation(
-            gate_nn=nn.Sequential(nn.Linear(dim_gat_out, 1), nn.Sigmoid())
-        )
-        self.critic_head = nn.Linear(dim_gat_out, 1)
 
     def forward(
         self,
@@ -80,13 +79,15 @@ class GnnV1(GnnBase):
             edge_attr=edge_attr_dict[("goal", "goal-obs", "obs")],
             return_attention_weights=None,
         )
+        x2 = F.leaky_relu(x1, negative_slope=0.01)  # Apply LeakyReLU after GNN
 
-        x2 = self.gat2(
-            x=(x1, x_dict["task"]),
+        x3 = self.gat2(
+            x=(x2, x_dict["task"]),
             edge_index=edge_index_dict[("obs", "obs-task", "task")],
             edge_attr=None,
             return_attention_weights=None,
         )
+        x4 = F.leaky_relu(x3, negative_slope=0.01)  # Apply LeakyReLU after GNN
 
         logits = self.actor(x2).squeeze(-1)
         task_batch_idx = batch_dict["task"]
@@ -183,9 +184,8 @@ class GnnV2(GnnBase):
             dim=1,
         )  # [B,2]
 
-        logits = x_task_updated.squeeze(-1)
         value = self.critic_head(pooled).squeeze(-1)  # [B]
-
+        logits = x_task_updated.view(-1, self.dim_tasks)  # [B, dim_tasks]
         return logits, value
 
     def to_data(self, obs: Observation, goal: Observation) -> HeteroData:
@@ -283,9 +283,8 @@ class GnnV3(GnnBase):
             dim=1,
         )  # [B,2]
 
-        logits = x2.squeeze(-1)
         value = self.critic_head(pooled).squeeze(-1)  # [B]
-
+        logits = x2.view(-1, self.dim_tasks)  # [B, dim_tasks]
         return logits, value
 
     def to_data(self, obs: Observation, goal: Observation) -> HeteroData:
@@ -401,7 +400,7 @@ class GnnV4(GnnBase):
             x=(x2, x_dict["critic"]),
             edge_index=edge_index_dict[("task", "task-critic", "critic")],
         )
-        return logits.squeeze(-1), value.squeeze(-1)
+        return logits.view(-1, self.dim_tasks), value.squeeze(-1)
 
     def to_data(self, obs: Observation, goal: Observation) -> HeteroData:
         goal_dict = self.cnv.tensor_state_dict_values(goal)
@@ -509,7 +508,7 @@ class GnnV5(GnnBase):
             x=(x1, x_dict["critic"]),
             edge_index=edge_index_dict[("task", "task-critic", "critic")],
         )
-        return logits.squeeze(-1), value.squeeze(-1)
+        return logits.view(-1, self.dim_tasks), value.squeeze(-1)
 
     def to_data(self, obs: Observation, goal: Observation) -> HeteroData:
         goal_dict = self.cnv.tensor_state_dict_values(goal)
