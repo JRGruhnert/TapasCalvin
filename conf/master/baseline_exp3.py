@@ -9,6 +9,7 @@ from tapas_gmm.master_train import MasterConfig
 agent = AgentConfig(
     name="baseline_v3",
     network=Network.BASELINEV1,
+    lr_actor=0.0003,
 )
 
 

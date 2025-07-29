@@ -303,7 +303,6 @@ class Agent:
                 assert (
                     state_values.shape == mb_rewards.shape
                 ), "Value prediction shape mismatch"
-                assert dist_entropy.dim() == 0, "Entropy must be scalar"
 
                 state_values = torch.squeeze(state_values)
 
@@ -331,16 +330,6 @@ class Agent:
                 ### Update gradients on mini-batch
                 self.optimizer.zero_grad()
                 loss.mean().backward()
-                for name, param in self.policy_new.named_parameters():
-                    if param.grad is None:
-                        print(
-                            f"Parameter '{name}' has NO gradient (not used or disconnected)!"
-                        )
-                    else:
-                        print(
-                            f"Parameter '{name}' has gradient, mean abs grad: {param.grad.abs().mean().item():.6f}"
-                        )
-
                 nn.utils.clip_grad_norm_(
                     self.policy_new.parameters(), self.config.max_grad_norm
                 )
