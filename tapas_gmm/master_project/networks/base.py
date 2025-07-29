@@ -70,6 +70,12 @@ class ActorCriticBase(nn.Module, ABC):
         goal: Observation,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         logits, value = self.forward([obs], [goal])
+        assert logits.shape == (
+            1,
+            self.dim_tasks,
+        ), f"Expected logits shape ({1}, {self.dim_tasks}), got {logits.shape}"
+        assert value.shape == (1,), f"Expected value shape ({1},), got {value.shape}"
+
         dist = Categorical(logits=logits)
         action = dist.sample()  # shape: [B]
         logprob = dist.log_prob(action)  # shape: [B]
@@ -81,7 +87,16 @@ class ActorCriticBase(nn.Module, ABC):
         goal: list[Observation],
         action: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        assert len(obs) == len(goal), "Observation and Goal lists have different sizes."
         logits, value = self.forward(obs, goal)
+        assert logits.shape == (
+            len(obs),
+            self.dim_tasks,
+        ), f"Expected logits shape ({len(obs)}, {self.dim_tasks}), got {logits.shape}"
+        assert value.shape == (
+            len(obs),
+        ), f"Expected value shape ({len(obs)},), got {value.shape}"
+
         dist = Categorical(logits=logits)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
