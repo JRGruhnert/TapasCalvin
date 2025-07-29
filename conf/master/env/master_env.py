@@ -25,3 +25,14 @@ env_2 = MasterEnvConfig(
     storage=storage,
     sampler=sampler,
 )
+
+env_3 = MasterEnvConfig(
+    task_space=TaskSpace.ALL,
+    state_space=StateSpace.ALL,
+    eval_mode=False,
+    pybullet_vis=False,
+    debug_vis=False,
+    evaluator=evaluator,
+    storage=storage,
+    sampler=sampler,
+)

@@ -1,19 +1,18 @@
+from conf.master.env.master_env import env_2
 from tapas_gmm.master_project.agent import AgentConfig
-
 from tapas_gmm.master_project.networks import Network
 from tapas_gmm.master_train import MasterConfig
-from conf.master.env.master_env import env_2
 
+
+# USING RELU
 agent = AgentConfig(
-    name="original",
-    network=Network.GNNV3,
-    lr_actor=0.0003,
-    lr_annealing=False,
-    early_stop_patience=20,
+    name="baseline_v1_1",
+    network=Network.BASELINEV1,
 )
 
+
 config = MasterConfig(
-    tag="original",
+    tag="baselinev1_1",
     env=env_2,
     agent=agent,
 )
