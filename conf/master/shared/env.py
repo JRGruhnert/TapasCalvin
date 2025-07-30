@@ -1,10 +1,10 @@
 from tapas_gmm.master_project.definitions import StateSpace, TaskSpace
 from tapas_gmm.master_project.environment import MasterEnvConfig
-from conf.master.env.evaluator import evaluator
-from conf.master.env.storage import storage
-from conf.master.env.sampler import sampler
+from conf.master.shared.evaluator import evaluator
+from conf.master.shared.storage import storage
+from conf.master.shared.sampler import sampler
 
-env_1 = MasterEnvConfig(
+env1 = MasterEnvConfig(
     task_space=TaskSpace.SMALL,
     state_space=StateSpace.SMALL,
     eval_mode=False,
@@ -15,7 +15,7 @@ env_1 = MasterEnvConfig(
     sampler=sampler,
 )
 
-env_2 = MasterEnvConfig(
+env2 = MasterEnvConfig(
     task_space=TaskSpace.SMALL,
     state_space=StateSpace.ALL,
     eval_mode=False,
@@ -26,7 +26,7 @@ env_2 = MasterEnvConfig(
     sampler=sampler,
 )
 
-env_3 = MasterEnvConfig(
+env3 = MasterEnvConfig(
     task_space=TaskSpace.ALL,
     state_space=StateSpace.ALL,
     eval_mode=False,

@@ -4,7 +4,7 @@ import re
 import torch
 from torch import nn
 import numpy as np
-from tapas_gmm.master_project.networks import Network, import_network
+from tapas_gmm.master_project.networks import NetworkType, import_network
 from tapas_gmm.utils.select_gpu import device
 from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.base import ActorCriticBase
@@ -13,8 +13,6 @@ from tapas_gmm.master_project.definitions import State, Task
 
 @dataclass
 class AgentConfig:
-    name: str
-    network: Network
     # Default values
     early_stop_patience: int = 5
     max_batches: int = 50
@@ -117,13 +115,16 @@ class Agent:
     def __init__(
         self,
         config: AgentConfig,
+        nt: NetworkType,
+        tag: str,
         tasks: list[Task],
         states: list[State],
         task_parameter: dict[Task, dict[State, np.ndarray]],
     ):
         # Hyperparameters
         self.config = config
-        Net = import_network(config.network)
+        Net = import_network(nt)
+        print("Using network:", nt)
         ### Initialize the agent
         self.mse_loss = nn.MSELoss()
         self.buffer = RolloutBuffer()
@@ -133,8 +134,6 @@ class Agent:
             self.policy_new.parameters(),
             lr=self.config.lr_actor,
         )
-        print("Using network:", config.network)
-        # print("Type:", self.policy_new)
 
         ### Internal flags and counter
         self.waiting_feedback: bool = False
@@ -144,7 +143,7 @@ class Agent:
         self.epochs_since_improvement = 0
 
         ### Directory path for the agent (specified by name)
-        self.directory_path = config.saving_path + config.name + "/"
+        self.directory_path = config.saving_path + nt.value + "/" + tag + "/"
         if not os.path.exists(self.directory_path):
             os.makedirs(self.directory_path)
 

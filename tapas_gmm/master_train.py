@@ -4,12 +4,14 @@ from omegaconf import OmegaConf, SCMode
 
 from tapas_gmm.master_project.environment import MasterEnv, MasterEnvConfig
 from tapas_gmm.master_project.agent import Agent, AgentConfig
+from tapas_gmm.master_project.networks import NetworkType
 from tapas_gmm.utils.argparse import parse_and_build_config
 
 
 @dataclass
 class MasterConfig:
     tag: str
+    nt: NetworkType
     agent: AgentConfig
     env: MasterEnvConfig
     verbose: bool = True
@@ -19,7 +21,7 @@ def train_agent(config: MasterConfig):
     # Initialize the environment and agent
     env = MasterEnv(config.env)
     tasks, states, tps = env.publish()
-    agent = Agent(config.agent, tasks, states, tps)
+    agent = Agent(config.agent, config.nt, config.tag, tasks, states, tps)
 
     # track total training time
     start_time = datetime.now().replace(microsecond=0)
@@ -67,8 +69,6 @@ def train_agent(config: MasterConfig):
 def entry_point():
 
     _, dict_config = parse_and_build_config(data_load=False, need_task=False)
-
-    dict_config.agent.name = dict_config.tag
 
     config = OmegaConf.to_container(
         dict_config, resolve=True, structured_config_mode=SCMode.INSTANTIATE
