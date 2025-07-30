@@ -7,7 +7,7 @@ from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.base import GnnBase
 from tapas_gmm.utils.select_gpu import device
 from tapas_gmm.master_project.networks.layers.master_modules import (
-    GinUnactivatedMlp,
+    GinUnactivatedMLP,
     GinStandardMLP,
 )
 
@@ -30,7 +30,7 @@ class Gnn(GnnBase):
         )
 
         self.action_gin = GINEConv(
-            nn=GinUnactivatedMlp(self.dim_state),
+            nn=GinUnactivatedMLP(self.dim_state),
             edge_dim=1,
         )
 
