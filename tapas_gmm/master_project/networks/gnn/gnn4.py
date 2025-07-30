@@ -104,5 +104,5 @@ class Gnn(GnnBase):
             obs
         )
         data[("task", "task-actor", "actor")].edge_index = self.cnv.task_task_sparse
-        data[("task", "task-critic", "critic")].edge_index = self.cnv.task_single
+        data[("task", "task-critic", "critic")].edge_index = self.cnv.task_to_single
         return data.to(device)

@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch_geometric.data import Batch, HeteroData
-from torch_geometric.nn import global_max_pool, global_mean_pool
 from torch_geometric.nn import GATv2Conv, LayerNorm, GINConv, GINEConv
 from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.base import GnnBase
@@ -14,7 +12,6 @@ class Gnn(GnnBase):
     def __init__(
         self,
         *args,
-        dim_mlp: int = 32,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -110,7 +107,7 @@ class Gnn(GnnBase):
         data["critic"].x = torch.zeros(1, 1)
 
         data[("task", "task-actor", "actor")].edge_index = self.cnv.task_task_sparse
-        data[("task", "task-critic", "critic")].edge_index = self.cnv.task_single
+        data[("task", "task-critic", "critic")].edge_index = self.cnv.task_to_single
         data[("state", "state-task", "task")].edge_index = self.cnv.state_task_full
         data[("state", "state-task", "task")].edge_attr = (
             self.cnv.state_task_attr_weighted(obs)

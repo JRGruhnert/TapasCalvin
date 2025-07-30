@@ -1,3 +1,4 @@
+from enum import Enum
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -16,6 +17,11 @@ from tapas_gmm.utils.select_gpu import device
 import networkx as nx
 import matplotlib.pyplot as plt
 from torch_geometric.utils import to_networkx
+
+
+class PPOType(Enum):
+    ACTOR = "actor"
+    CRITIC = "critic"
 
 
 class ActorCriticBase(nn.Module, ABC):

@@ -20,7 +20,7 @@ def to_nt(network_str):
 
 def import_network(network_type):
     if network_type is NetworkType.GNN_TEST:
-        from tapas_gmm.master_project.networks.gnn.gnn3 import Gnn as Network
+        from tapas_gmm.master_project.networks.gnn.gnn6 import Gnn as Network
     elif network_type is NetworkType.GNN_V1:
         from tapas_gmm.master_project.networks.gnn.gnn1 import Gnn as Network
     elif network_type is NetworkType.GNN_V2:

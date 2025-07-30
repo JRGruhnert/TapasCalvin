@@ -25,7 +25,7 @@ class AgentConfig:
     learning_epochs: int = 50  # How many passes over the collected batch per update
     lr_annealing: bool = False
     lr_actor: float = 0.0003  # Step size for actor optimizer
-    lr_critic: float = 0.0003  # Step size for critic optimizer
+    lr_critic: float = 0.0003  # NOTE unused # Step size for critic optimizer
     gamma: float = 0.99  # How much future rewards are worth today
     gae_lambda: float = 0.95  # Bias/variance trade‑off in advantage estimation
     eps_clip: float = 0.2  # How far the new policy is allowed to move from the old

@@ -343,7 +343,7 @@ class Converter:
         return torch.stack([indices, indices], dim=0)
 
     @cached_property
-    def task_single(self) -> torch.Tensor:
+    def task_to_single(self) -> torch.Tensor:
         num_tasks = len(self.tasks)
         indices = torch.arange(num_tasks)
         return torch.stack([indices, torch.zeros_like(indices)], dim=0)
