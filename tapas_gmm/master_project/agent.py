@@ -134,7 +134,7 @@ class Agent:
             lr=self.config.lr_actor,
         )
         print("Using network:", config.network)
-        print("Type:", self.policy_new)
+        # print("Type:", self.policy_new)
 
         ### Internal flags and counter
         self.waiting_feedback: bool = False
