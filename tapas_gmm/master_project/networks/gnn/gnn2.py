@@ -127,6 +127,6 @@ class Gnn(GnnBase):
         data["obs"].x = obs_tensor
         data["task"].x = task_tensor
 
-        data[("goal", "goal-obs", "obs")].edge_index = self.cnv.state_state_full
-        data[("obs", "obs-task", "task")].edge_index = self.cnv.state_task_full
+        data[("goal", "goal-obs", "obs")].edge_index = self.cnv.state_state_sparse
+        data[("obs", "obs-task", "task")].edge_index = self.cnv.state_task_sparse
         return data.to(device)

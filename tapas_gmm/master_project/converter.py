@@ -160,6 +160,34 @@ class IgnoreConverter(StateConverter):
         return 0.0
 
 
+class DistanceConverter(StateConverter):
+    def __init__(self):
+        """
+        Quaternions are assumed unit‑length; we don't clamp components.
+        """
+
+    def value(self, current: np.ndarray | float) -> np.ndarray | float:
+        """
+        Returns zeros as in current size, indicating no contribution to the feature.
+        """
+        if isinstance(current, np.ndarray):
+            value = np.zeros_like(current)
+            if current.shape[0] == 3:
+                return value
+            elif current.shape[0] == 4 or current.shape[0] == 7:
+                value[-1] = 1.0  # last element is 1.0 is for unit quaternion
+                return value
+
+        else:
+            return 0.0
+
+    def distance(self, current: np.ndarray | float, goal: np.ndarray | float) -> float:
+        """
+        Returns a constant value of 0.0, indicating no contribution to the feature.
+        """
+        return 1.0
+
+
 class Converter:
     def __init__(
         self,
@@ -176,6 +204,7 @@ class Converter:
         self.tps = task_parameter
         self.converter: dict[State, StateConverter] = {}
         self.ignore_converter = IgnoreConverter()
+        self.distance_converter = DistanceConverter()
         for state in states:
             if state.value.type == StateType.Transform:
                 self.converter[state] = TransformConverter(state, normalized)
@@ -387,12 +416,12 @@ class Converter:
             for key, converter in self.converter.items():
                 if key in task_tps:
                     val = converter.distance(current.states[key], task_tps[key])
-                    task_value = np.array([val, 1.0]) if pad else np.array(val)
+                    task_value = np.array([val, 0.0]) if pad else np.array(val)
                 else:
-                    val = self.ignore_converter.distance(
+                    val = self.distance_converter.distance(
                         current.states[key], current.states[key]
                     )
-                    task_value = np.array([val, 0.0]) if pad else np.array(val)
+                    task_value = np.array([val, 1.0]) if pad else np.array(val)
 
                 task_features.append(task_value)
             # Ensure consistent 2D shape: [num_states, feature_dim]

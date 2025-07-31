@@ -1,17 +1,12 @@
-from conf.master.shared.env import env2
+from conf.master.shared.env import env1
+from conf.master.shared.agent import experiment1
 from tapas_gmm.master_project.agent import AgentConfig
 from tapas_gmm.master_project.networks import NetworkType
 from tapas_gmm.master_train import MasterConfig
 
 
-gnn_v5_1 = AgentConfig(
-    name="gnn_v5",
-    network=NetworkType.GNN_V5,
-)
-
-
 config = MasterConfig(
-    tag="gnn5_1",
-    env=env2,
-    agent=gnn_v5_1,
+    tag="alt",
+    env=env1,
+    agent=experiment1,
 )

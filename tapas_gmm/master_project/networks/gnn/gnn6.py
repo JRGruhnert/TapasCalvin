@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.distributions import Categorical
 from torch_geometric.data import Batch, HeteroData
-from torch_geometric.nn import GINEConv
+from torch_geometric.nn import GINEConv, GINConv, GIN
 from torch_geometric.nn import GATv2Conv
 from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.base import GnnBase, PPOType
@@ -25,13 +25,13 @@ class GatReadoutNetwork(nn.Module):
         self.dim_action = dim_action
         self.dim_features = dim_features
 
-        self.state_gin = GINEConv(
+        self.state_gin = GINConv(
             nn=GinStandardMLP(
                 in_dim=dim_features,
                 out_dim=dim_features,
                 hidden_dim=dim_features,
             ),
-            edge_dim=1,
+            # edge_dim=1,
         )
 
         self.task_gin = GINEConv(
@@ -40,7 +40,7 @@ class GatReadoutNetwork(nn.Module):
                 out_dim=dim_features,
                 hidden_dim=dim_features,
             ),
-            edge_dim=1,
+            edge_dim=2,
         )
         self.gat = GATv2Conv(
             dim_features,
@@ -62,7 +62,7 @@ class GatReadoutNetwork(nn.Module):
         x1 = self.state_gin(
             x=(x_dict["goal"], x_dict["obs"]),
             edge_index=edge_index_dict[("goal", "goal-obs", "obs")],
-            edge_attr=edge_attr_dict[("goal", "goal-obs", "obs")],
+            # edge_attr=edge_attr_dict[("goal", "goal-obs", "obs")],
         )
         x2 = self.task_gin(
             x=(x1, x_dict["task"]),
@@ -134,12 +134,14 @@ class Gnn(GnnBase):
         data["task"].x = torch.zeros(self.dim_tasks, self.dim_encoder)
         data["value"].x = torch.zeros(1, self.dim_encoder)
 
-        data[("goal", "goal-obs", "obs")].edge_index = self.cnv.state_state_full
+        data[("goal", "goal-obs", "obs")].edge_index = self.cnv.state_state_sparse
         data[("obs", "obs-task", "task")].edge_index = self.cnv.state_task_full
-        data[("task", "task-value", "value")].edge_index = self.cnv.task_to_single
+        # data[("task", "task-value", "value")].edge_index = self.cnv.task_to_single
         data[("goal", "goal-obs", "obs")].edge_attr = self.cnv.state_state_attr
-        data[("obs", "obs-task", "task")].edge_attr = self.cnv.state_task_attr
-
+        # data[("obs", "obs-task", "task")].edge_attr = self.cnv.state_task_attr
+        data[("obs", "obs-task", "task")].edge_attr = self.cnv.state_task_attr_weighted(
+            obs
+        )
         return data.to(device)
 
     def act(

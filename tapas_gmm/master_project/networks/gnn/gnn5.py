@@ -1,10 +1,74 @@
 import torch
 import torch.nn as nn
 from torch_geometric.data import Batch, HeteroData
-from torch_geometric.nn import GATv2Conv, LayerNorm, GINConv, GINEConv
+from torch_geometric.nn import GINConv, GINEConv
+from tapas_gmm.master_project.networks.layers.master_modules import (
+    GinStandardMLP,
+    StandardMLP,
+    UnactivatedMLP,
+)
 from tapas_gmm.master_project.observation import Observation
-from tapas_gmm.master_project.networks.base import GnnBase
+from tapas_gmm.master_project.networks.base import GnnBase, PPOType
 from tapas_gmm.utils.select_gpu import device
+
+
+class CombinedGoalObsNetwork(nn.Module):
+    def __init__(
+        self,
+        dim_features: int,
+        dim_task: int,
+        dim_state: int,
+        ppo_type: PPOType,
+    ):
+        super().__init__()
+        self.ppo_type = ppo_type
+        self.dim_tasks = dim_task
+        self.dim_state = dim_state
+        self.dim_features = dim_features
+
+        self.state_task_gin = GINEConv(
+            nn=GinStandardMLP(
+                in_dim=self.dim_features,
+                out_dim=self.dim_features,
+                hidden_dim=self.dim_features,
+            ),
+            edge_dim=2,
+        )
+
+        self.actor_gin = GINConv(
+            nn=UnactivatedMLP(self.dim_features, 1),
+        )
+
+        self.critic_gin = GINConv(
+            nn=UnactivatedMLP(self.dim_features, 1),
+        )
+
+    def forward(self, batch: Batch) -> torch.Tensor:
+        x_dict = batch.x_dict
+        edge_index_dict = batch.edge_index_dict
+        edge_attr_dict = batch.edge_attr_dict
+
+        x1 = self.state_task_gin(
+            x=(x_dict["state"], x_dict["task"]),
+            edge_index=edge_index_dict[("state", "state-task", "task")],
+            edge_attr=edge_attr_dict[("state", "state-task", "task")],
+        )
+
+        if self.ppo_type is PPOType.ACTOR:
+            logits = self.actor_gin(
+                x=(x1, x_dict["actor"]),
+                edge_index=edge_index_dict[("task", "task-actor", "actor")],
+            )
+
+            return logits.view(-1, self.dim_tasks)
+
+        else:
+            value = self.critic_gin(
+                x=(x1, x_dict["critic"]),
+                edge_index=edge_index_dict[("task", "task-critic", "critic")],
+            )
+
+            return value.squeeze(-1)
 
 
 class Gnn(GnnBase):
@@ -16,43 +80,9 @@ class Gnn(GnnBase):
     ):
         super().__init__(*args, **kwargs)
 
-        self.state_mlp = nn.Sequential(
-            nn.Linear(self.dim_encoder * 2, self.dim_encoder),
-            nn.Tanh(),
-            nn.Linear(self.dim_encoder, self.dim_encoder),
-            nn.Tanh(),
-        )
-
-        state_task_mlp = nn.Sequential(
-            nn.Linear(self.dim_encoder, self.dim_encoder),
-            nn.Tanh(),
-            nn.Linear(self.dim_encoder, self.dim_encoder),
-            nn.Tanh(),
-        )
-
-        task_actor_mlp = nn.Sequential(
-            nn.Linear(self.dim_encoder, self.dim_encoder // 2),
-            nn.Tanh(),
-            nn.Linear(self.dim_encoder // 2, 1),
-        )
-
-        task_critic_mlp = nn.Sequential(
-            nn.Linear(self.dim_encoder, self.dim_encoder // 2),
-            nn.Tanh(),
-            nn.Linear(self.dim_encoder // 2, 1),
-        )
-
-        self.state_task_gin = GINEConv(
-            nn=state_task_mlp,
-            edge_dim=2,
-        )
-
-        self.actor_gin = GINConv(
-            nn=task_actor_mlp,
-        )
-
-        self.critic_gin = GINConv(
-            nn=task_critic_mlp,
+        self.state_mlp = StandardMLP(
+            in_dim=self.dim_encoder * 2,
+            out_dim=self.dim_encoder,
         )
 
     def forward(
@@ -61,27 +91,9 @@ class Gnn(GnnBase):
         goal: list[Observation],
     ) -> tuple[torch.Tensor, torch.Tensor]:
         batch: Batch = self.to_batch(obs, goal)
-        x_dict = batch.x_dict
-        edge_index_dict = batch.edge_index_dict
-        edge_attr_dict = batch.edge_attr_dict
-        batch_dict = batch.batch_dict
-
-        x1 = self.state_task_gin(
-            x=(x_dict["state"], x_dict["task"]),
-            edge_index=edge_index_dict[("state", "state-task", "task")],
-            edge_attr=edge_attr_dict[("state", "state-task", "task")],
-        )
-
-        logits = self.actor_gin(
-            x=(x1, x_dict["actor"]),
-            edge_index=edge_index_dict[("task", "task-actor", "actor")],
-        )
-        value = self.critic_gin(
-            x=(x1, x_dict["critic"]),
-            edge_index=edge_index_dict[("task", "task-critic", "critic")],
-        )
-
-        return logits.view(-1, self.dim_tasks), value.squeeze(-1)
+        logits = self.actor(batch)
+        value = self.critic(batch)
+        return logits, value
 
     def to_data(self, obs: Observation, goal: Observation) -> HeteroData:
         goal_dict = self.cnv.tensor_state_dict_values(goal)

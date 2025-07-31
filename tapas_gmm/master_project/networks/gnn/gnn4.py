@@ -25,13 +25,13 @@ class GinReadoutNetwork(nn.Module):
         self.dim_state = dim_state
         self.dim_features = dim_features
 
-        self.state_state_gin = GINEConv(
+        self.state_state_gin = GINConv(
             nn=GinStandardMLP(
                 in_dim=self.dim_features,
                 out_dim=self.dim_features,
                 hidden_dim=self.dim_features,
             ),
-            edge_dim=1,
+            # edge_dim=1,
         )
 
         self.state_task_gin = GINEConv(
@@ -135,9 +135,9 @@ class Gnn(GnnBase):
         data["actor"].x = torch.zeros(self.dim_tasks, 1)
         data["critic"].x = torch.zeros(1, 1)
 
-        data[("goal", "goal-obs", "obs")].edge_index = self.cnv.state_state_full
+        data[("goal", "goal-obs", "obs")].edge_index = self.cnv.state_state_sparse
         data[("obs", "obs-task", "task")].edge_index = self.cnv.state_task_full
-        data[("goal", "goal-obs", "obs")].edge_attr = self.cnv.state_state_attr
+        # data[("goal", "goal-obs", "obs")].edge_attr = self.cnv.state_state_attr
         data[("obs", "obs-task", "task")].edge_attr = self.cnv.state_task_attr_weighted(
             obs
         )

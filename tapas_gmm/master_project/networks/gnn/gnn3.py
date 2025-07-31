@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch_geometric.data import Batch, HeteroData
 from torch_geometric.nn import global_max_pool, global_mean_pool
-from torch_geometric.nn import GINEConv
+from torch_geometric.nn import GINEConv, GINConv
 from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.base import GnnBase, PPOType
 from tapas_gmm.utils.select_gpu import device
@@ -26,12 +26,12 @@ class MeanMaxPoolNetwork(nn.Module):
         self.dim_state = dim_state
         self.dim_features = dim_features
 
-        self.state_gin = GINEConv(
+        self.state_gin = GINConv(
             nn=GinStandardMLP(
                 in_dim=self.dim_features,
                 out_dim=self.dim_state,
             ),
-            edge_dim=1,
+            # edge_dim=1,
         )
 
         self.action_gin = GINEConv(
@@ -55,7 +55,7 @@ class MeanMaxPoolNetwork(nn.Module):
         x1 = self.state_gin(
             x=(x_dict["goal"], x_dict["obs"]),
             edge_index=edge_index_dict[("goal", "goal-obs", "obs")],
-            edge_attr=edge_attr_dict[("goal", "goal-obs", "obs")],
+            # edge_attr=edge_attr_dict[("goal", "goal-obs", "obs")],
         )
         x2 = self.action_gin(
             x=(x1, x_dict["task"]),
@@ -132,8 +132,8 @@ class Gnn(GnnBase):
         data["obs"].x = obs_tensor
         data["task"].x = task_tensor
 
-        data[("goal", "goal-obs", "obs")].edge_index = self.cnv.state_state_full
-        data[("obs", "obs-task", "task")].edge_index = self.cnv.state_task_full
+        data[("goal", "goal-obs", "obs")].edge_index = self.cnv.state_state_sparse
+        # data[("obs", "obs-task", "task")].edge_index = self.cnv.state_task_full
 
         data[("goal", "goal-obs", "obs")].edge_attr = self.cnv.state_state_attr
         data[("obs", "obs-task", "task")].edge_attr = self.cnv.state_task_attr
