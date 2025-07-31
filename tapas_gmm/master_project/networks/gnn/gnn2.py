@@ -4,26 +4,31 @@ from torch_geometric.data import Batch, HeteroData
 from torch_geometric.nn import global_max_pool, global_mean_pool
 from torch_geometric.nn import GINConv
 from tapas_gmm.master_project.observation import Observation
-from tapas_gmm.master_project.networks.base import GnnBase
+from tapas_gmm.master_project.networks.base import GnnBase, PPOType
 from tapas_gmm.utils.select_gpu import device
 from tapas_gmm.master_project.networks.layers.master_modules import (
-    GinStandardMLP,
     GinUnactivatedMLP,
+    GinStandardMLP,
 )
 
 
-class Gnn(GnnBase):
-
+class SimpleMeanMaxPoolNetwork(nn.Module):
     def __init__(
         self,
-        *args,
-        **kwargs,
+        dim_features: int,
+        dim_task: int,
+        dim_state: int,
+        ppo_type: PPOType,
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__()
+        self.ppo_type = ppo_type
+        self.dim_tasks = dim_task
+        self.dim_state = dim_state
+        self.dim_features = dim_features
 
         self.state_gin = GINConv(
             nn=GinStandardMLP(
-                in_dim=self.dim_encoder,
+                in_dim=self.dim_features,
                 out_dim=self.dim_state,
             ),
         )
@@ -38,40 +43,68 @@ class Gnn(GnnBase):
             nn.Linear(8, 1),
         )
 
-    def forward(
-        self,
-        obs: list[Observation],
-        goal: list[Observation],
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        batch: Batch = self.to_batch(obs, goal)
+    def forward(self, batch: Batch) -> torch.Tensor:
         x_dict = batch.x_dict
         edge_index_dict = batch.edge_index_dict
         batch_dict = batch.batch_dict
         task_batch_idx = batch_dict["task"]  # same length as total_task_nodes
 
         x1 = self.state_gin(
-            (x_dict["goal"], x_dict["obs"]),
+            x=(x_dict["goal"], x_dict["obs"]),
             edge_index=edge_index_dict[("goal", "goal-obs", "obs")],
         )
-
         x2 = self.action_gin(
-            (x1, x_dict["task"]),
+            x=(x1, x_dict["task"]),
             edge_index=edge_index_dict[("obs", "obs-task", "task")],
         )
 
-        max_pool = global_max_pool(x2, task_batch_idx)  # [B, D]
-        mean_pool = global_mean_pool(x2, task_batch_idx)  # [B, D]
-        # reduce to a (B, ‑) vector for your critic head:
-        pooled = torch.cat(
-            [
-                max_pool.max(dim=1).values.unsqueeze(-1),
-                mean_pool.mean(dim=1).unsqueeze(-1),
-            ],
-            dim=1,
-        )  # [B,2]
+        if self.ppo_type is PPOType.ACTOR:
+            return x2.view(-1, self.dim_tasks)  # [B, dim_tasks]
+        else:
+            max_pool = global_max_pool(x2, task_batch_idx)  # [B, D]
+            mean_pool = global_mean_pool(x2, task_batch_idx)  # [B, D]
+            # reduce to a (B, ‑) vector for your critic head:
+            pooled = torch.cat(
+                [
+                    max_pool.max(dim=1).values.unsqueeze(-1),
+                    mean_pool.mean(dim=1).unsqueeze(-1),
+                ],
+                dim=1,
+            )  # [B,2]
 
-        value = self.critic_head(pooled).squeeze(-1)  # [B]
-        logits = x2.view(-1, self.dim_tasks)  # [B, dim_tasks]
+            return self.critic_head(pooled).squeeze(-1)  # [B]
+
+
+class Gnn(GnnBase):
+
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+        self.actor = SimpleMeanMaxPoolNetwork(
+            dim_features=self.dim_encoder,
+            dim_state=self.dim_state,
+            dim_task=self.dim_tasks,
+            ppo_type=PPOType.ACTOR,
+        )
+        self.critic = SimpleMeanMaxPoolNetwork(
+            dim_features=self.dim_encoder,
+            dim_state=self.dim_state,
+            dim_task=self.dim_tasks,
+            ppo_type=PPOType.CRITIC,
+        )
+
+    def forward(
+        self,
+        obs: list[Observation],
+        goal: list[Observation],
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        batch: Batch = self.to_batch(obs, goal)
+        logits = self.actor(batch)
+        value = self.critic(batch)
         return logits, value
 
     def to_data(self, obs: Observation, goal: Observation) -> HeteroData:

@@ -108,9 +108,9 @@ class Gnn(GnnBase):
         goal: list[Observation],
     ) -> tuple[torch.Tensor, torch.Tensor]:
         batch: Batch = self.to_batch(obs, goal)
-        probs = self.actor(batch)
+        logits = self.actor(batch)
         value = self.critic(batch)
-        return probs, value
+        return logits, value
 
     def to_data(self, obs: Observation, goal: Observation) -> HeteroData:
         obs_dict = self.cnv.tensor_state_dict_values(obs)

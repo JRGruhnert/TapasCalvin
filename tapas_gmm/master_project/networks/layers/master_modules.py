@@ -19,7 +19,6 @@ class StandardMLP(nn.Sequential):
 
 
 class UnactivatedMLP(nn.Sequential):
-
     def __init__(
         self,
         in_dim: int,

@@ -1,56 +1,57 @@
 import torch
+from torch import nn
 from torch_geometric.data import Batch, HeteroData
 from torch_geometric.nn import GINConv, GINEConv
 from tapas_gmm.master_project.observation import Observation
-from tapas_gmm.master_project.networks.base import GnnBase
+from tapas_gmm.master_project.networks.base import GnnBase, PPOType
 from tapas_gmm.utils.select_gpu import device
 from tapas_gmm.master_project.networks.layers.master_modules import (
-    GinUnactivatedMLP,
     GinStandardMLP,
+    UnactivatedMLP,
 )
 
 
-class Gnn(GnnBase):
-
+class GinReadoutNetwork(nn.Module):
     def __init__(
         self,
-        *args,
-        **kwargs,
+        dim_features: int,
+        dim_task: int,
+        dim_state: int,
+        ppo_type: PPOType,
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__()
+        self.ppo_type = ppo_type
+        self.dim_tasks = dim_task
+        self.dim_state = dim_state
+        self.dim_features = dim_features
 
         self.state_state_gin = GINEConv(
             nn=GinStandardMLP(
-                in_dim=self.dim_encoder,
-                out_dim=self.dim_encoder,
-                hidden_dim=self.dim_encoder,
+                in_dim=self.dim_features,
+                out_dim=self.dim_features,
+                hidden_dim=self.dim_features,
             ),
             edge_dim=1,
         )
 
         self.state_task_gin = GINEConv(
             nn=GinStandardMLP(
-                in_dim=self.dim_encoder,
-                out_dim=self.dim_encoder,
-                hidden_dim=self.dim_encoder,
+                in_dim=self.dim_features,
+                out_dim=self.dim_features,
+                hidden_dim=self.dim_features,
             ),
             edge_dim=2,
         )
 
         self.actor_gin = GINConv(
-            nn=GinUnactivatedMLP(self.dim_encoder),
+            nn=UnactivatedMLP(self.dim_features, 1),
         )
 
         self.critic_gin = GINConv(
-            nn=GinUnactivatedMLP(self.dim_encoder),
+            nn=UnactivatedMLP(self.dim_features, 1),
         )
 
-    def forward(
-        self,
-        obs: list[Observation],
-        goal: list[Observation],
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        batch: Batch = self.to_batch(obs, goal)
+    def forward(self, batch: Batch) -> torch.Tensor:
         x_dict = batch.x_dict
         edge_index_dict = batch.edge_index_dict
         edge_attr_dict = batch.edge_attr_dict
@@ -66,15 +67,52 @@ class Gnn(GnnBase):
             edge_attr=edge_attr_dict[("obs", "obs-task", "task")],
         )
 
-        logits = self.actor_gin(
-            x=(x2, x_dict["actor"]),
-            edge_index=edge_index_dict[("task", "task-actor", "actor")],
+        if self.ppo_type is PPOType.ACTOR:
+
+            logits = self.actor_gin(
+                x=(x2, x_dict["actor"]),
+                edge_index=edge_index_dict[("task", "task-actor", "actor")],
+            )
+            return logits.view(-1, self.dim_tasks)
+        else:
+            value = self.critic_gin(
+                x=(x2, x_dict["critic"]),
+                edge_index=edge_index_dict[("task", "task-critic", "critic")],
+            )
+            return value.squeeze(-1)
+
+
+class Gnn(GnnBase):
+
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+        self.actor = GinReadoutNetwork(
+            dim_features=self.dim_encoder,
+            dim_state=self.dim_state,
+            dim_task=self.dim_tasks,
+            ppo_type=PPOType.ACTOR,
         )
-        value = self.critic_gin(
-            x=(x2, x_dict["critic"]),
-            edge_index=edge_index_dict[("task", "task-critic", "critic")],
+        self.critic = GinReadoutNetwork(
+            dim_features=self.dim_encoder,
+            dim_state=self.dim_state,
+            dim_task=self.dim_tasks,
+            ppo_type=PPOType.CRITIC,
         )
-        return logits.view(-1, self.dim_tasks), value.squeeze(-1)
+
+    def forward(
+        self,
+        obs: list[Observation],
+        goal: list[Observation],
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        batch: Batch = self.to_batch(obs, goal)
+        logits = self.actor(batch)
+        value = self.critic(batch)
+        return logits, value
 
     def to_data(self, obs: Observation, goal: Observation) -> HeteroData:
         goal_dict = self.cnv.tensor_state_dict_values(goal)
