@@ -20,17 +20,17 @@ class Baseline(BaselineBase):
         h_dim2 = h_dim1 // 2
         self.actor = nn.Sequential(
             nn.Linear(self.combined_feature_dim, h_dim1),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Linear(h_dim1, h_dim2),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Linear(h_dim2, self.dim_tasks),
         )
         # critic
         self.critic = nn.Sequential(
             nn.Linear(self.combined_feature_dim, h_dim1),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Linear(h_dim1, h_dim2),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Linear(h_dim2, 1),
         )
 

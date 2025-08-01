@@ -139,7 +139,7 @@ class Agent:
         self.waiting_feedback: bool = False
         self.current_epoch: int = 0
         # For early stopping
-        self.best_reward = 0
+        self.best_success = 0
         self.epochs_since_improvement = 0
 
         ### Directory path for the agent (specified by name)
@@ -225,9 +225,11 @@ class Agent:
             )
 
         ### Check for early stop (Plateau reached)
-        if total_reward > self.best_reward + 1e-2:  # small threshold
-            self.best_reward = total_reward
+        if success_rate > self.best_success + 1e-2:  # small threshold
+            self.best_success = success_rate
             self.epochs_since_improvement = 0
+            # Aditional save the new highscore before new learning.
+            self.save("best", verbose)
         else:
             self.epochs_since_improvement += 1
 
@@ -367,49 +369,40 @@ class Agent:
         ### Continue Training otherwise
         return False
 
-    def save(self, verbose: bool = False):
+    def save(self, tag: str = None, verbose: bool = False):
         """
         Save the model to the specified path.
         """
         if verbose:
             print("Saving Checkpoint!")
-        checkpoint_path = self.directory_path + "model_cp_epoch_{}.pth".format(
-            self.current_epoch,
+        if tag is None:
+            checkpoint_path = self.directory_path + "model_cp_epoch_{}.pth".format(
+                self.current_epoch,
+            )
+        else:
+            checkpoint_path = self.directory_path + "model_cp_{}.pth".format(
+                tag,
+            )
+        # torch.save(self.policy_old.state_dict(), checkpoint_path)
+        torch.save(
+            {
+                "model_state": self.policy_old.state_dict(),
+                "optimizer_state": self.optimizer.state_dict(),
+                "epoch": self.current_epoch,
+            },
+            checkpoint_path,
         )
-        torch.save(self.policy_old.state_dict(), checkpoint_path)
 
-    def load(self, external_path: str = None):
+    def load(self, checkpoint_path: str, keep_epoch: bool):
         """
         Load the model from the specified path.
         """
-        if external_path is not None:
-            # Load from provided path
-            checkpoint_path = external_path
-            match = re.search(r"epoch_(\d+)", os.path.basename(checkpoint_path))
-            self.current_epoch = int(match.group(1)) if match else 0
-        else:
-            # Search for the latest checkpoint in the directory
-            files = os.listdir(self.directory_path)
-            checkpoints = [
-                f for f in files if re.match(r"model_cp_epoch_(\d+)\.pth$", f)
-            ]
-            if not checkpoints:
-                raise FileNotFoundError("No checkpoint found in directory.")
-
-            # Get highest-numbered checkpoint
-            latest_checkpoint = max(
-                checkpoints, key=lambda f: int(re.search(r"epoch_(\d+)", f).group(1))
-            )
-            self.current_epoch = int(
-                re.search(r"epoch_(\d+)", latest_checkpoint).group(1)
-            )
-            checkpoint_path = os.path.join(self.directory_path, latest_checkpoint)
-
         print(f"Loading checkpoint from {checkpoint_path} (epoch {self.current_epoch})")
 
-        self.policy_old.load_state_dict(
-            torch.load(checkpoint_path, map_location=lambda storage, _: storage)
-        )
-        self.policy_new.load_state_dict(
-            torch.load(checkpoint_path, map_location=lambda storage, _: storage)
-        )
+        checkpoint = torch.load(checkpoint_path, map_location="cpu")
+
+        self.policy_old.load_state_dict(checkpoint["model_state"])
+        self.policy_new.load_state_dict(checkpoint["model_state"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state"])
+        if keep_epoch:
+            self.current_epoch = checkpoint["epoch"]  # redundant, but explicit

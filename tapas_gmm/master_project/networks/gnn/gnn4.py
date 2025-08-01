@@ -5,7 +5,7 @@ from torch_geometric.nn import GINConv, GINEConv
 from tapas_gmm.master_project.observation import Observation
 from tapas_gmm.master_project.networks.base import GnnBase, PPOType
 from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.master_project.networks.layers.master_modules import (
+from tapas_gmm.master_project.networks.layers.mlp import (
     GinStandardMLP,
     UnactivatedMLP,
 )

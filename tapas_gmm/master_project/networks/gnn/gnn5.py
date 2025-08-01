@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch_geometric.data import Batch, HeteroData
 from torch_geometric.nn import GINConv, GINEConv
-from tapas_gmm.master_project.networks.layers.master_modules import (
+from tapas_gmm.master_project.networks.layers.mlp import (
     GinStandardMLP,
     StandardMLP,
     UnactivatedMLP,
