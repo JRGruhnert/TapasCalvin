@@ -85,6 +85,19 @@ class Gnn(GnnBase):
             out_dim=self.dim_encoder,
         )
 
+        self.actor = CombinedGoalObsNetwork(
+            dim_features=self.dim_encoder,
+            dim_state=self.dim_state,
+            dim_task=self.dim_tasks,
+            ppo_type=PPOType.ACTOR,
+        )
+        self.critic = CombinedGoalObsNetwork(
+            dim_features=self.dim_encoder,
+            dim_state=self.dim_state,
+            dim_task=self.dim_tasks,
+            ppo_type=PPOType.CRITIC,
+        )
+
     def forward(
         self,
         obs: list[Observation],

@@ -59,7 +59,7 @@ class GinReadoutNetwork(nn.Module):
         x1 = self.state_state_gin(
             x=(x_dict["goal"], x_dict["obs"]),
             edge_index=edge_index_dict[("goal", "goal-obs", "obs")],
-            edge_attr=edge_attr_dict[("goal", "goal-obs", "obs")],
+            # edge_attr=edge_attr_dict[("goal", "goal-obs", "obs")],
         )
         x2 = self.state_task_gin(
             x=(x1, x_dict["task"]),
