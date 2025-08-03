@@ -29,12 +29,6 @@ class RewardMode(Enum):
     ONOFF = 2
 
 
-class SuccessMode(Enum):
-    AREA = 0
-    POSITION = 2
-    PRECISE = 3
-
-
 class TaskSpace(Enum):
     SMALL = 0
     ALL = 1
@@ -47,16 +41,23 @@ class StateSpace(Enum):
 
 
 class StateType(Enum):
-    Pose = 0
-    Transform = 1
-    Quaternion = 2
-    Scalar = 3
+    Transform = 0
+    Quaternion = 1
+    Scalar = 2
+
+
+class StateSuccess(Enum):
+    AREA = 0  # Has to be in area
+    PRECISE = 1  # Has to be precise (with threshold)
+    IGNORE = 2  # Is not used in Success calculation
+    # (mostly quaternions cause i am not able to make models that precise)
 
 
 @dataclass
 class StateInfo:
     identifier: str
     type: StateType
+    success: StateSuccess = StateSuccess.IGNORE
     space: StateSpace = StateSpace.UNUSED
     min: float | np.ndarray = np.array([-1.0, -1.0, -1.0])
     max: float | np.ndarray = np.array([1.0, 1.0, 1.0])
@@ -94,113 +95,65 @@ class State(Enum):
 
         return list(cls)[index]
 
-    @classmethod
-    def from_pose_string(cls, name: str) -> list:
-        """Return both euler and quat enum members for a pose string"""
-        if not name.endswith("_pose"):
-            raise ValueError(f"Expected string ending with '_pose', got: {name}")
-
-        # Generate both candidate names
-        base_name = name.rsplit("_", 1)[0]  # Remove '_pose' suffix
-        euler_name = f"{base_name}_euler"
-        quat_name = f"{base_name}_quat"
-
-        # Find matching enums for both
-        results = []
-        for candidate in [euler_name, quat_name]:
-            for member in cls:
-                if member.value.identifier == candidate:
-                    results.append(member)
-                    break
-        return results
-
-    EE_Pose = StateInfo(
-        identifier="ee_pose",
-        type=StateType.Pose,
-    )
-    Slide_Pose = StateInfo(
-        identifier="base__slide_pose",
-        type=StateType.Pose,
-    )
-    Drawer_Pose = StateInfo(
-        identifier="base__drawer_pose",
-        type=StateType.Pose,
-    )
-    Button_Pose = StateInfo(
-        identifier="base__button_pose",
-        type=StateType.Pose,
-    )
-    Switch_Pose = StateInfo(
-        identifier="base__switch_pose",
-        type=StateType.Pose,
-    )
-    Lightbulb_Pose = StateInfo(
-        identifier="lightbulb_pose",
-        type=StateType.Pose,
-    )
-    Led_Pose = StateInfo(
-        identifier="led_pose",
-        type=StateType.Pose,
-    )
-    Red_Pose = StateInfo(
-        identifier="block_red_pose",
-        type=StateType.Pose,
-    )
-    Blue_Pose = StateInfo(
-        identifier="block_blue_pose",
-        type=StateType.Pose,
-    )
-    Pink_Pose = StateInfo(
-        identifier="block_pink_pose",
-        type=StateType.Pose,
-    )
     EE_Transform = StateInfo(
         identifier="ee_euler",
         type=StateType.Transform,
         space=StateSpace.SMALL,
+        success=StateSuccess.PRECISE,
     )
     Slide_Transform = StateInfo(
         identifier="base__slide_euler",
         type=StateType.Transform,
         space=StateSpace.SMALL,
+        success=StateSuccess.PRECISE,
     )
     Drawer_Transform = StateInfo(
         identifier="base__drawer_euler",
         type=StateType.Transform,
         space=StateSpace.SMALL,
+        success=StateSuccess.PRECISE,
     )
     Button_Transform = StateInfo(
         identifier="base__button_euler",
         type=StateType.Transform,
         space=StateSpace.SMALL,
+        success=StateSuccess.PRECISE,
     )
     Switch_Transform = StateInfo(
         identifier="base__switch_euler",
         type=StateType.Transform,
+        # UNUSED CAUSE NOT ABLE TO RECORD
+        # Not relevant cause i already have enough tasks
     )
     Lightbulb_Transform = StateInfo(
         identifier="lightbulb_euler",
         type=StateType.Transform,
+        # UNUSED CAUSE NOT ABLE TO RECORD
+        # Not relevant cause i already have enough tasks
     )
     Led_Transform = StateInfo(
         identifier="led_euler",
         type=StateType.Transform,
         space=StateSpace.SMALL,
+        success=StateSuccess.PRECISE,
     )
     Red_Transform = StateInfo(
         identifier="block_red_euler",
         type=StateType.Transform,
         space=StateSpace.ALL,
+        success=StateSuccess.AREA,
     )
     Blue_Transform = StateInfo(
         identifier="block_blue_euler",
         type=StateType.Transform,
         space=StateSpace.ALL,
+        success=StateSuccess.AREA,
     )
     Pink_Transform = StateInfo(
         identifier="block_pink_euler",
         type=StateType.Transform,
         space=StateSpace.ALL,
+        success=StateSuccess.AREA,
     )
     EE_Quat = StateInfo(
         identifier="ee_quat",
@@ -210,41 +163,49 @@ class State(Enum):
     Slide_Quat = StateInfo(
         identifier="base__slide_quat",
         type=StateType.Quaternion,
+        space=StateSpace.ALL,
     )
     Drawer_Quat = StateInfo(
         identifier="base__drawer_quat",
         type=StateType.Quaternion,
+        space=StateSpace.ALL,
     )
     Button_Quat = StateInfo(
         identifier="base__button_quat",
         type=StateType.Quaternion,
+        space=StateSpace.ALL,
     )
     Switch_Quat = StateInfo(
         identifier="base__switch_quat",
         type=StateType.Quaternion,
+        # UNUSED CAUSE NOT ABLE TO RECORD
+        # Not relevant cause i already have enough tasks
     )
     Lightbulb_Quat = StateInfo(
         identifier="lightbulb_quat",
         type=StateType.Quaternion,
+        # UNUSED CAUSE NOT ABLE TO RECORD
+        # Not relevant cause i already have enough tasks
     )
     Led_Quat = StateInfo(
         identifier="led_quat",
         type=StateType.Quaternion,
+        space=StateSpace.SMALL,
     )
     Red_Quat = StateInfo(
         identifier="block_red_quat",
         type=StateType.Quaternion,
-        # state_space=StateSpace.DYNAMIC,
+        space=StateSpace.ALL,
     )
     Blue_Quat = StateInfo(
         identifier="block_blue_quat",
         type=StateType.Quaternion,
-        # state_space=StateSpace.DYNAMIC,
+        space=StateSpace.ALL,
     )
     Pink_Quat = StateInfo(
         identifier="block_pink_quat",
         type=StateType.Quaternion,
-        # state_space=StateSpace.DYNAMIC,
+        space=StateSpace.ALL,
     )
     EE_State = StateInfo(
         identifier="ee_state",
@@ -252,6 +213,7 @@ class State(Enum):
         min=0.0,
         max=1.0,
         space=StateSpace.SMALL,
+        success=StateSuccess.PRECISE,
     )  # Gripper
     Slide_State = StateInfo(
         identifier="base__slide",
@@ -259,6 +221,7 @@ class State(Enum):
         min=0.0,
         max=0.28,
         space=StateSpace.SMALL,
+        success=StateSuccess.PRECISE,
     )
     Drawer_State = StateInfo(
         identifier="base__drawer",
@@ -266,6 +229,7 @@ class State(Enum):
         min=0.0,
         max=0.22,
         space=StateSpace.SMALL,
+        success=StateSuccess.PRECISE,
     )
     Button_State = StateInfo(
         identifier="base__button",
@@ -273,18 +237,23 @@ class State(Enum):
         min=0.0,
         max=1.0,
         space=StateSpace.SMALL,
+        success=StateSuccess.PRECISE,
     )
     Switch_State = StateInfo(
         identifier="base__switch",
         type=StateType.Scalar,
         min=0.0,
         max=0.088,
+        # UNUSED CAUSE NOT ABLE TO RECORD
+        # Not relevant cause i already have enough tasks
     )
     Lightbulb_State = StateInfo(
         identifier="lightbulb",
         type=StateType.Scalar,
         min=0.0,
         max=1.0,
+        # UNUSED CAUSE NOT ABLE TO RECORD
+        # Not relevant cause i already have enough tasks
     )
     Led_State = StateInfo(
         identifier="led",
@@ -292,27 +261,28 @@ class State(Enum):
         min=0.0,
         max=1.0,
         space=StateSpace.SMALL,
+        success=StateSuccess.PRECISE,
     )
     Red_State = StateInfo(
         identifier="block_red",
         type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        # state_space=StateSpace.DYNAMIC,
+        # UNUSED CAUSE MEANINGLESS STATE
     )
     Blue_State = StateInfo(
         identifier="block_blue",
         type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        # state_space=StateSpace.DYNAMIC,
+        # UNUSED CAUSE MEANINGLESS STATE
     )
     Pink_State = StateInfo(
         identifier="block_pink",
         type=StateType.Scalar,
         min=0.0,
         max=1.0,
-        # state_space=StateSpace.DYNAMIC,
+        # UNUSED CAUSE MEANINGLESS STATE
     )
 
 
@@ -339,24 +309,6 @@ class Task(Enum):
     @classmethod
     def get_enum_by_index(enum_cls, index: int):
         return list(enum_cls)[index]
-
-    @classmethod
-    def count_by_action_space(cls, action_space: TaskSpace) -> int:
-        count = 0
-        for member in cls:
-            model_info = member.value
-            if model_info.space == action_space:
-                count += 1
-        return count
-
-    @classmethod
-    def get_tasks_in_task_space(cls, task_space: TaskSpace) -> List["Task"]:
-        tasks = []
-        for member in cls:
-            model_info = member.value
-            if model_info.space == task_space:
-                tasks.append(member)
-        return tasks
 
     DrawerDoClose = TaskInfo(
         precondition={
@@ -477,6 +429,149 @@ class Task(Enum):
             State.EE_State: State.EE_State.value.max,
             State.Slide_State: State.Slide_State.value.max,
         },
+    )
+    # Cut
+    BlockTableRedGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    BlockTablePinkGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    BlockTableBlueGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockTableRedGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockTablePinkGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockTableBlueGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockTableAllMoveTo = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    # Cut
+    BlockDrawerRedGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+            State.Drawer_State: State.Drawer_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    BlockDrawerPinkGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+            State.Drawer_State: State.Drawer_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    BlockDrawerBlueGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+            State.Drawer_State: State.Drawer_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockDrawerRedGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+            State.Drawer_State: State.Drawer_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockDrawerPinkGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+            State.Drawer_State: State.Drawer_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockDrawerBlueGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+            State.Drawer_State: State.Drawer_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockDrawerAllMoveTo = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+            State.Drawer_State: State.Drawer_State.value.max,
+        },
+        space=TaskSpace.ALL,
+    )
+    # Cut
+    BlockCabinetRedGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+            State.Slide_State: State.Slide_State.value.min,
+        },
+        space=TaskSpace.ALL,
+    )
+    BlockCabinetPinkGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+            State.Slide_State: State.Slide_State.value.min,
+        },
+        space=TaskSpace.ALL,
+    )
+    BlockCabinetBlueGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+            State.Slide_State: State.Slide_State.value.min,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockCabinetRedGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+            State.Slide_State: State.Slide_State.value.min,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockCabinetPinkGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+            State.Slide_State: State.Slide_State.value.min,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockCabinetBlueGrab = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+            State.Slide_State: State.Slide_State.value.min,
+        },
+        space=TaskSpace.ALL,
+    )
+    ReversedBlockCabinetAllMoveTo = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.max,
+            State.Slide_State: State.Slide_State.value.min,
+        },
+        space=TaskSpace.ALL,
     )
 
 

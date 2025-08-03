@@ -1,74 +1,68 @@
-from tqdm import tqdm
-from typing import Optional, Tuple
+from dataclasses import dataclass
+from datetime import datetime
+from omegaconf import OmegaConf, SCMode
 
-from tapas_gmm.env.calvin import Calvin
-from tapas_gmm.policy.models.master_project.hrl_enums import TaskModel, State
-from tapas_gmm.policy.policy import Policy
-from tapas_gmm.utils.keyboard_observer import KeyboardObserver
-from tapas_gmm.viz.live_keypoint import LiveKeypoints
+from tapas_gmm.master_project.environment import MasterEnv, MasterEnvConfig
+from tapas_gmm.master_project.agent import Agent, AgentConfig
+from tapas_gmm.master_project.networks import NetworkType
+from tapas_gmm.utils.argparse import parse_and_build_config
 
 
-# edge list construction
-# - states manual (cause not recorded)
-# - tapas model with index list
-# - need to load each model and then take index list
-def run_episode_hrl(
-    env: Calvin,
-    keyboard_obs: Optional[KeyboardObserver],
-    parent_policy,  # Your GNN-based HRL policy
-    child_policies: list[Policy],  # TAPAS sub-policies
-    goal_state,
-    horizon: Optional[int],
-    keypoint_viz: Optional[LiveKeypoints],
-    obs_dropout: Optional[float],
-    fragment_len: int,
-    disturbe_at_step: Optional[int],
-    hold_until_step: Optional[int],
-) -> Tuple[float, int]:
-    episode_reward = 0.0
-    obs, _, done, _ = env.reset()
-    obs = obs.to_rlbench_format()
+@dataclass
+class MasterConfig:
+    tag: str
+    nt: NetworkType
+    agent: AgentConfig
+    env: MasterEnvConfig
+    verbose: bool = True
 
-    tapas_model_dict = {}
-    task_parameter_dict = {}
-    step_no = 0
-    pbar = tqdm(total=horizon or 1000)
 
-    while not done and step_no < (horizon or 1000):
-        # --- GNN parent policy selects child TAPAS model based on current and goal states
-        child_index = parent_policy.predict(
-            obs, goal_state
-        )  # Returns index or key to child policy
-        selected_policy = child_policies[child_index]
+def train_agent(config: MasterConfig):
+    # Initialize the environment and agent
+    env = MasterEnv(config.env)
+    tasks, states, tps = env.publish()
+    agent = Agent(config.agent, config.nt, config.tag, tasks, states, tps)
 
-        selected_policy.reset_episode(env=env)
-        child_done = False
+    # track total training time
+    start_time = datetime.now().replace(microsecond=0)
+    batch_start_time = datetime.now().replace(microsecond=0)
+    stop_training = False
+    while not stop_training:  # Training loop
+        terminal = False
+        batch_rdy = False
+        obs, goal = env.reset()
+        while not terminal and not batch_rdy:
+            # TODO ask in console about next task. preferable via index with name of task
+            for i, task in enumerate(tasks):
+                print(f"{i}: {task.name}")
+            choice = input("Enter the Task id: ")
+            task_id = int(choice)
+            reward, terminal, obs = env.step(task_id, verbose=True)
+    env.close()
 
-        while not child_done and not done:
-            action, _ = selected_policy.predict(obs)
+    # print total training time
+    print(
+        "============================================================================================"
+    )
+    end_time = datetime.now().replace(microsecond=0)
+    print("Started training at: ", start_time)
+    print("Finished training at: ", end_time)
+    print("Total training time: ", end_time - start_time)
+    print(
+        "============================================================================================"
+    )
 
-            for _ in range(selected_policy.repeat_steps):
-                obs, reward, done, _ = env.step(action)
-                obs = obs.to_rlbench_format()
-                episode_reward += reward
-                step_no += 1
-                pbar.update(1)
 
-                if keypoint_viz:
-                    keypoint_viz.update_from_info({}, obs)
-                    keypoint_viz.propose_update_visualization({})
+def entry_point():
 
-                if horizon and step_no >= horizon:
-                    done = True
-                    break
+    _, dict_config = parse_and_build_config(data_load=False, need_task=False)
 
-            child_done = selected_policy.has_finished(obs)
+    config = OmegaConf.to_container(
+        dict_config, resolve=True, structured_config_mode=SCMode.INSTANTIATE
+    )
 
-        if keyboard_obs:
-            if keyboard_obs.success:
-                episode_reward += 1.0
-                done = True
-            elif keyboard_obs.reset_button:
-                done = True
+    train_agent(config)
 
-    return episode_reward, step_no + 1
+
+if __name__ == "__main__":
+    entry_point()

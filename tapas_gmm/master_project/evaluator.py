@@ -7,8 +7,8 @@ from tapas_gmm.master_project.converter import Converter
 from tapas_gmm.master_project.definitions import (
     RewardMode,
     State,
+    StateSuccess,
     StateType,
-    SuccessMode,
     Task,
 )
 from tapas_gmm.master_project.observation import Observation
@@ -18,7 +18,6 @@ from tapas_gmm.master_project.observation import Observation
 class EvaluatorConfig:
     allowed_steps: int = 18
     reward_mode: RewardMode = RewardMode.SPARSE
-    success_mode: SuccessMode = SuccessMode.AREA
     max_reward: float = 100.0
     min_reward: float = 0.0
     success_threshold: Dict[StateType, float] = field(
@@ -26,13 +25,6 @@ class EvaluatorConfig:
             StateType.Transform: 0.05,
             StateType.Quaternion: 0.1,
             StateType.Scalar: 0.05,
-        }
-    )
-    reward_scale: Dict[StateType, float] = field(
-        default_factory=lambda: {
-            StateType.Transform: 2.0,
-            StateType.Quaternion: 1.0,
-            StateType.Scalar: 2.0,
         }
     )
 
@@ -48,10 +40,6 @@ class Evaluator:
         self.steps_left = config.allowed_steps
         self.states = states
         self.tasks = tasks
-        total = sum(config.reward_scale.values())
-        self.normalized_reward_scale = {
-            key: value / total for key, value in config.reward_scale.items()
-        }
         self.converter = Converter(states=self.states, tasks=self.tasks)
         self.surfaces = {
             "table": [[0.0, -0.15, 0.46], [0.30, -0.03, 0.52]],
@@ -147,34 +135,28 @@ class Evaluator:
         goal_reached = True
         for state in self.states:
             state_type = state.value.type
-            if self.config.success_mode is SuccessMode.AREA:
-                if (
-                    state_type is StateType.Transform
-                    and state is not State.EE_Transform
-                ):
-                    goal_value = self.goal.states[state]
-                    goal_surface = self.check_surface(goal_value)
-                    next_value = obs.states[state]
-                    next_surface = self.check_surface(next_value)
-                    if goal_surface != next_surface:
-                        goal_reached = False
-                        break
-                elif state_type is StateType.Quaternion:
-                    pass  # Ignores Rotation
-                else:  # Scalars and EE States
-                    if dist[state] > self.config.success_threshold[state_type]:
-                        goal_reached = False
-                        break
-            elif self.config.success_mode is SuccessMode.POSITION:
-                if state_type is StateType.Quaternion:
-                    pass  # Ignores Rotation
-                else:  # Scalars and EE States
-                    if dist[state] > self.config.success_threshold[state_type]:
-                        goal_reached = False
-                        break
+            if state.value.success == StateSuccess.AREA:
+                if state_type is StateType.Quaternion or state_type is StateType.Scalar:
+                    raise ValueError(
+                        "Quaternion and Scalar States don't support area based evaluation."
+                    )
+                goal_value = self.goal.states[state]
+                goal_surface = self.check_surface(goal_value)
+                next_value = obs.states[state]
+                next_surface = self.check_surface(next_value)
+                if goal_surface != next_surface:
+                    goal_reached = False
+                    break
+            elif state.value.success == StateSuccess.PRECISE:
+                if dist[state] > self.config.success_threshold[state_type]:
+                    goal_reached = False
+                    break
+            elif state.value.success == StateSuccess.IGNORE:
+                pass  # Probably only Quaternions cause of Model recording
+                # State is not evaluated
             else:
                 raise NotImplementedError(
-                    f"Success Mode {self.config.success_mode.name} is not implemented yet."
+                    f"State Success type: {state.value.success} is not implemented."
                 )
         return goal_reached
 

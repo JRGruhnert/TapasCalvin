@@ -79,7 +79,9 @@ class MasterEnv:
         self.evaluator.reset(self.obs, goal)
         return self.obs, goal
 
-    def step(self, task_id: int) -> tuple[float, bool, Observation]:
+    def step(
+        self, task_id: int, verbose: bool = False
+    ) -> tuple[float, bool, Observation]:
         task = Task.get_enum_by_index(task_id)
         viz_dict = {}  # TODO: Make available
         # Loads Tapas Policy for that Task (batch predict config)
@@ -93,6 +95,8 @@ class MasterEnv:
                 self.calvin_obs, _, _, _ = self.env.step(
                     ee_action, self.config.debug_vis, viz_dict
                 )
+                if verbose:
+                    print(self.calvin_obs.ee_pose)
                 self.obs = Observation(self.calvin_obs)
         except FloatingPointError:
             # At some point the model crashes.

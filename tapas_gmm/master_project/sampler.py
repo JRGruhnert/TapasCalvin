@@ -72,9 +72,24 @@ class Sampler:
         object_poses = list(
             itertools.chain(
                 *[
-                    scene_dict.get(State.Red_Pose, object_poses[0]),
-                    scene_dict.get(State.Blue_Pose, object_poses[1]),
-                    scene_dict.get(State.Pink_Pose, object_poses[2]),
+                    np.concatenate(
+                        [
+                            scene_dict.get(State.Red_Transform, object_poses[0][:3]),
+                            scene_dict.get(State.Red_Quat, object_poses[0][-4:]),
+                        ],
+                    ),
+                    np.concatenate(
+                        [
+                            scene_dict.get(State.Blue_Transform, object_poses[1][:3]),
+                            scene_dict.get(State.Blue_Quat, object_poses[1][-4:]),
+                        ],
+                    ),
+                    np.concatenate(
+                        [
+                            scene_dict.get(State.Pink_Transform, object_poses[2][:3]),
+                            scene_dict.get(State.Pink_Quat, object_poses[2][-4:]),
+                        ],
+                    ),
                 ]
             )
         )
@@ -91,14 +106,14 @@ class Sampler:
                     scene_dict[state] = self.sample_from_values(
                         [state.value.min, state.value.max]
                     )
-                if (
+                elif (
                     state.value.type is StateType.Transform
                     or state.value.type is StateType.Quaternion
                 ):
                     pass
                     # raise NotImplementedError("Not Supported.")
-                if state.value.type is StateType.Pose:
-                    raise NotImplementedError("Not Implemented so far.")
+                else:
+                    raise NotImplementedError("StateType sampling not implemented.")
 
         # Hack to make light states depending on button and switch states
         # if State.Switch_State in scene_dict:

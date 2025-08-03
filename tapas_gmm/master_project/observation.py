@@ -118,9 +118,9 @@ class Observation:
         return self._states
 
 
-def tapas_format(obs: CalvinObservation, task: Task) -> SceneObservation:  # type: ignore
+def tapas_format(obs: CalvinObservation, task: Task = None) -> SceneObservation:  # type: ignore
     # This is a hack for changing the ee_pose to the origin for reversed models
     # It does nothing for standard models
-    if task.value.reversed:
+    if task is not None and task.value.reversed:
         obs.ee_pose = _origin_ee_tp_pose
     return _to_rlbench_format(obs)

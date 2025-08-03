@@ -348,18 +348,12 @@ def entry_point():
 
     _, dict_config = parse_and_build_config(data_load=False, need_task=False)
 
-    dict_config.agent.name = dict_config.tag
-
-    config = OmegaConf.to_container(
-        dict_config, resolve=True, structured_config_mode=SCMode.INSTANTIATE
-    )
-
-    default = f"results/{dict_config.agent.name}/"
+    default = f"results/{dict_config.nt.name}/{dict_config.tag.name}/"
     analyzer = RolloutAnalyzer(default)
     analyzer.load_all_batches()
     analyzer.print_analysis()
-    analyzer.plot_training_progress(name="training_plots.png")
-    analyzer.export_summary_csv(name="training_summary.csv")
+    analyzer.plot_training_progress(name="plots.png")
+    analyzer.export_summary_csv(name="summary.csv")
 
 
 if __name__ == "__main__":

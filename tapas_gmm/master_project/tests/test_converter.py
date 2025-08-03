@@ -15,8 +15,7 @@ from tapas_gmm.master_project.definitions import (
 )
 from tapas_gmm.master_project.observation import Observation
 
-state_list = State.list_by_state_space(StateSpace.SMALL)
-task_list = Task.get_tasks_in_task_space(StateSpace.SMALL)
+
 normalized = True
 
 
