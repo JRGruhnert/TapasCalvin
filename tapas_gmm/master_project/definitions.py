@@ -80,20 +80,13 @@ class State(Enum):
         raise NotImplementedError(f"Enum for {name} does not exist.")
 
     @classmethod
-    def get_tp_by_index(
-        cls, index: int, split_pose: bool = False
-    ) -> Union["State", tuple["State", "State"]]:
+    def get_tp_by_index(cls, index: int) -> tuple["State", "State"]:
         """Get enum member by index"""
-        if index < 0 or index >= len(cls):
-            raise IndexError(f"Index {index} out of range for ObservationState.")
-        if split_pose:
-            # Return both transform and quat for pose states
-            return (
-                list(cls)[index + 10],
-                list(cls)[index + 20],
-            )  # transform and quat
-
-        return list(cls)[index]
+        # TODO: This is a hacky way to get the transform and quat states
+        return (
+            list(cls)[index + 0],
+            list(cls)[index + 10],
+        )  # transform and quat
 
     EE_Transform = StateInfo(
         identifier="ee_euler",

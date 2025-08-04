@@ -102,35 +102,24 @@ class Storage:
     def get_tp_from_task(
         self,
         task: Task,
-        split_pose: bool = True,
     ) -> dict[State, np.ndarray]:
         tpgmm: TPGMM = self.get_policy(task).model
         result: dict[State, np.ndarray] = {}
         for _, segment in enumerate(tpgmm.segment_frames):
             for _, frame_idx in enumerate(segment):
-                if split_pose:
-                    transform_key, quaternion_key = State.get_tp_by_index(
-                        frame_idx, True
-                    )
-                    if transform_key in self.states:
-                        if frame_idx == 0:
-                            # Zero means its the ee_pose
-                            result[transform_key] = task.value.ee_hrl_start[:3]
-                        else:
-                            result[transform_key] = task.value.obj_start[:3]
-                    if quaternion_key in self.states:
-                        if frame_idx == 0:
-                            # Zero means its the ee_pose
-                            result[quaternion_key] = task.value.ee_hrl_start[-4:]
-                        else:
-                            result[quaternion_key] = task.value.obj_start[-4:]
-                else:
-                    pose_key = State.get_tp_by_index(frame_idx, False)
+                transform_key, quaternion_key = State.get_tp_by_index(frame_idx)
+                if transform_key in self.states:
                     if frame_idx == 0:
                         # Zero means its the ee_pose
-                        result[pose_key] = task.value.ee_hrl_start
+                        result[transform_key] = task.value.ee_hrl_start[:3]
                     else:
-                        result[pose_key] = task.value.obj_start
+                        result[transform_key] = task.value.obj_start[:3]
+                if quaternion_key in self.states:
+                    if frame_idx == 0:
+                        # Zero means its the ee_pose
+                        result[quaternion_key] = task.value.ee_hrl_start[-4:]
+                    else:
+                        result[quaternion_key] = task.value.obj_start[-4:]
         for key, value in task.value.precondition.items():
             result[key] = value
         return result

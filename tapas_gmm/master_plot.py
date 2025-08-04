@@ -348,7 +348,7 @@ def entry_point():
 
     _, dict_config = parse_and_build_config(data_load=False, need_task=False)
 
-    default = f"results/{dict_config.nt.name}/{dict_config.tag.name}/"
+    default = f"results/{dict_config.nt.value}/{dict_config.tag}/"
     analyzer = RolloutAnalyzer(default)
     analyzer.load_all_batches()
     analyzer.print_analysis()

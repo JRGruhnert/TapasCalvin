@@ -359,7 +359,7 @@ class Agent:
 
         ### Regular saving based on saving frequence
         if self.current_epoch % self.config.saving_freq == 0:
-            self.save(verbose)
+            self.save(verbose=verbose)
 
         ### Stop Training
         if self.current_epoch == self.config.max_batches:
