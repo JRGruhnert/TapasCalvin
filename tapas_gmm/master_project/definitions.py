@@ -1,7 +1,7 @@
 from enum import Enum
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Union
+from typing import Dict
 from git import List
 import numpy as np
 
@@ -424,99 +424,106 @@ class Task(Enum):
         },
     )
     # Cut
-    BlockTableRedGrab = TaskInfo(
+    BlockTableRed = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
         },
         space=TaskSpace.ALL,
     )
-    BlockTablePinkGrab = TaskInfo(
+    BlockTablePink = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
         },
         space=TaskSpace.ALL,
     )
-    BlockTableBlueGrab = TaskInfo(
+    BlockTableBlue = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
         },
         space=TaskSpace.ALL,
     )
-    ReversedBlockTableRedGrab = TaskInfo(
+    BlockTableRedReversed = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
         },
+        reversed=True,
         space=TaskSpace.ALL,
     )
-    ReversedBlockTablePinkGrab = TaskInfo(
+    BlockTablePinkReversed = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
         },
+        reversed=True,
         space=TaskSpace.ALL,
     )
-    ReversedBlockTableBlueGrab = TaskInfo(
+    BlockTableBlueReversed = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
         },
-        space=TaskSpace.ALL,
-    )
-    ReversedBlockTableAllMoveTo = TaskInfo(
-        precondition={
-            State.EE_State: State.EE_State.value.max,
-        },
+        reversed=True,
         space=TaskSpace.ALL,
     )
     # Cut
-    BlockDrawerRedGrab = TaskInfo(
+    BlockDrawerRed = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Drawer_State: State.Drawer_State.value.max,
         },
         space=TaskSpace.ALL,
     )
-    BlockDrawerPinkGrab = TaskInfo(
+    BlockDrawerPink = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Drawer_State: State.Drawer_State.value.max,
         },
         space=TaskSpace.ALL,
     )
-    BlockDrawerBlueGrab = TaskInfo(
+    BlockDrawerBlue = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
             State.Drawer_State: State.Drawer_State.value.max,
         },
         space=TaskSpace.ALL,
     )
-    ReversedBlockDrawerRedGrab = TaskInfo(
+    BlockDrawerRedReversed = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Drawer_State: State.Drawer_State.value.max,
         },
+        reversed=True,
         space=TaskSpace.ALL,
     )
-    ReversedBlockDrawerPinkGrab = TaskInfo(
+    BlockDrawerPinkReversed = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Drawer_State: State.Drawer_State.value.max,
         },
+        reversed=True,
         space=TaskSpace.ALL,
     )
-    ReversedBlockDrawerBlueGrab = TaskInfo(
+    BlockDrawerBlueReversed = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.min,
             State.Drawer_State: State.Drawer_State.value.max,
         },
-        space=TaskSpace.ALL,
-    )
-    ReversedBlockDrawerAllMoveTo = TaskInfo(
-        precondition={
-            State.EE_State: State.EE_State.value.max,
-            State.Drawer_State: State.Drawer_State.value.max,
-        },
+        reversed=True,
         space=TaskSpace.ALL,
     )
     # Cut
+    BlockMoveTo = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+        },
+        space=TaskSpace.ALL,
+    )
+    BlockMoveToReversed = TaskInfo(
+        precondition={
+            State.EE_State: State.EE_State.value.min,
+        },
+        reversed=True,
+        space=TaskSpace.ALL,
+    )
+    """
     BlockCabinetRedGrab = TaskInfo(
         precondition={
             State.EE_State: State.EE_State.value.max,
@@ -566,6 +573,7 @@ class Task(Enum):
         },
         space=TaskSpace.ALL,
     )
+    """
 
 
 def convert_to_states(state_space: StateSpace) -> List[State]:

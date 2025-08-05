@@ -50,13 +50,14 @@ class MasterEnv:
         if self.config.task_space == TaskSpace.SMALL:
             self.config.evaluator.allowed_steps = 6  # Max 6 Steps needed
         else:
-            self.config.evaluator.allowed_steps = 18  # Max 16 Steps needed
+            self.config.evaluator.allowed_steps = 20  # Max 16 Steps needed
 
         self.env = Calvin(eval=config.eval_mode, vis=config.pybullet_vis)
         self.evaluator = Evaluator(config.evaluator, self.tasks, self.states)
         self.sampler = Sampler(config.sampler, self.states)
         self.policy_storage = Storage(config.storage, self.tasks, self.states)
         self.obs: Observation = None
+        self.last_gripper_action = [1.0]  # open
 
     def publish(
         self,
@@ -75,9 +76,9 @@ class MasterEnv:
             scene_obs, static=False, settle_time=50
         )
         self.obs = Observation(self.calvin_obs)
-        goal = Observation(calvin_goal)
-        self.evaluator.reset(self.obs, goal)
-        return self.obs, goal
+        self.goal = Observation(calvin_goal)
+        self.evaluator.reset(self.obs, self.goal)
+        return self.obs, self.goal
 
     def step(
         self, task_id: int, verbose: bool = False
@@ -89,14 +90,25 @@ class MasterEnv:
         policy.reset_episode(self.env)
         # Batch prediction for the given observation
         try:
-            prediction, _ = policy.predict(tapas_format(self.calvin_obs, task))
+            prediction, _ = policy.predict(
+                tapas_format(self.calvin_obs, task, self.goal)
+            )
             for action in prediction:
-                ee_action = np.concatenate((action.ee, action.gripper))
+                print(type(action.gripper))
+                if len(action.gripper) is not 0:
+                    self.last_gripper_action = action.gripper
+                ee_action = np.concatenate(
+                    (
+                        action.ee,
+                        self.last_gripper_action,
+                    )
+                )
                 self.calvin_obs, _, _, _ = self.env.step(
                     ee_action, self.config.debug_vis, viz_dict
                 )
                 if verbose:
                     print(self.calvin_obs.ee_pose)
+                    print(self.calvin_obs.ee_state)
                 self.obs = Observation(self.calvin_obs)
         except FloatingPointError:
             # At some point the model crashes.

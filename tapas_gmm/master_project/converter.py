@@ -316,6 +316,7 @@ class Converter:
     def tensor_task_distance(
         self,
         obs: Observation,
+        goal: Observation,
     ) -> torch.Tensor:
         features: list[np.ndarray] = []
         for task in self.tasks:
@@ -407,6 +408,7 @@ class Converter:
     def tensor_task_distance(
         self,
         current: Observation,
+        goal: Observation,
         pad: bool = False,
     ) -> torch.Tensor:
         features: list[np.ndarray] = []
@@ -440,3 +442,28 @@ class Converter:
         # Now safely get edge attributes for (task, state) pairs: [E, 2]
         edge_attr = dist_matrix[task_indices, state_indices]  # [E, 2]
         return edge_attr
+
+
+def update_dynamic_tp_position(
+    obs: Observation,
+    goal: Observation,
+    state: State,
+    value: np.ndarray,
+) -> np.ndarray:
+    """
+    Update the task parameter position in the goal observation.
+    This is used to update the task parameter position in the goal observation.
+    """
+    # TODO: Hardcoded
+    if state is State.Blue_Transform:
+        # Update position
+        goal.states[state] = obs.states[state].copy()
+        goal.states[state].value[:3] = value[:3]
+    elif state is State.Red_Transform:
+        # Update position
+        goal.states[state] = obs.states[state].copy()
+        goal.states[state].value[:3] = value[:3]
+    elif state is State.Pink_Transform:
+        # Update position
+        goal.states[state] = obs.states[state].copy()
+        goal.states[state].value[:3] = value[:3]

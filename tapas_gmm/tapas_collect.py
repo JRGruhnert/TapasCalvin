@@ -136,7 +136,6 @@ def main(config: Config) -> None:
                         # logger.info("Resetting without saving traj.")
                         ebar.set_description("Resetting without saving traj")
                         replay_memory.reset_current_traj()
-
                         obs, _, _, _ = env.reset(
                             sampler.sample_pre_condition(obs.scene_obs)
                         )

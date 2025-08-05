@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict
 
+from matplotlib import table
 import numpy as np
 import torch
 from tapas_gmm.master_project.converter import Converter
@@ -42,10 +43,11 @@ class Evaluator:
         self.tasks = tasks
         self.converter = Converter(states=self.states, tasks=self.tasks)
         self.surfaces = {
-            "table": [[0.0, -0.15, 0.46], [0.30, -0.03, 0.52]],
+            "table": [[0.0, -0.15, 0.46], [0.30, -0.03, 0.46]],
             # "slider_left": [[-0.32, 0.05, 0.46], [-0.16, 0.12, 0.46]],
-            "slider_right": [[-0.05, 0.05, 0.46], [0.13, 0.12, 0.52]],
-            "drawer_open": [[0.0, -0.35, 0.38], [0.40, 0.12, 0.44]],
+            # "slider_right": [[-0.05, 0.05, 0.46], [0.13, 0.12, 0.46]],
+            "drawer_open": [[0.04, -0.35, 0.38], [0.30, -0.21, 0.38]],
+            "drawer_closed": [[0.04, -0.16, 0.38], [0.30, -0.03, 0.38]],
         }  # changed drawer box since its a movable surface
         # NOTE: Coords for original surfaces
         # table: [[0.0, -0.15, 0.46], [0.30, -0.03, 0.46]]
