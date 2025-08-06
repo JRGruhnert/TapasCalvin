@@ -33,11 +33,18 @@ def train_agent(config: MasterConfig):
         obs, goal = env.reset()
         while not terminal and not batch_rdy:
             # TODO ask in console about next task. preferable via index with name of task
-            for i, task in enumerate(tasks):
+            print(f"{0}: Reset")
+            for i, task in enumerate(tasks, start=1):
                 print(f"{i}: {task.name}")
             choice = input("Enter the Task id: ")
             task_id = int(choice)
-            reward, terminal, obs = env.step(task_id, verbose=True)
+            if task_id == 0:
+                print("Resetting environment...")
+                obs, goal = env.reset()
+                terminal = False
+            else:
+                task_id -= 1  # Adjust for zero-based index
+                reward, terminal, obs = env.step(task_id, verbose=True)
     env.close()
 
     # print total training time
