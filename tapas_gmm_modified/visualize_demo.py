@@ -7,18 +7,18 @@ import torch
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf, SCMode
 
-import tapas_gmm.utils.logging  # noqa
-from tapas_gmm.utils.argparse import parse_and_build_config
-from tapas_gmm.utils.geometry_torch import quaternion_to_matrix
-from tapas_gmm.utils.misc import (
+import tapas_gmm_modified.utils.logging  # noqa
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.geometry_torch import quaternion_to_matrix
+from tapas_gmm_modified.utils.misc import (
     DataNamingConfig,
     apply_machine_config,
     import_config_file,
     load_scene_data,
     pretrain_checkpoint_name,
 )
-from tapas_gmm.viz.operations import channel_front2back
-from tapas_gmm.viz.threed import plot_coordindate_frame
+from tapas_gmm_modified.viz.operations import channel_front2back
+from tapas_gmm_modified.viz.threed import plot_coordindate_frame
 
 # lovely_tensors.monkey_patch()
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
         },
     )
     args, dict_config = parse_and_build_config(extra_args=extra_args)
-    #dict_config = complete_config(args, dict_config)  # type: ignore
+    # dict_config = complete_config(args, dict_config)  # type: ignore
 
     config = OmegaConf.to_container(
         dict_config, resolve=True, structured_config_mode=SCMode.INSTANTIATE

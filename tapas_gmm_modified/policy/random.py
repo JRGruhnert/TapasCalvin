@@ -3,8 +3,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from tapas_gmm.policy.policy import PolicyConfig
-from tapas_gmm.utils.observation import SceneObservation
+from tapas_gmm_modified.policy.policy import PolicyConfig
+from tapas_gmm_modified.utils.observation import SceneObservation
 
 
 @dataclass

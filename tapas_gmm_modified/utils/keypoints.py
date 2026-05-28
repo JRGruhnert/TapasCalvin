@@ -2,7 +2,7 @@ from typing import Sequence
 
 import torch
 
-from tapas_gmm.utils.geometry_torch import identity_quaternions
+from tapas_gmm_modified.utils.geometry_torch import identity_quaternions
 
 
 def get_keypoint_distance(set1: torch.Tensor, set2: torch.Tensor) -> torch.Tensor:

@@ -4,14 +4,14 @@ import numpy as np
 import torch
 from loguru import logger
 
-from tapas_gmm.utils.geometry_torch import (
+from tapas_gmm_modified.utils.geometry_torch import (
     homogenous_transform_from_rot_shift,
     invert_homogenous_transform,
     quaternion_pose_diff,
     quaternion_to_axis_angle,
     quaternion_to_matrix,
 )
-from tapas_gmm.utils.observation import SceneObservation
+from tapas_gmm_modified.utils.observation import SceneObservation
 
 
 def pad_list(source, target_len=2):

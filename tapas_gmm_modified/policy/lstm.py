@@ -8,16 +8,16 @@ from loguru import logger
 from tensordict import TensorDict
 from torch.distributions.normal import Normal
 
-from tapas_gmm.dataset.bc import BCDataset
-from tapas_gmm.env.environment import BaseEnvironment
-from tapas_gmm.policy.models.diffusion.normalizer import LinearNormalizer
-from tapas_gmm.policy.policy import Policy, PolicyConfig
-from tapas_gmm.utils.config import _SENTINELS
-from tapas_gmm.utils.geometry_torch import frame_transform_pos_quat
-from tapas_gmm.utils.logging import log_constructor
-from tapas_gmm.utils.misc import DataNamingConfig
-from tapas_gmm.utils.observation import SceneObservation
-from tapas_gmm.utils.select_gpu import device  # , normalize_quaternion
+from tapas_gmm_modified.dataset.bc import BCDataset
+from tapas_gmm_modified.env.environment import BaseEnvironment
+from tapas_gmm_modified.policy.models.diffusion.normalizer import LinearNormalizer
+from tapas_gmm_modified.policy.policy import Policy, PolicyConfig
+from tapas_gmm_modified.utils.config import _SENTINELS
+from tapas_gmm_modified.utils.geometry_torch import frame_transform_pos_quat
+from tapas_gmm_modified.utils.logging import log_constructor
+from tapas_gmm_modified.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.observation import SceneObservation
+from tapas_gmm_modified.utils.select_gpu import device  # , normalize_quaternion
 
 
 @dataclass

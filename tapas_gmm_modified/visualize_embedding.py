@@ -10,18 +10,18 @@ import torch.utils.data
 from matplotlib import gridspec, patches
 from sklearn import manifold
 
-import tapas_gmm.utils.logging  # noqa
-from tapas_gmm.dataset.dc import DenseCorrespondenceDataset
-from tapas_gmm.encoder import encoder_switch
-from tapas_gmm.utils.misc import (
+import tapas_gmm_modified.utils.logging  # noqa
+from tapas_gmm_modified.dataset.dc import DenseCorrespondenceDataset
+from tapas_gmm_modified.encoder import encoder_switch
+from tapas_gmm_modified.utils.misc import (
     import_config_file,
     load_replay_memory,
     load_replay_memory_from_path,
     pretrain_checkpoint_name,
     set_seeds,
 )
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.viz.operations import channel_front2back_batch
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.viz.operations import channel_front2back_batch
 
 RECONSTRUCTION = "reconstruction"
 TSNE = "tsne"

@@ -1,23 +1,23 @@
 from enum import Enum
 
-from tapas_gmm.policy.policy import Policy
+from tapas_gmm_modified.policy.policy import Policy
 
 # from loguru import logger
 
-# from tapas_gmm.policy.encoder import DiskReadEncoderPolicy, EncoderPolicy
-# from tapas_gmm.policy.gmm import GMMPolicy
-# from tapas_gmm.policy.lstm import LSTMPolicy
-# from tapas_gmm.policy.manual import ManualPolicy
+# from tapas_gmm_modified.policy.encoder import DiskReadEncoderPolicy, EncoderPolicy
+# from tapas_gmm_modified.policy.gmm import GMMPolicy
+# from tapas_gmm_modified.policy.lstm import LSTMPolicy
+# from tapas_gmm_modified.policy.manual import ManualPolicy
 
 # try:
-#     from tapas_gmm.policy.motion_planner import MotionPlannerPolicy
+#     from tapas_gmm_modified.policy.motion_planner import MotionPlannerPolicy
 # except ImportError:
 #     logger.error("Can't import MotionPlannerPolicy. Is mplib installed?")
 #     MotionPlannerPolicy = None
 
-# from tapas_gmm.policy.diffusion import DiffusionPolicy
-# from tapas_gmm.policy.random import RandomPolicy
-# from tapas_gmm.policy.sphere import SpherePolicy
+# from tapas_gmm_modified.policy.diffusion import DiffusionPolicy
+# from tapas_gmm_modified.policy.random import RandomPolicy
+# from tapas_gmm_modified.policy.sphere import SpherePolicy
 
 # # TODO: change this to auto-select the policy based on the policy config class?
 # policy_switch = {
@@ -55,21 +55,23 @@ class PolicyEnum(Enum):
 # TODO: switch over to config-based policy import like for envs
 def import_policy(policy_name: str, disk_read=False) -> Policy:
     if policy_name == "encoder":
-        from tapas_gmm.policy.encoder import EncoderPolicy as Policy
+        from tapas_gmm_modified.policy.encoder import EncoderPolicy as Policy
     elif policy_name == "random":
-        from tapas_gmm.policy.random import RandomPolicy as Policy
+        from tapas_gmm_modified.policy.random import RandomPolicy as Policy
     elif policy_name == "sphere":
-        from tapas_gmm.policy.sphere import SpherePolicy as Policy
+        from tapas_gmm_modified.policy.sphere import SpherePolicy as Policy
     elif policy_name == "manual":
-        from tapas_gmm.policy.manual import ManualPolicy as Policy
+        from tapas_gmm_modified.policy.manual import ManualPolicy as Policy
     elif policy_name == "motion_planner":
-        from tapas_gmm.policy.motion_planner import MotionPlannerPolicy as Policy
+        from tapas_gmm_modified.policy.motion_planner import (
+            MotionPlannerPolicy as Policy,
+        )
     elif policy_name == "gmm":
-        from tapas_gmm.policy.gmm import GMMPolicy as Policy
+        from tapas_gmm_modified.policy.gmm import GMMPolicy as Policy
     elif policy_name == "lstm":
-        from tapas_gmm.policy.lstm import LSTMPolicy as Policy
+        from tapas_gmm_modified.policy.lstm import LSTMPolicy as Policy
     elif policy_name == "diffusion":
-        from tapas_gmm.policy.diffusion import DiffusionPolicy as Policy
+        from tapas_gmm_modified.policy.diffusion import DiffusionPolicy as Policy
     else:
         raise ValueError(f"Invalid policy {policy_name}")
 

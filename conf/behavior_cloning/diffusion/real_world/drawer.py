@@ -12,12 +12,15 @@ from conf.behavior_cloning.diffusion.default import (
     training,
 )
 from conf.encoder.vit_keypoints.nofilter import vit_keypoints_predictor_config
-from tapas_gmm.behavior_cloning import Config, DataLoaderConfig
-from tapas_gmm.encoder.encoder import ObservationEncoderConfig
-from tapas_gmm.policy.diffusion import ConditionalUnet1DConfig, DiffusionPolicyConfig
+from tapas_gmm_modified.behavior_cloning import Config, DataLoaderConfig
+from tapas_gmm_modified.encoder.encoder import ObservationEncoderConfig
+from tapas_gmm_modified.policy.diffusion import (
+    ConditionalUnet1DConfig,
+    DiffusionPolicyConfig,
+)
 
-# from tapas_gmm.utils.misc import DataNamingConfig
-from tapas_gmm.utils.observation import ObservationConfig
+# from tapas_gmm_modified.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.observation import ObservationConfig
 
 task = "Drawer"
 

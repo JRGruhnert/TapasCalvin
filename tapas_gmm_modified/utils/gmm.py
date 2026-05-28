@@ -6,7 +6,7 @@ from riepybdlib.statistics import HMM as HMM_RBD
 from riepybdlib.statistics import Gaussian as MVN_RBD
 from scipy.linalg import block_diag, cho_factor, cho_solve
 
-from tapas_gmm.utils.misc import multiply_iterable
+from tapas_gmm_modified.utils.misc import multiply_iterable
 
 # def concat_mvn(gaussians):
 #     mvn = MVN_PBD()

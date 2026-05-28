@@ -3,8 +3,8 @@ import ssl
 import numpy as np
 import torch.nn as nn
 
-import tapas_gmm.encoder.models.keypoints.resnet as models
-from tapas_gmm.encoder.models.keypoints.vision_transformer import (  # VitS_8
+import tapas_gmm_modified.encoder.models.keypoints.resnet as models
+from tapas_gmm_modified.encoder.models.keypoints.vision_transformer import (  # VitS_8
     get_vitb8,
     get_vits8,
 )

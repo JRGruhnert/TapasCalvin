@@ -4,15 +4,15 @@ from typing import Dict
 from matplotlib import table
 import numpy as np
 import torch
-from tapas_gmm.master_project.converter import Converter
-from tapas_gmm.master_project.definitions import (
+from tapas_gmm_modified.master_project.converter import Converter
+from tapas_gmm_modified.master_project.definitions import (
     RewardMode,
     State,
     StateSuccess,
     StateType,
     Task,
 )
-from tapas_gmm.master_project.observation import Observation
+from tapas_gmm_modified.master_project.observation import Observation
 
 
 @dataclass

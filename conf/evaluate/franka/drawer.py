@@ -2,12 +2,12 @@ from conf._machine import data_naming_config
 from conf.env.panda.handguide_banana import franka_env_config
 from conf.kp_encode_trajectories.vit.franka import policy_config as vit_config
 from conf.policy.models.tpgmm.auto_test import auto_tpgmm_config
-from tapas_gmm.env.franka import IK_Solvers, IKConfig
-from tapas_gmm.evaluate import Config, EvalConfig
-from tapas_gmm.policy.gmm import GMMPolicyConfig
-from tapas_gmm.utils.config import SET_PROGRAMMATICALLY
-from tapas_gmm.utils.misc import DataNamingConfig
-from tapas_gmm.utils.observation import ObservationConfig
+from tapas_gmm_modified.env.franka import IK_Solvers, IKConfig
+from tapas_gmm_modified.evaluate import Config, EvalConfig
+from tapas_gmm_modified.policy.gmm import GMMPolicyConfig
+from tapas_gmm_modified.utils.config import SET_PROGRAMMATICALLY
+from tapas_gmm_modified.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.observation import ObservationConfig
 
 franka_env_config.teleop = True
 franka_env_config.neutral_joints = (

@@ -8,20 +8,20 @@ import torch
 from loguru import logger
 from omegaconf import MISSING, DictConfig, OmegaConf, SCMode
 
-import tapas_gmm.utils.logging  # noqa
-from tapas_gmm.dataset.scene import SceneDataset, SceneDatasetConfig
-from tapas_gmm.env import Environment, import_env
-from tapas_gmm.env.environment import (
+import tapas_gmm_modified.utils.logging  # noqa
+from tapas_gmm_modified.dataset.scene import SceneDataset, SceneDatasetConfig
+from tapas_gmm_modified.env import Environment, import_env
+from tapas_gmm_modified.env.environment import (
     BaseEnvironmentConfig,
     RestoreActionMode,
     RestoreEnvState,
 )
 
-# from tapas_gmm.policy import PolicyEnum, import_policy
-from tapas_gmm.utils.argparse import parse_and_build_config
+# from tapas_gmm_modified.policy import PolicyEnum, import_policy
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
 
-# from tapas_gmm.utils.keyboard_observer import KeyboardObserver
-from tapas_gmm.utils.misc import (  # loop_sleep,
+# from tapas_gmm_modified.utils.keyboard_observer import KeyboardObserver
+from tapas_gmm_modified.utils.misc import (  # loop_sleep,
     DataNamingConfig,
     get_dataset_name,
     get_full_task_name,
@@ -30,7 +30,7 @@ from tapas_gmm.utils.misc import (  # loop_sleep,
 # from tqdm.auto import tqdm
 
 
-# from tapas_gmm.utils.random import configure_seeds
+# from tapas_gmm_modified.utils.random import configure_seeds
 
 
 @dataclass

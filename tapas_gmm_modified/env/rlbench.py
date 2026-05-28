@@ -49,9 +49,9 @@ from rlbench.tasks import (
     TurnTap,
 )
 
-from tapas_gmm.env import Environment
-from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
-from tapas_gmm.utils.geometry_np import (
+from tapas_gmm_modified.env import Environment
+from tapas_gmm_modified.env.environment import BaseEnvironment, BaseEnvironmentConfig
+from tapas_gmm_modified.utils.geometry_np import (
     conjugate_quat,
     homogenous_transform_from_rot_shift,
     invert_homogenous_transform,
@@ -64,7 +64,7 @@ from tapas_gmm.utils.geometry_np import (
     quaternion_to_axis_angle,
     quaternion_to_matrix,
 )
-from tapas_gmm.utils.observation import (
+from tapas_gmm_modified.utils.observation import (
     CameraOrder,
     SceneObservation,
     SingleCamObservation,

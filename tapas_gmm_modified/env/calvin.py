@@ -10,9 +10,9 @@ from loguru import logger
 
 from calvin_env.envs.observation import CalvinObservation
 from calvin_env.envs.calvin_env import get_env_from_cfg, CalvinEnvironment
-from tapas_gmm.env import Environment
-from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
-from tapas_gmm.utils.geometry_np import (
+from tapas_gmm_modified.env import Environment
+from tapas_gmm_modified.env.environment import BaseEnvironment, BaseEnvironmentConfig
+from tapas_gmm_modified.utils.geometry_np import (
     axis_angle_to_quaternion,
     conjugate_quat,
     homogenous_transform_from_rot_shift,
@@ -75,7 +75,9 @@ class Calvin(BaseEnvironment):
     def reset(
         self, scene_obs=None, static=True, settle_time=20
     ) -> tuple[CalvinObservation, float, bool, dict]:
-        return self.env.reset(scene_obs=scene_obs, static=static, settle_time= settle_time)
+        return self.env.reset(
+            scene_obs=scene_obs, static=static, settle_time=settle_time
+        )
 
     def reset_to_demo(self, path: str) -> CalvinObservation:
         raise NotImplementedError("Not implemented yet")

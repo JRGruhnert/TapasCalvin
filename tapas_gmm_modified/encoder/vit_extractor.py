@@ -6,24 +6,30 @@ import torch
 from loguru import logger
 from omegaconf import DictConfig
 
-import tapas_gmm.encoder.representation_learner as representation_learner
-from tapas_gmm.encoder.keypoints import (
+import tapas_gmm_modified.encoder.representation_learner as representation_learner
+from tapas_gmm_modified.encoder.keypoints import (
     KeypointsConfig,
     KeypointsPredictor,
     PriorTypes,
     ProjectionTypes,
     ReferenceSelectionTypes,
 )
-from tapas_gmm.encoder.models.vit_extractor.extractor import (
+from tapas_gmm_modified.encoder.models.vit_extractor.extractor import (
     VitEncoderModel,
     VitFeatureModelConfig,
 )
-from tapas_gmm.filter.discrete_filter import DiscreteFilter, DiscreteFilterConfig
-from tapas_gmm.filter.particle_filter import ParticleFilter, ParticleFilterConfig
-from tapas_gmm.utils.debug import measure_runtime
-from tapas_gmm.utils.observation import SampleTypes, SceneObservation
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.viz.operations import channel_back2front_batch
+from tapas_gmm_modified.filter.discrete_filter import (
+    DiscreteFilter,
+    DiscreteFilterConfig,
+)
+from tapas_gmm_modified.filter.particle_filter import (
+    ParticleFilter,
+    ParticleFilterConfig,
+)
+from tapas_gmm_modified.utils.debug import measure_runtime
+from tapas_gmm_modified.utils.observation import SampleTypes, SceneObservation
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.viz.operations import channel_back2front_batch
 
 
 @dataclass

@@ -1,8 +1,7 @@
 from conf.master.shared.env import test_env
 from conf.master.shared.agent import test
-from tapas_gmm.master_project.networks import NetworkType
-from tapas_gmm.master_train import MasterConfig
-
+from tapas_gmm_modified.master_project.networks import NetworkType
+from tapas_gmm_modified.master_train import MasterConfig
 
 config = MasterConfig(
     tag="test",

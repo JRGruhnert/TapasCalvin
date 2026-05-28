@@ -15,20 +15,23 @@ from mani_skill2.utils.io_utils import load_json
 from omegaconf import MISSING, DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
-import tapas_gmm.utils.logging  # noqa
+import tapas_gmm_modified.utils.logging  # noqa
 
 # from config import camera_pose
-from tapas_gmm.dataset.scene import SceneDataset, SceneDatasetConfig
-from tapas_gmm.env.mani_skill import (
+from tapas_gmm_modified.dataset.scene import SceneDataset, SceneDatasetConfig
+from tapas_gmm_modified.env.mani_skill import (
     ACTION_MODE,
     OBS_MODE,
     ManiSkillEnv,
     ManiSkillEnvironmentConfig,
 )
-from tapas_gmm.utils.argparse import parse_and_build_config
-from tapas_gmm.utils.keyboard_observer import KeyboardObserver
-from tapas_gmm.utils.maniskill_replay import from_pd_joint_delta_pos, from_pd_joint_pos
-from tapas_gmm.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.keyboard_observer import KeyboardObserver
+from tapas_gmm_modified.utils.maniskill_replay import (
+    from_pd_joint_delta_pos,
+    from_pd_joint_pos,
+)
+from tapas_gmm_modified.utils.misc import DataNamingConfig
 
 
 @dataclass
@@ -83,7 +86,7 @@ def _main(config: Config, save_path: pathlib.Path) -> None:
 
     # Create a main env for replay
     env_kwargs = ori_env_kwargs.copy()
-    # if assert succeeds, no need to update any kwargs from tapas_gmm.env_kwargs
+    # if assert succeeds, no need to update any kwargs from tapas_gmm_modified.env_kwargs
     assert set(env_kwargs.keys()).issubset(
         {
             "obs_mode",

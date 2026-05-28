@@ -7,12 +7,12 @@ import torch
 import torch.nn as nn
 from loguru import logger
 
-from tapas_gmm.dataset.bc import BCDataset
-from tapas_gmm.env.environment import BaseEnvironment
-from tapas_gmm.utils.logging import log_constructor
-from tapas_gmm.utils.observation import SceneObservation
-from tapas_gmm.utils.robot_trajectory import RobotTrajectory
-from tapas_gmm.utils.select_gpu import device  # , normalize_quaternion
+from tapas_gmm_modified.dataset.bc import BCDataset
+from tapas_gmm_modified.env.environment import BaseEnvironment
+from tapas_gmm_modified.utils.logging import log_constructor
+from tapas_gmm_modified.utils.observation import SceneObservation
+from tapas_gmm_modified.utils.robot_trajectory import RobotTrajectory
+from tapas_gmm_modified.utils.select_gpu import device  # , normalize_quaternion
 
 
 @dataclass

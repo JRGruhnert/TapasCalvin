@@ -1,4 +1,4 @@
-from tapas_gmm.encoder.keypoints import (
+from tapas_gmm_modified.encoder.keypoints import (
     EncoderConfig,
     KeypointsConfig,
     KeypointsPredictorConfig,

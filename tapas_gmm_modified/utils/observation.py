@@ -10,8 +10,8 @@ from omegaconf import MISSING
 from tensordict import TensorDict, tensorclass
 from tensordict.tensordict import TensorDictBase, pad_sequence
 
-from tapas_gmm.utils.config import _SENTINELS, SET_PROGRAMMATICALLY
-from tapas_gmm.utils.geometry_np import (
+from tapas_gmm_modified.utils.config import _SENTINELS, SET_PROGRAMMATICALLY
+from tapas_gmm_modified.utils.geometry_np import (
     compute_angle_between_poses,
     compute_angle_between_quaternions,
     compute_distance_between_poses,

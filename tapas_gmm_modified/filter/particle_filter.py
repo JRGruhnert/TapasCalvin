@@ -5,17 +5,17 @@ import torch
 from loguru import logger
 from omegaconf import DictConfig
 
-import tapas_gmm.encoder.keypoints
-from tapas_gmm.utils.geometry_torch import (  # flipped_logistic,
+import tapas_gmm_modified.encoder.keypoints
+from tapas_gmm_modified.utils.geometry_torch import (  # flipped_logistic,
     batchwise_project_onto_cam,
     noisy_pixel_coordinates_to_world,
 )
 
-# import tapas_gmm.encoder.vit_extractor
-from tapas_gmm.utils.misc import multiply_iterable
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.utils.torch import gaussian_cdf
-from tapas_gmm.viz.particle_filter import InitDbgViz, SampleObsViz
+# import tapas_gmm_modified.encoder.vit_extractor
+from tapas_gmm_modified.utils.misc import multiply_iterable
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.utils.torch import gaussian_cdf
+from tapas_gmm_modified.viz.particle_filter import InitDbgViz, SampleObsViz
 
 
 @dataclass

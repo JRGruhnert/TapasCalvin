@@ -1,19 +1,22 @@
 from loguru import logger
 
-from tapas_gmm.encoder.bvae import BVAE
-from tapas_gmm.encoder.cnn import CNN, CNNDepth
-from tapas_gmm.encoder.keypoints import KeypointsPredictor, KeypointsPredictorConfig
-from tapas_gmm.encoder.keypoints_gt import (
+from tapas_gmm_modified.encoder.bvae import BVAE
+from tapas_gmm_modified.encoder.cnn import CNN, CNNDepth
+from tapas_gmm_modified.encoder.keypoints import (
+    KeypointsPredictor,
+    KeypointsPredictorConfig,
+)
+from tapas_gmm_modified.encoder.keypoints_gt import (
     GTKeypointsPredictor,
     GTKeypointsPredictorConfig,
 )
-from tapas_gmm.encoder.monet import Monet
-from tapas_gmm.encoder.representation_learner import (
+from tapas_gmm_modified.encoder.monet import Monet
+from tapas_gmm_modified.encoder.representation_learner import (
     RepresentationLearner,
     RepresentationLearnerConfig,
 )
-from tapas_gmm.encoder.transporter import Transporter
-from tapas_gmm.encoder.vit_extractor import (
+from tapas_gmm_modified.encoder.transporter import Transporter
+from tapas_gmm_modified.encoder.vit_extractor import (
     VitFeatureEncoder,
     VitFeatureEncoderConfig,
     VitKeypointsPredictor,

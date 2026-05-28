@@ -4,15 +4,15 @@ import torch.nn as nn
 from torch.distributions import Categorical
 from abc import ABC, abstractmethod
 from torch_geometric.data import Batch, HeteroData
-from build.lib.tapas_gmm.master_project.master_encoder import (
+from build.lib.tapas_gmm_modified.master_project.master_encoder import (
     QuaternionEncoder,
     ScalarEncoder,
     TransformEncoder,
 )
-from tapas_gmm.master_project.converter import Converter
-from tapas_gmm.master_project.definitions import State, StateType, Task
-from tapas_gmm.master_project.observation import Observation
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.master_project.converter import Converter
+from tapas_gmm_modified.master_project.definitions import State, StateType, Task
+from tapas_gmm_modified.master_project.observation import Observation
+from tapas_gmm_modified.utils.select_gpu import device
 import networkx as nx
 import matplotlib.pyplot as plt
 from torch_geometric.utils import to_networkx

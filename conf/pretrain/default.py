@@ -1,5 +1,5 @@
-from tapas_gmm.pretrain import TrainingConfig
-from tapas_gmm.utils.observation import ObservationConfig
+from tapas_gmm_modified.pretrain import TrainingConfig
+from tapas_gmm_modified.utils.observation import ObservationConfig
 
 training_config = TrainingConfig(
     steps=int(1e5),

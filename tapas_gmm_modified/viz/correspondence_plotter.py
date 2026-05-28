@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from matplotlib.patches import Circle
 
-from tapas_gmm.viz.operations import flattened_pixel_locations_to_u_v
+from tapas_gmm_modified.viz.operations import flattened_pixel_locations_to_u_v
 
 
 def plot_heatmaps(

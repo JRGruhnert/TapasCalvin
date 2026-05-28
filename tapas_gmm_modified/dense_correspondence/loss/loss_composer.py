@@ -1,8 +1,8 @@
 import torch
 from loguru import logger
 
-from tapas_gmm.dataset.dc import DcDatasetDataType, DenseCorrespondenceDataset
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.dataset.dc import DcDatasetDataType, DenseCorrespondenceDataset
+from tapas_gmm_modified.utils.select_gpu import device
 
 
 def get_loss(

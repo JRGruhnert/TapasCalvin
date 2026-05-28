@@ -1,7 +1,7 @@
 from omegaconf import MISSING
 
-from tapas_gmm.env import Environment
-from tapas_gmm.env.mani_skill import ManiSkillEnvironmentConfig
+from tapas_gmm_modified.env import Environment
+from tapas_gmm_modified.env.mani_skill import ManiSkillEnvironmentConfig
 
 maniskill_env_config = ManiSkillEnvironmentConfig(
     task=MISSING,

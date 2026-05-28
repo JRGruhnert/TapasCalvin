@@ -1,4 +1,4 @@
-from tapas_gmm.master_project.agent import AgentConfig
+from tapas_gmm_modified.master_project.agent import AgentConfig
 
 test = AgentConfig(batch_size=8, mini_batch_size=4)
 

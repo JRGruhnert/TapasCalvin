@@ -6,8 +6,8 @@ import numpy as np
 import torch
 import viz.action_distribution as action_distribution
 
-from tapas_gmm.utils.debug import summarize_list_of_tensors, summarize_tensor
-from tapas_gmm.utils.misc import load_replay_memory
+from tapas_gmm_modified.utils.debug import summarize_list_of_tensors, summarize_tensor
+from tapas_gmm_modified.utils.misc import load_replay_memory
 
 PRINTABLE = "printable"
 SUMMARIZABLE = "summarizable"

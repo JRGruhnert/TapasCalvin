@@ -8,44 +8,53 @@ import tqdm
 from loguru import logger
 from omegaconf import DictConfig
 
-import tapas_gmm.dense_correspondence.loss.loss_composer as dc_loss_composer
-import tapas_gmm.encoder.models.keypoints.keypoints as keypoints
-import tapas_gmm.encoder.models.keypoints.model_based_vision as model_based_vision
+import tapas_gmm_modified.dense_correspondence.loss.loss_composer as dc_loss_composer
+import tapas_gmm_modified.encoder.models.keypoints.keypoints as keypoints
+import tapas_gmm_modified.encoder.models.keypoints.model_based_vision as model_based_vision
 import wandb
-from tapas_gmm.dataset.bc import BCDataset
-from tapas_gmm.dense_correspondence.correspondence_finder import (
+from tapas_gmm_modified.dataset.bc import BCDataset
+from tapas_gmm_modified.dense_correspondence.correspondence_finder import (
     get_mask_center,
     get_masked_avg_descriptor,
     random_sample_from_masked_image_torch,
 )
-from tapas_gmm.dense_correspondence.loss.pixelwise_contrastive_loss import (
+from tapas_gmm_modified.dense_correspondence.loss.pixelwise_contrastive_loss import (
     PixelwiseContrastiveLoss,
 )
-from tapas_gmm.encoder.representation_learner import (
+from tapas_gmm_modified.encoder.representation_learner import (
     RepresentationLearner,
     RepresentationLearnerConfig,
 )
-from tapas_gmm.filter.discrete_filter import DiscreteFilter, DiscreteFilterConfig
-from tapas_gmm.filter.particle_filter import ParticleFilter, ParticleFilterConfig
-from tapas_gmm.utils.geometry_torch import append_depth_to_uv, hard_pixels_to_3D_world
+from tapas_gmm_modified.filter.discrete_filter import (
+    DiscreteFilter,
+    DiscreteFilterConfig,
+)
+from tapas_gmm_modified.filter.particle_filter import (
+    ParticleFilter,
+    ParticleFilterConfig,
+)
+from tapas_gmm_modified.utils.geometry_torch import (
+    append_depth_to_uv,
+    hard_pixels_to_3D_world,
+)
 
-# from tapas_gmm.utils.debug import nan_hook, summarize_tensor
-from tapas_gmm.utils.logging import indent_func_log, log_constructor
-from tapas_gmm.utils.misc import get_and_log_failure as get_conf
-from tapas_gmm.utils.observation import (
+# from tapas_gmm_modified.utils.debug import nan_hook, summarize_tensor
+from tapas_gmm_modified.utils.logging import indent_func_log, log_constructor
+from tapas_gmm_modified.utils.misc import get_and_log_failure as get_conf
+from tapas_gmm_modified.utils.observation import (
     SampleTypes,
     SceneObservation,
     SingleCamObservation,
     tensor_dict_equal,
 )
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.utils.select_gpu import device
 
-# from tapas_gmm.viz.image_series import vis_series
-from tapas_gmm.viz.image_single import image_with_points_overlay_uv_list
-from tapas_gmm.viz.operations import channel_front2back
+# from tapas_gmm_modified.viz.image_series import vis_series
+from tapas_gmm_modified.viz.image_single import image_with_points_overlay_uv_list
+from tapas_gmm_modified.viz.operations import channel_front2back
 
-# from tapas_gmm.viz.particle_filter import ParticleFilterViz
-from tapas_gmm.viz.surface import depth_map_with_points_overlay_uv_list
+# from tapas_gmm_modified.viz.particle_filter import ParticleFilterViz
+from tapas_gmm_modified.viz.surface import depth_map_with_points_overlay_uv_list
 
 KeypointsTypes = keypoints.KeypointsTypes
 
@@ -849,7 +858,9 @@ class KeypointsPredictor(RepresentationLearner):
         )
 
         if ref_selection is ReferenceSelectionTypes.MANUAL and preview_frames:
-            from tapas_gmm.viz.keypoint_selector import ManualKeypointSelectorConfig
+            from tapas_gmm_modified.viz.keypoint_selector import (
+                ManualKeypointSelectorConfig,
+            )
 
             assert type(ref_selector_config) is ManualKeypointSelectorConfig
 
@@ -1092,7 +1103,7 @@ class KeypointsPredictor(RepresentationLearner):
     ):
         # In this modul CV2 is imported, which causes RLBench to crash if its
         # loaded before the env is created, so import here instead.
-        from tapas_gmm.viz.keypoint_selector import KeypointSelector
+        from tapas_gmm_modified.viz.keypoint_selector import KeypointSelector
 
         descriptor = descriptor.cpu()
 

@@ -5,13 +5,13 @@ from omegaconf import DictConfig
 from torch import nn
 from torch.nn import functional as F
 
-import tapas_gmm.encoder.models.bvae.beta_vae as bvae
-from tapas_gmm.encoder.representation_learner import (
+import tapas_gmm_modified.encoder.models.bvae.beta_vae as bvae
+from tapas_gmm_modified.encoder.representation_learner import (
     RepresentationLearner,
     RepresentationLearnerConfig,
 )
-from tapas_gmm.utils.observation import SampleTypes, SingleCamObservation
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.utils.observation import SampleTypes, SingleCamObservation
+from tapas_gmm_modified.utils.select_gpu import device
 
 
 @dataclass

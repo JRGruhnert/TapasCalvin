@@ -4,12 +4,12 @@ import numpy as np
 import torch
 import numpy as np
 
-from tapas_gmm.master_project.definitions import (
+from tapas_gmm_modified.master_project.definitions import (
     StateType,
     Task,
     State,
 )
-from tapas_gmm.master_project.observation import Observation
+from tapas_gmm_modified.master_project.observation import Observation
 
 
 class StateConverter(ABC):

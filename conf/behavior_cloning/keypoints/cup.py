@@ -8,11 +8,11 @@ from conf.behavior_cloning.keypoints.default import (
 )
 from conf.encoder.keypoints.phone import keypoints_predictor_config
 from conf.observation.wrist_nocrop import observation_config
-from tapas_gmm.behavior_cloning import Config
-from tapas_gmm.dataset.bc import BCDataConfig
-from tapas_gmm.policy.encoder import EncoderPolicyConfig
-from tapas_gmm.utils.config import SET_PROGRAMMATICALLY
-from tapas_gmm.utils.observation import MaskTypes
+from tapas_gmm_modified.behavior_cloning import Config
+from tapas_gmm_modified.dataset.bc import BCDataConfig
+from tapas_gmm_modified.policy.encoder import EncoderPolicyConfig
+from tapas_gmm_modified.utils.config import SET_PROGRAMMATICALLY
+from tapas_gmm_modified.utils.observation import MaskTypes
 
 policy_config = EncoderPolicyConfig(
     encoder_name="keypoints",

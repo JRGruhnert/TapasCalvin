@@ -2,9 +2,9 @@ from omegaconf import MISSING
 from conf._machine import data_naming_config
 from conf.dataset.scene.calvin import scene_dataset_config
 from conf.env.calvin.env_collect_conf import calvin_env_config
-from tapas_gmm.tapas_collect import Config
-from tapas_gmm.env import Environment
-from tapas_gmm.policy import PolicyEnum
+from tapas_gmm_modified.tapas_collect import Config
+from tapas_gmm_modified.env import Environment
+from tapas_gmm_modified.policy import PolicyEnum
 
 config = Config(
     task=MISSING,

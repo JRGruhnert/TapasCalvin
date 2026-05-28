@@ -2,7 +2,7 @@ from conf._machine import data_naming_config
 from conf.behavior_cloning.diffusion.default import bc_data, bc_training
 from conf.behavior_cloning.diffusion.five_demos.default import data_loader
 from conf.behavior_cloning.diffusion.sweep import policy
-from tapas_gmm.behavior_cloning import Config
+from tapas_gmm_modified.behavior_cloning import Config
 
 policy.training.lr_warmup_steps = 50
 

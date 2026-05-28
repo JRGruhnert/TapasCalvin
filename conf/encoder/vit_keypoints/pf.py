@@ -1,10 +1,14 @@
 from conf.encoder.vit_extractor.default import vit_model_config
-from tapas_gmm.encoder.keypoints import KeypointsConfig, PriorTypes, ProjectionTypes
-from tapas_gmm.encoder.vit_extractor import (
+from tapas_gmm_modified.encoder.keypoints import (
+    KeypointsConfig,
+    PriorTypes,
+    ProjectionTypes,
+)
+from tapas_gmm_modified.encoder.vit_extractor import (
     VitKeypointsEncoderConfig,
     VitKeypointsPredictorConfig,
 )
-from tapas_gmm.filter.particle_filter import ParticleFilterConfig
+from tapas_gmm_modified.filter.particle_filter import ParticleFilterConfig
 
 encoder_config = VitKeypointsEncoderConfig(
     vit=vit_model_config,

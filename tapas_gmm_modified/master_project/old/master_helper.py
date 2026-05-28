@@ -4,18 +4,18 @@ from typing import Dict, Set
 
 from loguru import logger
 import numpy as np
-from tapas_gmm.master_project.definitions import (
+from tapas_gmm_modified.master_project.definitions import (
     TaskSpace,
     Task,
     State,
     _origin_ee_tp_pose,
 )
 
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.master_project.observation import Observation
-from tapas_gmm.policy import import_policy
-from tapas_gmm.policy.gmm import GMMPolicy, GMMPolicyConfig
-from tapas_gmm.policy.models.tpgmm import (
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.master_project.observation import Observation
+from tapas_gmm_modified.policy import import_policy
+from tapas_gmm_modified.policy.gmm import GMMPolicy, GMMPolicyConfig
+from tapas_gmm_modified.policy.models.tpgmm import (
     AutoTPGMM,
     AutoTPGMMConfig,
     Gaussian,

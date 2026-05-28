@@ -1,4 +1,4 @@
-from tapas_gmm.policy.models.tpgmm import (
+from tapas_gmm_modified.policy.models.tpgmm import (
     AutoTPGMMConfig,
     CascadeConfig,
     DemoSegmentationConfig,

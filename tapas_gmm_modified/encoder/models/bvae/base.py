@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 from torch import nn
 
-from tapas_gmm.encoder.models.bvae.types_ import Any, List, Tensor
+from tapas_gmm_modified.encoder.models.bvae.types_ import Any, List, Tensor
 
 
 class BaseVAE(nn.Module):

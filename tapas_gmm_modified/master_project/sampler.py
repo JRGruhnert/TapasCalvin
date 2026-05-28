@@ -4,7 +4,7 @@ import random
 from typing import Dict
 import numpy as np
 
-from tapas_gmm.master_project.definitions import (
+from tapas_gmm_modified.master_project.definitions import (
     State,
     StateType,
 )

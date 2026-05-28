@@ -3,8 +3,8 @@ from conf.dataset.dc.phone import smo_dc_dat_config
 from conf.encoder.keypoints.phone import keypoints_predictor_config
 from conf.observation.wrist_nocrop import observation_config
 from conf.pretrain.default import observation_config, training_config
-from tapas_gmm.pretrain import Config, TrainingConfig
-from tapas_gmm.utils.data_loading import DataLoaderConfig
+from tapas_gmm_modified.pretrain import Config, TrainingConfig
+from tapas_gmm_modified.utils.data_loading import DataLoaderConfig
 
 dataloader_config = DataLoaderConfig(
     train_split=0.7,

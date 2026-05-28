@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-# from tapas_gmm.utils.multi_processing import mp_wrapper
+# from tapas_gmm_modified.utils.multi_processing import mp_wrapper
 
 
 def make_2d_histos(action_store):

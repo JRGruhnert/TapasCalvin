@@ -8,39 +8,39 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
-import tapas_gmm.utils.logging  # noqa
+import tapas_gmm_modified.utils.logging  # noqa
 import wandb
-from tapas_gmm.dataset.bc import BCDataConfig, BCDataset
-from tapas_gmm.encoder.keypoints import PriorTypes
-from tapas_gmm.policy import import_policy
-from tapas_gmm.policy.encoder import EncoderPolicyConfig
+from tapas_gmm_modified.dataset.bc import BCDataConfig, BCDataset
+from tapas_gmm_modified.encoder.keypoints import PriorTypes
+from tapas_gmm_modified.policy import import_policy
+from tapas_gmm_modified.policy.encoder import EncoderPolicyConfig
 
 # TODO: split policy into Policy and LearningPolicy, then import LearningPolicy and its config here.
-from tapas_gmm.policy.lstm import LSTMPolicy, LSTMPolicyConfig, PolicyConfig
-from tapas_gmm.utils.argparse import parse_and_build_config
-from tapas_gmm.utils.config import (
+from tapas_gmm_modified.policy.lstm import LSTMPolicy, LSTMPolicyConfig, PolicyConfig
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.config import (
     SET_PROGRAMMATICALLY,
     save_config_along_path,
     value_not_set,
 )
-from tapas_gmm.utils.data_loading import (
+from tapas_gmm_modified.utils.data_loading import (
     DataLoaderConfig,
     InfiniteDataIterator,
     build_infinte_data_iterators,
 )
-from tapas_gmm.utils.ema import EMAModel
-from tapas_gmm.utils.logging import indent_logs
-from tapas_gmm.utils.misc import (
+from tapas_gmm_modified.utils.ema import EMAModel
+from tapas_gmm_modified.utils.logging import indent_logs
+from tapas_gmm_modified.utils.misc import (
     DataNamingConfig,
     load_scene_data,
     policy_checkpoint_name,
     pretrain_checkpoint_name,
 )
-from tapas_gmm.utils.observation import ObservationConfig, collate
-from tapas_gmm.utils.random import configure_seeds
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.utils.version import get_git_revision_hash
-from tapas_gmm.viz.particle_filter import ParticleFilterViz
+from tapas_gmm_modified.utils.observation import ObservationConfig, collate
+from tapas_gmm_modified.utils.random import configure_seeds
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.utils.version import get_git_revision_hash
+from tapas_gmm_modified.viz.particle_filter import ParticleFilterViz
 
 # import os
 # os.environ["CUDA_LAUNCH_BLOCKING"] = "1"  # for better CUDA debugging

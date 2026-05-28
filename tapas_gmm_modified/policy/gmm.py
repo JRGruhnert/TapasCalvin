@@ -7,18 +7,29 @@ from loguru import logger
 from riepybdlib.mappings import s1_log_e
 from tqdm.auto import tqdm
 
-from tapas_gmm.dataset.demos import get_frame_transform_flat, get_frames_from_obs
-from tapas_gmm.encoder.encoder import ObservationEncoder, ObservationEncoderConfig
-from tapas_gmm.env.environment import (
+from tapas_gmm_modified.dataset.demos import (
+    get_frame_transform_flat,
+    get_frames_from_obs,
+)
+from tapas_gmm_modified.encoder.encoder import (
+    ObservationEncoder,
+    ObservationEncoderConfig,
+)
+from tapas_gmm_modified.env.environment import (
     BaseEnvironment,
     RestoreActionMode,
     RestoreEnvState,
 )
-from tapas_gmm.policy.models.tpgmm import TPGMM, AutoTPGMM, AutoTPGMMConfig, TPGMMConfig
+from tapas_gmm_modified.policy.models.tpgmm import (
+    TPGMM,
+    AutoTPGMM,
+    AutoTPGMMConfig,
+    TPGMMConfig,
+)
 
-# from tapas_gmm.policy.motion_planner import MotionPlannerPolicy
-from tapas_gmm.policy.policy import Policy, PolicyConfig
-from tapas_gmm.utils.geometry_np import (
+# from tapas_gmm_modified.policy.motion_planner import MotionPlannerPolicy
+from tapas_gmm_modified.policy.policy import Policy, PolicyConfig
+from tapas_gmm_modified.utils.geometry_np import (
     axis_and_angle_to_quaternion,
     compute_angle_between_quaternions,
     conjugate_quat,
@@ -33,11 +44,11 @@ from tapas_gmm.utils.geometry_np import (
     quaternion_to_matrix,
     rotate_vector_by_quaternion,
 )
-from tapas_gmm.utils.observation import SceneObservation
-from tapas_gmm.utils.robot_trajectory import RobotTrajectory, TrajectoryPoint
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.utils.topp import TOPP  # , SapienScene
-from tapas_gmm.viz.gmm import plot_traj_topp
+from tapas_gmm_modified.utils.observation import SceneObservation
+from tapas_gmm_modified.utils.robot_trajectory import RobotTrajectory, TrajectoryPoint
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.utils.topp import TOPP  # , SapienScene
+from tapas_gmm_modified.viz.gmm import plot_traj_topp
 
 zero_pos = np.array([0, 0, 0])
 zero_quat = np.array([1, 0, 0, 0])

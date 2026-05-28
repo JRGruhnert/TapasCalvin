@@ -1,7 +1,7 @@
 import torch
 from loguru import logger
 
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.utils.select_gpu import device
 
 try:
     import pycuda.driver as cuda  # type: ignore

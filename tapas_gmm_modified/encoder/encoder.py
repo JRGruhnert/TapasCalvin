@@ -4,10 +4,10 @@ from typing import Any, Callable
 import torch
 from torch import nn
 
-from tapas_gmm.dataset.bc import BCDataset
-from tapas_gmm.encoder import get_image_encoder_class
-from tapas_gmm.utils.observation import SceneObservation
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.dataset.bc import BCDataset
+from tapas_gmm_modified.encoder import get_image_encoder_class
+from tapas_gmm_modified.utils.observation import SceneObservation
+from tapas_gmm_modified.utils.select_gpu import device
 
 # TODO: rename encoders to ImageEncoders
 # then make ImageEncoders part of the BatchEncoder?

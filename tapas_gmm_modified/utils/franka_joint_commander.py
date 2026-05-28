@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 from trajectory_msgs.msg import JointTrajectory as JointTrajectoryMsg
 from trajectory_msgs.msg import JointTrajectoryPoint as JointTrajectoryPointMsg
 
-from tapas_gmm.utils.robot_trajectory import RobotTrajectory
+from tapas_gmm_modified.utils.robot_trajectory import RobotTrajectory
 
 integer_infinity = np.iinfo(np.int32).max
 

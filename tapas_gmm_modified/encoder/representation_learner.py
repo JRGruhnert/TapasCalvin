@@ -6,11 +6,11 @@ import torch.nn as nn
 from loguru import logger
 from omegaconf import DictConfig
 
-from tapas_gmm.dataset.dc import DenseCorrespondenceDataset
-from tapas_gmm.utils.logging import indent_func_log
-from tapas_gmm.utils.misc import get_and_log_failure as get_conf
-from tapas_gmm.utils.observation import SceneObservation, SingleCamObservation
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.dataset.dc import DenseCorrespondenceDataset
+from tapas_gmm_modified.utils.logging import indent_func_log
+from tapas_gmm_modified.utils.misc import get_and_log_failure as get_conf
+from tapas_gmm_modified.utils.observation import SceneObservation, SingleCamObservation
+from tapas_gmm_modified.utils.select_gpu import device
 
 # TODO: split into VisualEncoder and RepresentationLearner. VisualEncoder does not
 # have to be nn.Module and does not need training methods.

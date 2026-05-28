@@ -7,8 +7,8 @@ import numpy as np
 import torch
 from loguru import logger
 
-import tapas_gmm.dense_correspondence.correspondence_finder as correspondence_finder
-from tapas_gmm.viz.live_heatmap_visualization import (
+import tapas_gmm_modified.dense_correspondence.correspondence_finder as correspondence_finder
+from tapas_gmm_modified.viz.live_heatmap_visualization import (
     COLOR_BLACK,
     COLOR_GREEN,
     COLOR_RED,
@@ -17,7 +17,11 @@ from tapas_gmm.viz.live_heatmap_visualization import (
     display,
     draw_reticle,
 )
-from tapas_gmm.viz.operations import channel_front2back, channel_front2back_batch, scale
+from tapas_gmm_modified.viz.operations import (
+    channel_front2back,
+    channel_front2back_batch,
+    scale,
+)
 
 
 @dataclass

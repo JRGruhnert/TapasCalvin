@@ -1,4 +1,3 @@
-from tapas_gmm.master_project.sampler import SamplerConfig
-
+from tapas_gmm_modified.master_project.sampler import SamplerConfig
 
 sampler = SamplerConfig()

@@ -1,6 +1,6 @@
 import numpy as np
 
-from tapas_gmm.utils.keyboard_observer import KeyboardObserver
+from tapas_gmm_modified.utils.keyboard_observer import KeyboardObserver
 
 
 def human_feedback(keyboard_obs, action, feedback_type):

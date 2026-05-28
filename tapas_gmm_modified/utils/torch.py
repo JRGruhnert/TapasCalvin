@@ -5,7 +5,7 @@ from functools import wraps
 import torch
 from loguru import logger
 
-from tapas_gmm.utils.typing import NDArrayOrNDArraySeq, TensorOrTensorSeq
+from tapas_gmm_modified.utils.typing import NDArrayOrNDArraySeq, TensorOrTensorSeq
 
 
 def list_or_tensor(func):

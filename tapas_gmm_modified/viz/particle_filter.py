@@ -7,7 +7,7 @@ import torch
 import torchvision.transforms as T
 from matplotlib.pyplot import cm
 
-from tapas_gmm.viz.operations import np_channel_front2back, rgb2gray
+from tapas_gmm_modified.viz.operations import np_channel_front2back, rgb2gray
 
 
 class InitDbgViz:

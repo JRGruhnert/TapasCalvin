@@ -10,7 +10,7 @@ from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 from mpl_toolkits.mplot3d.proj3d import proj_transform
 
-from tapas_gmm.utils.geometry_np import (
+from tapas_gmm_modified.utils.geometry_np import (
     quaternion_to_axis_and_angle,
     quaternion_to_axis_angle,
 )

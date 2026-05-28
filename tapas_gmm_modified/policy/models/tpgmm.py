@@ -19,16 +19,16 @@ from omegaconf import OmegaConf
 from scipy.linalg import block_diag
 from tqdm.auto import tqdm
 
-import tapas_gmm.utils.geometry_np as geometry_np
-from tapas_gmm.dataset.demos import Demos, DemosSegment, PartialFrameViewDemos
-from tapas_gmm.utils.config import (
+import tapas_gmm_modified.utils.geometry_np as geometry_np
+from tapas_gmm_modified.dataset.demos import Demos, DemosSegment, PartialFrameViewDemos
+from tapas_gmm_modified.utils.config import (
     _SENTINELS,
     COPY_FROM_MAIN_FITTING,
     recursive_compare_dataclass,
 )
 
 # TODO: change geometry_torch imports to module import + geometry_torch. prefix in use
-from tapas_gmm.utils.geometry_torch import (
+from tapas_gmm_modified.utils.geometry_torch import (
     matrix_to_quaternion,
     quaternion_is_standard,
     quaternion_is_unit,
@@ -37,13 +37,13 @@ from tapas_gmm.utils.geometry_torch import (
     reconstruct_quaternion,
     remove_quaternion_dim,
 )
-from tapas_gmm.utils.gmm import (  # concat_mvn,
+from tapas_gmm_modified.utils.gmm import (  # concat_mvn,
     concat_mvn_rbd,
     get_component_mu_sigma,
     hmm_transition_probabilities,
 )
-from tapas_gmm.utils.logging import indent_logs
-from tapas_gmm.utils.manifolds import (
+from tapas_gmm_modified.utils.logging import indent_logs
+from tapas_gmm_modified.utils.manifolds import (
     Manifold_Quat,
     Manifold_R1,
     Manifold_R3,
@@ -51,11 +51,11 @@ from tapas_gmm.utils.manifolds import (
     Manifold_S2,
     Manifold_T,
 )
-from tapas_gmm.utils.misc import multiply_iterable
-from tapas_gmm.utils.np import get_indeces_of_duplicate_rows
-from tapas_gmm.utils.torch import batched_block_diag
-from tapas_gmm.utils.typing import NDArrayOrNDArraySeq
-from tapas_gmm.viz.gmm import (
+from tapas_gmm_modified.utils.misc import multiply_iterable
+from tapas_gmm_modified.utils.np import get_indeces_of_duplicate_rows
+from tapas_gmm_modified.utils.torch import batched_block_diag
+from tapas_gmm_modified.utils.typing import NDArrayOrNDArraySeq
+from tapas_gmm_modified.viz.gmm import (
     SingleDimPlotData,
     TPGMMPlotData,
     plot_coordinate_frame_trajs,
@@ -72,10 +72,10 @@ from tapas_gmm.viz.gmm import (
     plot_state_sequence_for_demo,
     plot_tangent_data,
 )
-from tapas_gmm.viz.quaternion import plot_quat_components
-from tapas_gmm.viz.threed import plot_rotation_basis
+from tapas_gmm_modified.viz.quaternion import plot_quat_components
+from tapas_gmm_modified.viz.threed import plot_rotation_basis
 
-# import tapas_gmm.utils.geometry_torch as geometry_torch
+# import tapas_gmm_modified.utils.geometry_torch as geometry_torch
 
 
 # NOTE: Don't reload this module - this breaks enum comparison!

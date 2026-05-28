@@ -1,3 +1,3 @@
-from tapas_gmm.encoder.monet import MonetConfig
+from tapas_gmm_modified.encoder.monet import MonetConfig
 
 monet_config = MonetConfig()

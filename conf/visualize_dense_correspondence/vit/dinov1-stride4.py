@@ -1,9 +1,9 @@
 from conf._machine import data_naming_config
 from conf.encoder.vit_extractor.stride4 import vit_feature_encoder_config
-from tapas_gmm.utils.misc import DataNamingConfig
-from tapas_gmm.utils.observation import ObservationConfig
-from tapas_gmm.visualize_dense_correspondence import Config, EncoderConfig
-from tapas_gmm.viz.live_heatmap_visualization import (
+from tapas_gmm_modified.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.observation import ObservationConfig
+from tapas_gmm_modified.visualize_dense_correspondence import Config, EncoderConfig
+from tapas_gmm_modified.viz.live_heatmap_visualization import (
     DisplayConfig,
     DistanceMetricConfig,
     HeatmapVisualizationConfig,

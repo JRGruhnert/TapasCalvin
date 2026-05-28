@@ -1,12 +1,12 @@
 import numpy as np
 import torch
 
-from tapas_gmm.master_project.definitions import (
+from tapas_gmm_modified.master_project.definitions import (
     State,
     Task,
     _origin_ee_tp_pose,
 )
-from tapas_gmm.utils.observation import (
+from tapas_gmm_modified.utils.observation import (
     CameraOrder,
     SceneObservation,
     SingleCamObservation,

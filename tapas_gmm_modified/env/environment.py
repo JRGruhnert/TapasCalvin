@@ -8,14 +8,14 @@ import numpy as np
 from loguru import logger
 from omegaconf import MISSING
 
-from tapas_gmm.utils.geometry_np import (
+from tapas_gmm_modified.utils.geometry_np import (
     axis_angle_to_quaternion,
     euler_angles_to_axis_angle,
     quaternion_to_axis_angle,
     quat_real_first_to_real_last,
 )
-from tapas_gmm.utils.observation import SceneObservation
-from tapas_gmm.utils.robot_trajectory import RobotTrajectory
+from tapas_gmm_modified.utils.observation import SceneObservation
+from tapas_gmm_modified.utils.robot_trajectory import RobotTrajectory
 
 
 def squash(array, order=20):

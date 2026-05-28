@@ -4,7 +4,7 @@ from loguru import logger
 from torch import nn
 import torchvision as transforms
 
-from tapas_gmm.encoder.models.keypoints import networks
+from tapas_gmm_modified.encoder.models.keypoints import networks
 
 
 class KeypointsTypes(Enum):
@@ -53,7 +53,7 @@ class KeypointsModel(nn.Module):
         logger.info("Normalizing images: {}", self.normalize_images)
 
     def compute_descriptors(self, batch, upscale=True):
-        # from tapas_gmm.utils.debug import summarize_tensor
+        # from tapas_gmm_modified.utils.debug import summarize_tensor
         # print(summarize_tensor(batch, "batch"))
         if self.normalize_images:
             batch = self.img_normalization(batch)

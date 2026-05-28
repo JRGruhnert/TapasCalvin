@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import torch
 from torch import nn
 
-from tapas_gmm.encoder.models.transporter.utils import spatial_softmax
+from tapas_gmm_modified.encoder.models.transporter.utils import spatial_softmax
 
 
 # TODO: break down further into image_encoder, keypoint_encoder, config

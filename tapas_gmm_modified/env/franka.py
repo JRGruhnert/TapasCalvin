@@ -21,11 +21,13 @@ from rl_franka.panda_controller_manager import PandaControllerManager
 from robot_io.cams.threaded_camera import ThreadedCamera
 from sensor_msgs.msg import JointState
 
-from tapas_gmm.env import Environment
-from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
-from tapas_gmm.utils.franka import clamp_translation
-from tapas_gmm.utils.franka_joint_commander import ThreadedJointTrajectoryFollower
-from tapas_gmm.utils.geometry_np import (
+from tapas_gmm_modified.env import Environment
+from tapas_gmm_modified.env.environment import BaseEnvironment, BaseEnvironmentConfig
+from tapas_gmm_modified.utils.franka import clamp_translation
+from tapas_gmm_modified.utils.franka_joint_commander import (
+    ThreadedJointTrajectoryFollower,
+)
+from tapas_gmm_modified.utils.geometry_np import (
     homogenous_transform_from_rot_shift,
     matrix_to_quaternion,
     quat_real_first_to_real_last,
@@ -33,18 +35,18 @@ from tapas_gmm.utils.geometry_np import (
     quaternion_is_unit,
     quaternion_to_matrix,
 )
-from tapas_gmm.utils.logging import indent_logs
-from tapas_gmm.utils.observation import (
+from tapas_gmm_modified.utils.logging import indent_logs
+from tapas_gmm_modified.utils.observation import (
     CameraOrder,
     SceneObservation,
     SingleCamObservation,
     dict_to_tensordict,
     empty_batchsize,
 )
-from tapas_gmm.utils.robot_trajectory import RobotTrajectory, TrajectoryPoint
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.viz.keypoint_selector import COLOR_RED, draw_reticle
-from tapas_gmm.viz.operations import int_to_float_range, np_channel_back2front
+from tapas_gmm_modified.utils.robot_trajectory import RobotTrajectory, TrajectoryPoint
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.viz.keypoint_selector import COLOR_RED, draw_reticle
+from tapas_gmm_modified.viz.operations import int_to_float_range, np_channel_back2front
 
 # TODO: figure out how to define this in package-level init and import it here
 PACKAGE_DIR = pathlib.Path(__file__).parent.parent.resolve()

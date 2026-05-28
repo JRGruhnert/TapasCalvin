@@ -1,7 +1,7 @@
 from collections import defaultdict
 
-from tapas_gmm.env import Environment
-from tapas_gmm.env.environment import BaseEnvironmentConfig
+from tapas_gmm_modified.env import Environment
+from tapas_gmm_modified.env.environment import BaseEnvironmentConfig
 
 task_horizons = {
     "CloseMicrowave": 300,  # i.e. 15 seconds

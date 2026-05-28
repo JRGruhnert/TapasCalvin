@@ -3,7 +3,7 @@ from typing import Optional, Sequence
 import torch
 from torch import nn
 
-from tapas_gmm.policy.models.diffusion.module_attr_mixin import ModuleAttrMixin
+from tapas_gmm_modified.policy.models.diffusion.module_attr_mixin import ModuleAttrMixin
 
 
 def get_intersection_slice_mask(

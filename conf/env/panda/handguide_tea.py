@@ -1,6 +1,6 @@
 from omegaconf import MISSING
 
-from tapas_gmm.env.franka import FrankaEnvironmentConfig
+from tapas_gmm_modified.env.franka import FrankaEnvironmentConfig
 
 franka_env_config = FrankaEnvironmentConfig(
     task=MISSING,

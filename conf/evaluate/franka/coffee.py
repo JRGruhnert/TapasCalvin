@@ -6,13 +6,13 @@ from conf.encoder.vit_keypoints.nofilter import (
 )
 from conf.env.panda.handguide_coffee import franka_env_config
 from conf.policy.models.tpgmm.auto_test import auto_tpgmm_config
-from tapas_gmm.encoder.encoder import ObservationEncoderConfig
-from tapas_gmm.evaluate import Config, EvalConfig
-from tapas_gmm.policy import PolicyEnum
-from tapas_gmm.policy.gmm import GMMPolicyConfig
-from tapas_gmm.utils.config import SET_PROGRAMMATICALLY
-from tapas_gmm.utils.misc import DataNamingConfig
-from tapas_gmm.utils.observation import ObservationConfig
+from tapas_gmm_modified.encoder.encoder import ObservationEncoderConfig
+from tapas_gmm_modified.evaluate import Config, EvalConfig
+from tapas_gmm_modified.policy import PolicyEnum
+from tapas_gmm_modified.policy.gmm import GMMPolicyConfig
+from tapas_gmm_modified.utils.config import SET_PROGRAMMATICALLY
+from tapas_gmm_modified.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.observation import ObservationConfig
 
 franka_env_config.teleop = True
 franka_env_config.eval = True

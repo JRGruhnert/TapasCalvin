@@ -1,6 +1,6 @@
 from omegaconf import MISSING
 
-from tapas_gmm.env.calvin import CalvinConfig
+from tapas_gmm_modified.env.calvin import CalvinConfig
 
 calvin_env_config = CalvinConfig(
     task=MISSING,

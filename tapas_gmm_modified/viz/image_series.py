@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import cm, gridspec
 from matplotlib.colors import ListedColormap
 
-from tapas_gmm.viz.operations import channel_front2back, rgb2gray
+from tapas_gmm_modified.viz.operations import channel_front2back, rgb2gray
 
 
 def vis_series(img_tensor, channeled=True, file_name=None):

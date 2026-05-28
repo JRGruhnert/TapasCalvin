@@ -3,28 +3,32 @@ from dataclasses import dataclass, field
 import numpy as np
 import torch
 import tsdf.fusion as fusion
-import tapas_gmm.utils.logging  # noqa
-from tapas_gmm.dataset.scene import SubSampleTypes
-from tapas_gmm.env import Environment
+import tapas_gmm_modified.utils.logging  # noqa
+from tapas_gmm_modified.dataset.scene import SubSampleTypes
+from tapas_gmm_modified.env import Environment
 from loguru import logger
 from omegaconf import OmegaConf, SCMode
-from tapas_gmm.tsdf.cluster import Cluster  # type: ignore
-from tapas_gmm.tsdf.filter import (
+from tapas_gmm_modified.tsdf.cluster import Cluster  # type: ignore
+from tapas_gmm_modified.tsdf.filter import (
     coordinate_boxes,
     filter_plane_from_mesh_and_pointcloud,
     gripper_dists,
 )
 
-from tapas_gmm.utils.argparse import parse_and_build_config
-from tapas_gmm.utils.cuda import (
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.cuda import (
     try_debug_memory,
     try_destroy_context,
     try_empty_cuda_cache,
     try_make_context,
 )
-from tapas_gmm.utils.misc import DataNamingConfig, apply_machine_config, load_scene_data
-from tapas_gmm.utils.random import configure_seeds
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.utils.misc import (
+    DataNamingConfig,
+    apply_machine_config,
+    load_scene_data,
+)
+from tapas_gmm_modified.utils.random import configure_seeds
+from tapas_gmm_modified.utils.select_gpu import device
 
 # import viz.image_series as viz_image_series
 

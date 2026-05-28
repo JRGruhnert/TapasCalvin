@@ -5,13 +5,13 @@ import torch
 from loguru import logger
 from scipy.spatial.distance import cdist
 
-from tapas_gmm.utils.geometry_torch import (
+from tapas_gmm_modified.utils.geometry_torch import (
     homogenous_transform_from_rot_shift,
     invert_homogenous_transform,
     invert_intrinsics,
     quaternion_to_matrix,
 )
-from tapas_gmm.viz.operations import flattened_pixel_locations_to_u_v
+from tapas_gmm_modified.viz.operations import flattened_pixel_locations_to_u_v
 
 dtype_float = torch.FloatTensor
 dtype_long = torch.LongTensor

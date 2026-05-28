@@ -2,7 +2,7 @@ import argparse
 
 from omegaconf import DictConfig, OmegaConf
 
-from tapas_gmm.utils.misc import import_config_file
+from tapas_gmm_modified.utils.misc import import_config_file
 
 
 def resolve_tuple(*args):

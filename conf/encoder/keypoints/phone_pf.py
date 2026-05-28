@@ -1,4 +1,4 @@
-from tapas_gmm.encoder.keypoints import (
+from tapas_gmm_modified.encoder.keypoints import (
     EncoderConfig,
     KeypointsConfig,
     KeypointsPredictorConfig,
@@ -7,7 +7,7 @@ from tapas_gmm.encoder.keypoints import (
     ProjectionTypes,
     ReferenceSelectionTypes,
 )
-from tapas_gmm.filter.particle_filter import ParticleFilterConfig
+from tapas_gmm_modified.filter.particle_filter import ParticleFilterConfig
 
 keypoints_config = KeypointsConfig()
 

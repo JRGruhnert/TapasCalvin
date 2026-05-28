@@ -3,8 +3,8 @@ import pathlib
 
 from loguru import logger
 
-from tapas_gmm.utils.data_loading import save_image, save_tensor
-from tapas_gmm.utils.observation import (
+from tapas_gmm_modified.utils.data_loading import save_image, save_tensor
+from tapas_gmm_modified.utils.observation import (
     GENERIC_ATTRIBUTES,
     MaskTypes,
     SceneObservation,
@@ -142,7 +142,6 @@ class Trajectory:
             json.dump(metadata, f)
 
         self.reset()
-
 
     def __len__(self) -> int:
         return len(self.observations)

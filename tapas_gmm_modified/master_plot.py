@@ -8,7 +8,7 @@ from omegaconf import OmegaConf, SCMode
 import pandas as pd
 from typing import Dict
 
-from tapas_gmm.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
 
 
 class RolloutAnalyzer:
@@ -235,7 +235,9 @@ class RolloutAnalyzer:
                 f"   ⚠️  Policy is very deterministic ({max_action_pct:.1%} on one action)"
             )
         elif max_action_pct < 0.3:
-            print(f"   ⚠️  Policy is very random (max action only {max_action_pct:.1%})")
+            print(
+                f"   ⚠️  Policy is very random (max action only {max_action_pct:.1%})"
+            )
 
         # Check success rate
         if overall["mean_success_rate"] < 0.01:

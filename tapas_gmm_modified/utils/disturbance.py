@@ -1,4 +1,4 @@
-from tapas_gmm.env.environment import BaseEnvironment
+from tapas_gmm_modified.env.environment import BaseEnvironment
 
 
 def disturbe_at_step_no(

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from omegaconf import MISSING
 
-from tapas_gmm.dataset.scene import SceneDatasetConfig
+from tapas_gmm_modified.dataset.scene import SceneDatasetConfig
 
 scene_dataset_config = SceneDatasetConfig(
     data_root=MISSING,

@@ -21,23 +21,23 @@ from matplotlib.transforms import Bbox
 from tensordict import TensorDict
 from torch.utils.data import Dataset
 
-from tapas_gmm.dataset.trajectory import Trajectory
-from tapas_gmm.encoder.keypoints import KeypointsPredictor
-from tapas_gmm.encoder.keypoints_gt import GTKeypointsPredictor
-from tapas_gmm.utils.config import (
+from tapas_gmm_modified.dataset.trajectory import Trajectory
+from tapas_gmm_modified.encoder.keypoints import KeypointsPredictor
+from tapas_gmm_modified.encoder.keypoints_gt import GTKeypointsPredictor
+from tapas_gmm_modified.utils.config import (
     dict_from_disk,
     dict_to_disk,
     structured_config_to_dict,
     structured_config_to_yaml,
     yaml_to_disk,
 )
-from tapas_gmm.utils.data_loading import load_image, load_tensor, save_tensor
-from tapas_gmm.utils.geometry_np import (
+from tapas_gmm_modified.utils.data_loading import load_image, load_tensor, save_tensor
+from tapas_gmm_modified.utils.geometry_np import (
     compute_angle_between_poses,
     compute_distance_between_poses,
 )
-from tapas_gmm.utils.misc import DataNamingConfig, load_scene_data
-from tapas_gmm.utils.observation import (
+from tapas_gmm_modified.utils.misc import DataNamingConfig, load_scene_data
+from tapas_gmm_modified.utils.observation import (
     ALL_CAMERA_ATTRIBUTES,
     GENERIC_ATTRIBUTES,
     CameraOrder,

@@ -1,4 +1,3 @@
-from tapas_gmm.master_project.storage import StorageConfig
-
+from tapas_gmm_modified.master_project.storage import StorageConfig
 
 storage = StorageConfig()

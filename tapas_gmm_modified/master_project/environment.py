@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 import numpy as np
-from tapas_gmm.env.calvin import Calvin
-from tapas_gmm.master_project.definitions import (
+from tapas_gmm_modified.env.calvin import Calvin
+from tapas_gmm_modified.master_project.definitions import (
     State,
     StateSpace,
     Task,
@@ -10,16 +10,16 @@ from tapas_gmm.master_project.definitions import (
     convert_to_states,
     convert_to_tasks,
 )
-from tapas_gmm.master_project.observation import Observation, tapas_format
-from tapas_gmm.master_project.evaluator import (
+from tapas_gmm_modified.master_project.observation import Observation, tapas_format
+from tapas_gmm_modified.master_project.evaluator import (
     Evaluator,
     EvaluatorConfig,
 )
-from tapas_gmm.master_project.sampler import (
+from tapas_gmm_modified.master_project.sampler import (
     Sampler,
     SamplerConfig,
 )
-from tapas_gmm.master_project.storage import (
+from tapas_gmm_modified.master_project.storage import (
     Storage,
     StorageConfig,
 )

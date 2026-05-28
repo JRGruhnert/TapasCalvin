@@ -8,12 +8,14 @@ import torch.nn as nn
 from einops.layers.torch import Rearrange
 from loguru import logger
 
-from tapas_gmm.policy.models.diffusion.conv1d_components import (
+from tapas_gmm_modified.policy.models.diffusion.conv1d_components import (
     Conv1dBlock,
     Downsample1d,
     Upsample1d,
 )
-from tapas_gmm.policy.models.diffusion.positional_embedding import SinusoidalPosEmb
+from tapas_gmm_modified.policy.models.diffusion.positional_embedding import (
+    SinusoidalPosEmb,
+)
 
 
 @dataclass

@@ -4,8 +4,8 @@ import torch
 import torchvision
 from omegaconf import DictConfig
 
-import tapas_gmm.encoder.keypoints
-from tapas_gmm.utils.geometry_torch import (
+import tapas_gmm_modified.encoder.keypoints
+from tapas_gmm_modified.utils.geometry_torch import (
     batched_pinhole_projection_image_to_world_coordinates,
     batched_project_onto_cam,
 )

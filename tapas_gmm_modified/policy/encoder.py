@@ -4,21 +4,21 @@ from typing import Any
 import torch
 from loguru import logger
 
-from tapas_gmm.dataset.bc import BCDataset
-from tapas_gmm.encoder import encoder_switch
-from tapas_gmm.encoder.bvae import BVAEConfig
-from tapas_gmm.encoder.cnn import CNNConfig
-from tapas_gmm.encoder.keypoints import KeypointsPredictorConfig
-from tapas_gmm.encoder.keypoints_gt import GTKeypointsPredictorConfig
-from tapas_gmm.encoder.models.keypoints.keypoints import KeypointsTypes
-from tapas_gmm.encoder.monet import MonetConfig
-from tapas_gmm.encoder.transporter import TransporterConfig
-from tapas_gmm.env.environment import BaseEnvironment
-from tapas_gmm.policy.lstm import LSTMPolicy, LSTMPolicyConfig
-from tapas_gmm.utils.logging import indent_logs, log_constructor
-from tapas_gmm.utils.misc import DataNamingConfig
-from tapas_gmm.utils.observation import ObservationConfig, SceneObservation
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.dataset.bc import BCDataset
+from tapas_gmm_modified.encoder import encoder_switch
+from tapas_gmm_modified.encoder.bvae import BVAEConfig
+from tapas_gmm_modified.encoder.cnn import CNNConfig
+from tapas_gmm_modified.encoder.keypoints import KeypointsPredictorConfig
+from tapas_gmm_modified.encoder.keypoints_gt import GTKeypointsPredictorConfig
+from tapas_gmm_modified.encoder.models.keypoints.keypoints import KeypointsTypes
+from tapas_gmm_modified.encoder.monet import MonetConfig
+from tapas_gmm_modified.encoder.transporter import TransporterConfig
+from tapas_gmm_modified.env.environment import BaseEnvironment
+from tapas_gmm_modified.policy.lstm import LSTMPolicy, LSTMPolicyConfig
+from tapas_gmm_modified.utils.logging import indent_logs, log_constructor
+from tapas_gmm_modified.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.observation import ObservationConfig, SceneObservation
+from tapas_gmm_modified.utils.select_gpu import device
 
 EncoderConfig = Any  # BVAEConfig | CNNConfig | KeypointsPredictorConfig | \
 # GTKeypointsPredictorConfig | MonetConfig | TransporterConfig

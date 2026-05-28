@@ -2,11 +2,11 @@ from omegaconf import MISSING
 from conf._machine import data_naming_config
 from conf.encoder.keypoints_gt.default import keypoints_gt_config
 from conf.encoder.vit_keypoints.nofilter import vit_keypoints_predictor_config
-from tapas_gmm.dataset.bc import BCDataConfig
-from tapas_gmm.kp_encode_trajectories import Config
-from tapas_gmm.policy.encoder import PseudoEncoderPolicyConfig
-from tapas_gmm.utils.misc import DataNamingConfig
-from tapas_gmm.utils.observation import MaskTypes, ObservationConfig
+from tapas_gmm_modified.dataset.bc import BCDataConfig
+from tapas_gmm_modified.kp_encode_trajectories import Config
+from tapas_gmm_modified.policy.encoder import PseudoEncoderPolicyConfig
+from tapas_gmm_modified.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.observation import MaskTypes, ObservationConfig
 
 encoder_naming_config = DataNamingConfig(
     task=None,  # If None, values are taken from data_naming_config

@@ -13,14 +13,18 @@ from numba import njit, prange
 from skimage import measure
 from tqdm.auto import tqdm
 
-from tapas_gmm.tsdf.filter import cut_volume_with_box, filter_background, filter_gripper
-from tapas_gmm.utils.cuda import FUSION_GPU_MODE, cuda
-from tapas_gmm.utils.geometry_torch import (
+from tapas_gmm_modified.tsdf.filter import (
+    cut_volume_with_box,
+    filter_background,
+    filter_gripper,
+)
+from tapas_gmm_modified.utils.cuda import FUSION_GPU_MODE, cuda
+from tapas_gmm_modified.utils.geometry_torch import (
     batched_rigid_transform,
     invert_homogenous_transform,
 )
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.viz.operations import np_channel_front2back
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.viz.operations import np_channel_front2back
 
 if FUSION_GPU_MODE:
     from pycuda.compiler import SourceModule  # type: ignore
@@ -86,8 +90,7 @@ class TSDFVolume:
             cuda.memcpy_htod(self._color_vol_gpu, self._color_vol_cpu)
 
             # Cuda kernel function (C++)
-            self._cuda_src_mod = SourceModule(
-                """
+            self._cuda_src_mod = SourceModule("""
             __global__ void integrate(float * tsdf_vol,
                                       float * weight_vol,
                                       float * color_vol,
@@ -160,8 +163,7 @@ class TSDFVolume:
               new_g = fmin(roundf((old_g*w_old+obs_weight*new_g)/w_new),255.0f);
               new_r = fmin(roundf((old_r*w_old+obs_weight*new_r)/w_new),255.0f);
               color_vol[voxel_idx] = new_b*256*256+new_g*256+new_r;
-            }"""
-            )
+            }""")
 
             self._cuda_integrate = self._cuda_src_mod.get_function("integrate")
 

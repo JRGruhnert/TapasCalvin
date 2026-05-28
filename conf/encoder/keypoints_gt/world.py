@@ -1,11 +1,15 @@
-from tapas_gmm.encoder.keypoints import KeypointsConfig, KeypointsTypes, ProjectionTypes
-from tapas_gmm.encoder.keypoints_gt import (
+from tapas_gmm_modified.encoder.keypoints import (
+    KeypointsConfig,
+    KeypointsTypes,
+    ProjectionTypes,
+)
+from tapas_gmm_modified.encoder.keypoints_gt import (
     EncoderConfig,
     GTKeypointsPredictorConfig,
     PreTrainingConfig,
     ReferenceSelectionTypes,
 )
-from tapas_gmm.viz.keypoint_selector import (
+from tapas_gmm_modified.viz.keypoint_selector import (
     DisplayConfig,
     DistanceMetricConfig,
     ManualKeypointSelectorConfig,

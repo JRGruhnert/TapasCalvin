@@ -10,8 +10,8 @@ import torchvision.transforms as T
 from loguru import logger
 from matplotlib import cm
 
-from tapas_gmm.encoder.keypoints import PriorTypes
-from tapas_gmm.viz.operations import channel_front2back, rgb2gray, scale
+from tapas_gmm_modified.encoder.keypoints import PriorTypes
+from tapas_gmm_modified.viz.operations import channel_front2back, rgb2gray, scale
 
 
 class VizType(Enum):

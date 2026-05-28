@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from tapas_gmm.utils.multi_processing import mp_wrapper
-from tapas_gmm.viz.operations import channel_front2back, scale
+from tapas_gmm_modified.utils.multi_processing import mp_wrapper
+from tapas_gmm_modified.viz.operations import channel_front2back, scale
 
 
 @mp_wrapper

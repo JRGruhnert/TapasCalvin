@@ -1,5 +1,5 @@
-from tapas_gmm.dataset.dc import DCDataConfig, DcDatasetDataType
-from tapas_gmm.utils.observation import MaskTypes
+from tapas_gmm_modified.dataset.dc import DCDataConfig, DcDatasetDataType
+from tapas_gmm_modified.utils.observation import MaskTypes
 
 datatype_probabilites = (
     (DcDatasetDataType.SINGLE_OBJECT_WITHIN_SCENE, 1),

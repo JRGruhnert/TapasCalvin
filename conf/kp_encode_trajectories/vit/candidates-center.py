@@ -1,9 +1,9 @@
 from conf._machine import data_naming_config
 from conf.encoder.vit_keypoints.candidates_center import vit_keypoints_predictor_config
-from tapas_gmm.kp_encode_trajectories import Config
-from tapas_gmm.policy.encoder import PseudoEncoderPolicyConfig
-from tapas_gmm.utils.misc import DataNamingConfig
-from tapas_gmm.utils.observation import ObservationConfig
+from tapas_gmm_modified.kp_encode_trajectories import Config
+from tapas_gmm_modified.policy.encoder import PseudoEncoderPolicyConfig
+from tapas_gmm_modified.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.observation import ObservationConfig
 
 encoder_naming_config = DataNamingConfig(
     task=None,  # If None, values are taken from data_naming_config

@@ -9,8 +9,8 @@ from loguru import logger
 from riepybdlib.mappings import s2_id
 from sklearn.cluster import DBSCAN
 
-from tapas_gmm.utils.geometry_np import ensure_quaternion_continuity
-from tapas_gmm.utils.geometry_torch import (
+from tapas_gmm_modified.utils.geometry_np import ensure_quaternion_continuity
+from tapas_gmm_modified.utils.geometry_torch import (
     axis_angle_to_matrix,
     axis_angle_to_quaternion,
     conjugate_quat,
@@ -37,9 +37,9 @@ from tapas_gmm.utils.geometry_torch import (
     standardize_quaternion,
     translation_to_direction_and_magnitude,
 )
-from tapas_gmm.utils.keypoints import tp_from_keypoints
-from tapas_gmm.utils.observation import SceneObservation
-from tapas_gmm.utils.torch import (
+from tapas_gmm_modified.utils.keypoints import tp_from_keypoints
+from tapas_gmm_modified.utils.observation import SceneObservation
+from tapas_gmm_modified.utils.torch import (
     batched_block_diag,
     cat,
     list_or_tensor,
@@ -50,8 +50,8 @@ from tapas_gmm.utils.torch import (
     to_numpy,
     unsqueeze,
 )
-from tapas_gmm.utils.typing import NDArrayOrNDArraySeq, TensorOrTensorSeq
-from tapas_gmm.viz.quaternion import plot_quat_components
+from tapas_gmm_modified.utils.typing import NDArrayOrNDArraySeq, TensorOrTensorSeq
+from tapas_gmm_modified.viz.quaternion import plot_quat_components
 
 PREFER_SMALLER_ROTS = True  # TODO: Make this a config option
 
@@ -2965,7 +2965,7 @@ def get_orientation_per_frame(
 
 
 def get_idx_by_target_len(traj_len: int, target_len: int) -> torch.Tensor:
-    # Copied from tapas_gmm.dataset.trajectory.py, but changed the supersampling strategy
+    # Copied from tapas_gmm_modified.dataset.trajectory.py, but changed the supersampling strategy
     # for shorter trajs. Analogous to subsampling now, instead of padding with
     # the last frame. And using torch instead of numpy.
     indeces = torch.linspace(start=0, end=traj_len - 1, steps=target_len)

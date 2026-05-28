@@ -1,7 +1,7 @@
 from conf._machine import data_naming_config
 from conf.behavior_cloning.diffusion.real_world.default import policy
 from conf.evaluate.franka.coffee import eval, franka_env_config
-from tapas_gmm.evaluate import Config
+from tapas_gmm_modified.evaluate import Config
 
 policy.encoder_config.disk_read_keypoints = False
 

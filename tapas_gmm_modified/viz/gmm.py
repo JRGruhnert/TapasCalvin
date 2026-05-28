@@ -15,7 +15,7 @@ from matplotlib.legend_handler import HandlerPatch
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle, Ellipse
 
-from tapas_gmm.utils.manifolds import (
+from tapas_gmm_modified.utils.manifolds import (
     Manifold_Quat,
     Manifold_R1,
     Manifold_R3,
@@ -23,13 +23,13 @@ from tapas_gmm.utils.manifolds import (
     Manifold_S2,
     Manifold_T,
 )
-from tapas_gmm.viz.threed import (
+from tapas_gmm_modified.viz.threed import (
     colorline_3d,
     plot_coordindate_frame,
     plot_ellipsoid_from_gaussian3d,
     plot_rot_from_quaternion,
 )
-from tapas_gmm.viz.utils import set_ax_border
+from tapas_gmm_modified.viz.utils import set_ax_border
 
 dim_names = tuple(("x", "y", "z"))
 

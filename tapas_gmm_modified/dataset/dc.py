@@ -13,13 +13,17 @@ from torch.utils.data.dataloader import default_collate
 
 # NOTE: using Dataset in type annotations as replacement for SceneDataset,
 # to avoid a circular import. This is a bit hacky. TODO: fix.
-# from tapas_gmm.dataset.scene import SceneDataset
-import tapas_gmm.dense_correspondence.correspondence_augmentation as correspondence_augmentation  # noqa 501
-import tapas_gmm.dense_correspondence.correspondence_finder as correspondence_finder
-from tapas_gmm.utils.misc import configure_class_instance
-from tapas_gmm.utils.observation import MaskTypes, SampleTypes, SingleCamObservation
-from tapas_gmm.viz.correspondence_plotter import cross_debug_plot, debug_plots
-from tapas_gmm.viz.operations import (
+# from tapas_gmm_modified.dataset.scene import SceneDataset
+import tapas_gmm_modified.dense_correspondence.correspondence_augmentation as correspondence_augmentation  # noqa 501
+import tapas_gmm_modified.dense_correspondence.correspondence_finder as correspondence_finder
+from tapas_gmm_modified.utils.misc import configure_class_instance
+from tapas_gmm_modified.utils.observation import (
+    MaskTypes,
+    SampleTypes,
+    SingleCamObservation,
+)
+from tapas_gmm_modified.viz.correspondence_plotter import cross_debug_plot, debug_plots
+from tapas_gmm_modified.viz.operations import (
     channel_front2back,
     get_image_tensor_mean,
     get_image_tensor_std,

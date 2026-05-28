@@ -5,11 +5,11 @@ import torch.nn as nn
 from loguru import logger
 from omegaconf import DictConfig
 
-from tapas_gmm.encoder.representation_learner import (
+from tapas_gmm_modified.encoder.representation_learner import (
     RepresentationLearner,
     RepresentationLearnerConfig,
 )
-from tapas_gmm.utils.observation import SingleCamObservation
+from tapas_gmm_modified.utils.observation import SingleCamObservation
 
 
 @dataclass

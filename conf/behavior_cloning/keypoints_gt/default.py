@@ -1,13 +1,13 @@
 from conf._machine import data_naming_config
 from conf.encoder.keypoints_gt.default import keypoints_gt_config
-from tapas_gmm.behavior_cloning import Config, TrainingConfig
-from tapas_gmm.dataset.bc import BCDataConfig
-from tapas_gmm.policy.encoder import EncoderPolicyConfig
-from tapas_gmm.policy.lstm import LSTMPolicyTrainingConfig
-from tapas_gmm.utils.config import SET_PROGRAMMATICALLY
-from tapas_gmm.utils.data_loading import DataLoaderConfig
-from tapas_gmm.utils.misc import DataNamingConfig
-from tapas_gmm.utils.observation import MaskTypes, ObservationConfig
+from tapas_gmm_modified.behavior_cloning import Config, TrainingConfig
+from tapas_gmm_modified.dataset.bc import BCDataConfig
+from tapas_gmm_modified.policy.encoder import EncoderPolicyConfig
+from tapas_gmm_modified.policy.lstm import LSTMPolicyTrainingConfig
+from tapas_gmm_modified.utils.config import SET_PROGRAMMATICALLY
+from tapas_gmm_modified.utils.data_loading import DataLoaderConfig
+from tapas_gmm_modified.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.observation import MaskTypes, ObservationConfig
 
 bc_data_config = BCDataConfig(
     fragment_length=30,

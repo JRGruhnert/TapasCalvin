@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import torch
 from torch import nn
 
-from tapas_gmm.encoder.models.bvae.base import BaseVAE
+from tapas_gmm_modified.encoder.models.bvae.base import BaseVAE
 
 from .types_ import List, Tensor
 

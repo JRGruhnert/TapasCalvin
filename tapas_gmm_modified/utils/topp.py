@@ -3,9 +3,9 @@
 import numpy as np
 from loguru import logger
 
-from tapas_gmm.utils.robot_trajectory import RobotTrajectory
+from tapas_gmm_modified.utils.robot_trajectory import RobotTrajectory
 
-# from tapas_gmm.utils.geometry_np import (
+# from tapas_gmm_modified.utils.geometry_np import (
 #     conjugate_quat,
 #     homogenous_transform_from_rot_shift,
 #     invert_homogenous_transform,
@@ -13,7 +13,7 @@ from tapas_gmm.utils.robot_trajectory import RobotTrajectory
 #     quaternion_to_matrix,
 # )
 
-# from tapas_gmm.utils.debug import save_q_traj_dbg
+# from tapas_gmm_modified.utils.debug import save_q_traj_dbg
 
 try:
     import mplib

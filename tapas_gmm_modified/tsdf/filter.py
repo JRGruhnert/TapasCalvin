@@ -2,7 +2,7 @@ import numpy as np
 import open3d
 from pyrep.objects.vision_sensor import VisionSensor
 
-from tapas_gmm.env import Environment
+from tapas_gmm_modified.env import Environment
 
 project = VisionSensor.pointcloud_from_depth_and_camera_params
 

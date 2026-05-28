@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from loguru import logger
 
-from tapas_gmm.utils.torch import (
+from tapas_gmm_modified.utils.torch import (
     list_or_tensor,
     list_or_tensor_mult_return,
     single_index_any_tensor_dim,

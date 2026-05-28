@@ -1,4 +1,4 @@
-# from tapas_gmm.utils.multi_processing import mp_wrapper
+# from tapas_gmm_modified.utils.multi_processing import mp_wrapper
 import matplotlib.pyplot as plt
 import numpy as np
 

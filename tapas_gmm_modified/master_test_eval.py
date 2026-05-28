@@ -7,36 +7,35 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
-from tapas_gmm.env.calvin import Calvin
-from tapas_gmm.policy.gmm import GMMPolicy
-import tapas_gmm.utils.logging  # noqa
+from tapas_gmm_modified.env.calvin import Calvin
+from tapas_gmm_modified.policy.gmm import GMMPolicy
+import tapas_gmm_modified.utils.logging  # noqa
 import wandb
-from tapas_gmm.env import Environment, import_env
-from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
-from tapas_gmm.policy import import_policy
-from tapas_gmm.policy.policy import Policy, PolicyConfig
-from tapas_gmm.utils.argparse import parse_and_build_config
-from tapas_gmm.utils.config import value_not_set
-from tapas_gmm.utils.disturbance import disturbe_at_step_no
-from tapas_gmm.utils.keyboard_observer import (
+from tapas_gmm_modified.env import Environment, import_env
+from tapas_gmm_modified.env.environment import BaseEnvironment, BaseEnvironmentConfig
+from tapas_gmm_modified.policy import import_policy
+from tapas_gmm_modified.policy.policy import Policy, PolicyConfig
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.config import value_not_set
+from tapas_gmm_modified.utils.disturbance import disturbe_at_step_no
+from tapas_gmm_modified.utils.keyboard_observer import (
     KeyboardObserver,
     wait_for_environment_reset,
 )
-from tapas_gmm.calvin_project.calvin.envs.calvin_env import (
+from tapas_gmm_modified.calvin_project.calvin.envs.calvin_env import (
     CalvinObservation,
 )
 
-# from tapas_gmm.utils.misc import loop_sleep
-from tapas_gmm.utils.misc import DataNamingConfig, policy_checkpoint_name
-from tapas_gmm.utils.observation import SceneObservation, random_obs_dropout
-from tapas_gmm.utils.random import configure_seeds
-from tapas_gmm.utils.robot_trajectory import RobotTrajectory, TrajectoryPoint
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.utils.tasks import get_task_horizon
-from tapas_gmm.viz.live_keypoint import LiveKeypoints
+# from tapas_gmm_modified.utils.misc import loop_sleep
+from tapas_gmm_modified.utils.misc import DataNamingConfig, policy_checkpoint_name
+from tapas_gmm_modified.utils.observation import SceneObservation, random_obs_dropout
+from tapas_gmm_modified.utils.random import configure_seeds
+from tapas_gmm_modified.utils.robot_trajectory import RobotTrajectory, TrajectoryPoint
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.utils.tasks import get_task_horizon
+from tapas_gmm_modified.viz.live_keypoint import LiveKeypoints
 import numpy as np
 from typing import Dict, Any
-
 
 init_griper_state = 0.9 * torch.ones(1, device=device)
 

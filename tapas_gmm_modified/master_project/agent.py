@@ -4,11 +4,11 @@ import re
 import torch
 from torch import nn
 import numpy as np
-from tapas_gmm.master_project.networks import NetworkType, import_network
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.master_project.observation import Observation
-from tapas_gmm.master_project.networks.base import ActorCriticBase
-from tapas_gmm.master_project.definitions import State, Task
+from tapas_gmm_modified.master_project.networks import NetworkType, import_network
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.master_project.observation import Observation
+from tapas_gmm_modified.master_project.networks.base import ActorCriticBase
+from tapas_gmm_modified.master_project.definitions import State, Task
 
 
 @dataclass

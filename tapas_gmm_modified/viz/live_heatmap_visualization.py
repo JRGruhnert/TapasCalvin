@@ -6,10 +6,10 @@ import cv2
 # import matplotlib.pyplot as plt
 import numpy as np
 
-import tapas_gmm.dense_correspondence.correspondence_finder as correspondence_finder
-from tapas_gmm.dataset.dc import DenseCorrespondenceDataset
-from tapas_gmm.encoder import KeypointsPredictor, VitFeatureEncoder
-from tapas_gmm.viz.operations import channel_front2back
+import tapas_gmm_modified.dense_correspondence.correspondence_finder as correspondence_finder
+from tapas_gmm_modified.dataset.dc import DenseCorrespondenceDataset
+from tapas_gmm_modified.encoder import KeypointsPredictor, VitFeatureEncoder
+from tapas_gmm_modified.viz.operations import channel_front2back
 
 COLOR_RED = (0, 0, 255)
 COLOR_GREEN = (0, 255, 0)

@@ -4,8 +4,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from tapas_gmm.policy.models.diffusion.dict_of_tensor_mixin import DictOfTensorMixin
-from tapas_gmm.policy.models.diffusion.pytorch_util import dict_apply
+from tapas_gmm_modified.policy.models.diffusion.dict_of_tensor_mixin import (
+    DictOfTensorMixin,
+)
+from tapas_gmm_modified.policy.models.diffusion.pytorch_util import dict_apply
 
 
 class LinearNormalizer(DictOfTensorMixin):

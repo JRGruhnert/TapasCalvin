@@ -10,14 +10,14 @@ import sapien.core
 import torch
 from loguru import logger
 
-from tapas_gmm.env import Environment
-from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
-from tapas_gmm.utils.geometry_np import (
+from tapas_gmm_modified.env import Environment
+from tapas_gmm_modified.env.environment import BaseEnvironment, BaseEnvironmentConfig
+from tapas_gmm_modified.utils.geometry_np import (
     invert_homogenous_transform,
     quaternion_to_axis_angle,
 )
-from tapas_gmm.utils.misc import invert_dict
-from tapas_gmm.utils.observation import (
+from tapas_gmm_modified.utils.misc import invert_dict
+from tapas_gmm_modified.utils.observation import (
     CameraOrder,
     SceneObservation,
     SingleCamObservation,

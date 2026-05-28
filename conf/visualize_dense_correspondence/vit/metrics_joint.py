@@ -6,10 +6,10 @@ from conf.visualize_dense_correspondence.vit.cosine import (
 from conf.visualize_dense_correspondence.vit.euclidean import (
     distance_metric_config as euclidean_config,
 )
-from tapas_gmm.utils.misc import DataNamingConfig
-from tapas_gmm.utils.observation import ObservationConfig
-from tapas_gmm.visualize_dense_correspondence import Config, EncoderConfig
-from tapas_gmm.viz.live_heatmap_visualization import (
+from tapas_gmm_modified.utils.misc import DataNamingConfig
+from tapas_gmm_modified.utils.observation import ObservationConfig
+from tapas_gmm_modified.visualize_dense_correspondence import Config, EncoderConfig
+from tapas_gmm_modified.viz.live_heatmap_visualization import (
     DisplayConfig,
     HeatmapVisualizationConfig,
     SamplingConfig,

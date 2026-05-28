@@ -1,6 +1,6 @@
 import numpy as np
 
-from tapas_gmm.utils.observation import SceneObservation
+from tapas_gmm_modified.utils.observation import SceneObservation
 
 
 class SpherePolicy:

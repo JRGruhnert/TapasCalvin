@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 
-from tapas_gmm.utils.multi_processing import mp_wrapper
+from tapas_gmm_modified.utils.multi_processing import mp_wrapper
 
 
 @mp_wrapper

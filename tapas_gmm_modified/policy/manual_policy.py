@@ -1,13 +1,13 @@
 from loguru import logger
 import numpy as np
 
-from tapas_gmm.env.calvin import Calvin
-from tapas_gmm.env.environment import BaseEnvironment
-from tapas_gmm.utils.human_feedback import correct_action
+from tapas_gmm_modified.env.calvin import Calvin
+from tapas_gmm_modified.env.environment import BaseEnvironment
+from tapas_gmm_modified.utils.human_feedback import correct_action
 from calvin_env.envs.observation import (
     CalvinObservation,
 )
-from tapas_gmm.utils.keyboard_observer import KeyboardObserver
+from tapas_gmm_modified.utils.keyboard_observer import KeyboardObserver
 
 
 class ManualCalvinPolicy:

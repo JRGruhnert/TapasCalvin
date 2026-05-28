@@ -3,7 +3,7 @@ import torch
 from numba import prange
 from numpy.linalg import inv
 
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.utils.select_gpu import device
 
 
 # TODO: probably have something like this already somewhere.

@@ -7,18 +7,26 @@ from scipy.spatial.transform import Rotation as R
 import torch
 from loguru import logger
 
-from tapas_gmm.encoder.encoder import ObservationEncoder, ObservationEncoderConfig
-from tapas_gmm.env.environment import BaseEnvironment
+from tapas_gmm_modified.encoder.encoder import (
+    ObservationEncoder,
+    ObservationEncoderConfig,
+)
+from tapas_gmm_modified.env.environment import BaseEnvironment
 
-from tapas_gmm.policy.models.master_project.hrl_gnn import HRL_GNN
-from tapas_gmm.policy.models.master_project.hrl_model import (
+from tapas_gmm_modified.policy.models.master_project.hrl_gnn import HRL_GNN
+from tapas_gmm_modified.policy.models.master_project.hrl_model import (
     HierarchicalLearner,
     HierarchicalLearnerConfig,
 )
-from tapas_gmm.policy.models.tpgmm import TPGMM, AutoTPGMM, AutoTPGMMConfig, TPGMMConfig
+from tapas_gmm_modified.policy.models.tpgmm import (
+    TPGMM,
+    AutoTPGMM,
+    AutoTPGMMConfig,
+    TPGMMConfig,
+)
 
-# from tapas_gmm.policy.motion_planner import MotionPlannerPolicy
-from tapas_gmm.policy.policy import Policy, PolicyConfig
+# from tapas_gmm_modified.policy.motion_planner import MotionPlannerPolicy
+from tapas_gmm_modified.policy.policy import Policy, PolicyConfig
 from utils.robot_trajectory import RobotTrajectory
 
 zero_pos = np.array([0, 0, 0])

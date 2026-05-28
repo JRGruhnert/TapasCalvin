@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 
 import torch
 
-from tapas_gmm.utils.torch import compare_state_dicts
+from tapas_gmm_modified.utils.torch import compare_state_dicts
 
 
 def main(path_a, path_b):

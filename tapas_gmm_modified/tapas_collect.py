@@ -9,25 +9,25 @@ import torch
 from loguru import logger
 from tqdm.auto import tqdm
 
-from tapas_gmm.collect_data import Config
-from tapas_gmm.env import Environment
-from tapas_gmm.env.calvin import CalvinConfig, Calvin
+from tapas_gmm_modified.collect_data import Config
+from tapas_gmm_modified.env import Environment
+from tapas_gmm_modified.env.calvin import CalvinConfig, Calvin
 
-from tapas_gmm.env.environment import BaseEnvironmentConfig
-from tapas_gmm.master_project.definitions import StateSpace, convert_to_states
-from tapas_gmm.master_project.sampler import Sampler, SamplerConfig
-from tapas_gmm.policy import PolicyEnum
-from tapas_gmm.policy.manual_policy import ManualCalvinPolicy
-from tapas_gmm.dataset.scene import SceneDataset, SceneDatasetConfig
-from tapas_gmm.master_project.observation import Observation, tapas_format
-from tapas_gmm.utils.argparse import parse_and_build_config
-from tapas_gmm.utils.misc import (
+from tapas_gmm_modified.env.environment import BaseEnvironmentConfig
+from tapas_gmm_modified.master_project.definitions import StateSpace, convert_to_states
+from tapas_gmm_modified.master_project.sampler import Sampler, SamplerConfig
+from tapas_gmm_modified.policy import PolicyEnum
+from tapas_gmm_modified.policy.manual_policy import ManualCalvinPolicy
+from tapas_gmm_modified.dataset.scene import SceneDataset, SceneDatasetConfig
+from tapas_gmm_modified.master_project.observation import Observation, tapas_format
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.misc import (
     DataNamingConfig,
     get_dataset_name,
     loop_sleep,
 )
 
-from tapas_gmm.utils.keyboard_observer import KeyboardObserver
+from tapas_gmm_modified.utils.keyboard_observer import KeyboardObserver
 
 
 @dataclass

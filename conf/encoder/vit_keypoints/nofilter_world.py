@@ -1,16 +1,16 @@
 from conf.encoder.vit_extractor.default import vit_model_config
-from tapas_gmm.encoder.keypoints import (
+from tapas_gmm_modified.encoder.keypoints import (
     KeypointsConfig,
     PriorTypes,
     ProjectionTypes,
     ReferenceSelectionTypes,
 )
-from tapas_gmm.encoder.vit_extractor import (
+from tapas_gmm_modified.encoder.vit_extractor import (
     PreTrainingConfig,
     VitKeypointsEncoderConfig,
     VitKeypointsPredictorConfig,
 )
-from tapas_gmm.viz.keypoint_selector import (
+from tapas_gmm_modified.viz.keypoint_selector import (
     DisplayConfig,
     DistanceMetricConfig,
     ManualKeypointSelectorConfig,

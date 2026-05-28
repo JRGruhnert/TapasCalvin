@@ -1,13 +1,12 @@
 import numpy as np
 import torch
-from tapas_gmm.utils.observation import (
+from tapas_gmm_modified.utils.observation import (
     SceneObservation,
     SingleCamObservation,
     CameraOrder,
     dict_to_tensordict,
     empty_batchsize,
 )
-
 
 """
 Observation: {
@@ -98,10 +97,11 @@ Info: {
                         'logical_state': 0}}}}
 """
 
-def calvin_to_tapas_representation(c_obs, c_action) -> list[SceneObservation]: # type: ignore
+
+def calvin_to_tapas_representation(c_obs, c_action) -> list[SceneObservation]:  # type: ignore
     """
     Convert a CALVIN observation and action into a TAPAS SceneObservation.
-    
+
     Assumptions:
       - c_obs is a dict with keys:
           "rgb_obs": dict of camera images (e.g. {"wrist": numpy array ...})
@@ -117,17 +117,17 @@ def calvin_to_tapas_representation(c_obs, c_action) -> list[SceneObservation]: #
       - For cameras, we assume a single camera "wrist" and use dummy intrinsics and extrinsics.
       - Joint velocities are not available in c_obs so we default them to zeros.
       - Batch size is inferred from c_action.
-    
+
     Returns:
       A list containing one SceneObservation instance (batched).
     """
     # --- Process robot state ---
     if c_obs is None:
         return None
-    robot_obs = c_obs.get('robot_obs')
+    robot_obs = c_obs.get("robot_obs")
     if robot_obs is None:
         return None
-    
+
     # Extract TCP position (first 3 numbers) and TCP orientation (next 4 numbers)
     tcp_pos = np.array(robot_obs[:3])
     tcp_orn = np.array(robot_obs[3:7])  # assumed to be a quaternion (qx, qy, qz, qw)
@@ -138,25 +138,31 @@ def calvin_to_tapas_representation(c_obs, c_action) -> list[SceneObservation]: #
     # (Here we assume gripper_opening_width is at index 7 and gripper_action is the last element)
     gripper_opening_width = robot_obs[7]
     gripper_action = robot_obs[-1]
-    
+
     # Arm joint positions from robot_info (assumed to be 7 numbers)
-    arm_joint_pos = np.array(c_obs['robot_info']['arm_joint_states'])
+    arm_joint_pos = np.array(c_obs["robot_info"]["arm_joint_states"])
     # If velocities are not provided, we set them to zeros
     arm_joint_vel = np.zeros_like(arm_joint_pos)
 
     # --- Process action ---
     # Convert c_action to a torch tensor (assume float32)
-    action_tensor = torch.tensor(c_action, dtype=torch.float32)  # shape: (batch_size, 7)
+    action_tensor = torch.tensor(
+        c_action, dtype=torch.float32
+    )  # shape: (batch_size, 7)
     batch_size = action_tensor.shape[0]
 
     # --- Process camera observations ---
     # We assume that c_obs["rgb_obs"] and c_obs["depth_obs"] are dicts mapping camera names to images.
     # Here we use the "wrist" camera.
     # Convert these observations to torch tensors.
-    rgb_arr = c_obs['rgb_obs'].get('wrist', None)
-    depth_arr = c_obs['depth_obs'].get('wrist', None)
-    rgb_tensor = torch.tensor(rgb_arr, dtype=torch.float32) if rgb_arr is not None else None
-    depth_tensor = torch.tensor(depth_arr, dtype=torch.float32) if depth_arr is not None else None
+    rgb_arr = c_obs["rgb_obs"].get("wrist", None)
+    depth_arr = c_obs["depth_obs"].get("wrist", None)
+    rgb_tensor = (
+        torch.tensor(rgb_arr, dtype=torch.float32) if rgb_arr is not None else None
+    )
+    depth_tensor = (
+        torch.tensor(depth_arr, dtype=torch.float32) if depth_arr is not None else None
+    )
     # For demonstration, we create dummy camera intrinsics (3x3 identity) and extrinsics (4x4 identity).
     dummy_intr = torch.eye(3, dtype=torch.float32).unsqueeze(0).repeat(batch_size, 1, 1)
     dummy_extr = torch.eye(4, dtype=torch.float32).unsqueeze(0).repeat(batch_size, 1, 1)
@@ -167,54 +173,69 @@ def calvin_to_tapas_representation(c_obs, c_action) -> list[SceneObservation]: #
         extr=dummy_extr,
         intr=dummy_intr,
         mask=None,
-        batch_size=torch.Size([batch_size])
+        batch_size=torch.Size([batch_size]),
     )
     # Specify camera order (here only "wrist")
-    cam_order = CameraOrder(order=('wrist',), batch_size=torch.Size([batch_size]))
+    cam_order = CameraOrder(order=("wrist",), batch_size=torch.Size([batch_size]))
     # Build a dictionary mapping camera names to observations.
-    cameras_dict = {
-        'wrist': cam_obs,
-        '_order': cam_order
-    }
+    cameras_dict = {"wrist": cam_obs, "_order": cam_order}
     cameras_tensordict = dict_to_tensordict(cameras_dict)
 
     # --- Process object poses ---
     # From scene_info["movable_objects"], extract for each object a 7-dimensional pose [pos, quat]
-    movable_objects = c_obs.get('scene_info', {}).get('movable_objects', {})
+    movable_objects = c_obs.get("scene_info", {}).get("movable_objects", {})
     object_poses_dict = {}
     for name, obj in movable_objects.items():
-        pos = np.array(obj['current_pos'])  # shape (3,)
-        orn = np.array(obj['current_orn'])  # shape (4,)
+        pos = np.array(obj["current_pos"])  # shape (3,)
+        orn = np.array(obj["current_orn"])  # shape (4,)
         obj_pose = np.concatenate([pos, orn])  # shape (7,)
         # Convert and repeat to have shape (batch_size, 7)
-        obj_pose_tensor = torch.tensor(obj_pose, dtype=torch.float32).unsqueeze(0).repeat(batch_size, 1)
+        obj_pose_tensor = (
+            torch.tensor(obj_pose, dtype=torch.float32)
+            .unsqueeze(0)
+            .repeat(batch_size, 1)
+        )
         # Use the object name as the key (or you could standardize names as obj000, obj001, etc.)
         object_poses_dict[name] = obj_pose_tensor
     object_poses_tensordict = dict_to_tensordict(object_poses_dict)
 
     # --- Process additional robot information ---
     # For joint positions and velocities, create tensors and repeat for batch.
-    joint_pos_tensor = torch.tensor(arm_joint_pos, dtype=torch.float32).unsqueeze(0).repeat(batch_size, 1)
-    joint_vel_tensor = torch.tensor(arm_joint_vel, dtype=torch.float32).unsqueeze(0).repeat(batch_size, 1)
+    joint_pos_tensor = (
+        torch.tensor(arm_joint_pos, dtype=torch.float32)
+        .unsqueeze(0)
+        .repeat(batch_size, 1)
+    )
+    joint_vel_tensor = (
+        torch.tensor(arm_joint_vel, dtype=torch.float32)
+        .unsqueeze(0)
+        .repeat(batch_size, 1)
+    )
     # For ee_pose, repeat it to match batch size.
-    ee_pose_tensor = torch.tensor(ee_pose, dtype=torch.float32).unsqueeze(0).repeat(batch_size, 1)
+    ee_pose_tensor = (
+        torch.tensor(ee_pose, dtype=torch.float32).unsqueeze(0).repeat(batch_size, 1)
+    )
     # Gripper state (we use gripper_action here) as a tensor of shape (batch_size, 1)
-    gripper_state_tensor = torch.tensor([gripper_action], dtype=torch.float32).unsqueeze(0).repeat(batch_size, 1)
+    gripper_state_tensor = (
+        torch.tensor([gripper_action], dtype=torch.float32)
+        .unsqueeze(0)
+        .repeat(batch_size, 1)
+    )
     # For feedback, we create a zero tensor.
     feedback_tensor = torch.zeros(batch_size, 1, dtype=torch.float32)
 
     # --- Assemble the SceneObservation ---
     scene_obs = SceneObservation(
-        action=action_tensor,             # shape: (batch_size, 7)
-        cameras=cameras_tensordict,         # LazyStackedTensorDict of camera observations
-        ee_pose=ee_pose_tensor,             # shape: (batch_size, 7)
-        feedback=feedback_tensor,           # shape: (batch_size, 1)
-        gripper_state=gripper_state_tensor, # shape: (batch_size, 1)
-        joint_pos=joint_pos_tensor,         # shape: (batch_size, 7)
-        joint_vel=joint_vel_tensor,         # shape: (batch_size, 7)
-        object_poses=object_poses_tensordict, # LazyStackedTensorDict of object poses
+        action=action_tensor,  # shape: (batch_size, 7)
+        cameras=cameras_tensordict,  # LazyStackedTensorDict of camera observations
+        ee_pose=ee_pose_tensor,  # shape: (batch_size, 7)
+        feedback=feedback_tensor,  # shape: (batch_size, 1)
+        gripper_state=gripper_state_tensor,  # shape: (batch_size, 1)
+        joint_pos=joint_pos_tensor,  # shape: (batch_size, 7)
+        joint_vel=joint_vel_tensor,  # shape: (batch_size, 7)
+        object_poses=object_poses_tensordict,  # LazyStackedTensorDict of object poses
         kp=None,
-        batch_size=torch.Size([batch_size])
+        batch_size=torch.Size([batch_size]),
     )
 
     # Return as a list (if required by your interface)
@@ -269,5 +290,6 @@ SceneObservation(
     is_shared=False) 
 """
 
-def tapas_to_calvin_representation(t_obs: list[SceneObservation]) -> dict: # type: ignore
+
+def tapas_to_calvin_representation(t_obs: list[SceneObservation]) -> dict:  # type: ignore
     return {}

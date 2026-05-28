@@ -5,13 +5,13 @@ import torch
 from loguru import logger
 from torch.utils.data import Dataset
 
-from tapas_gmm.dataset.demos import Demos
-from tapas_gmm.utils.franka import compute_ee_delta
-from tapas_gmm.utils.geometry_np import (
+from tapas_gmm_modified.dataset.demos import Demos
+from tapas_gmm_modified.utils.franka import compute_ee_delta
+from tapas_gmm_modified.utils.geometry_np import (
     ensure_quat_positive_real_part,
     ensure_quaternion_continuity,
 )
-from tapas_gmm.utils.observation import (
+from tapas_gmm_modified.utils.observation import (
     CameraOrder,
     SceneObservation,
     SingleCamObservation,

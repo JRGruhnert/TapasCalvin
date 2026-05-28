@@ -14,11 +14,14 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf, SCMode
 from tensordict import TensorDict
 
-from tapas_gmm.dataset.scene import SceneDataset
-from tapas_gmm.utils.argparse import parse_and_build_config
-from tapas_gmm.utils.misc import DataNamingConfig, load_scene_data
-from tapas_gmm.utils.observation import ObservationConfig, tensorclass_from_tensordict
-from tapas_gmm.viz.operations import channel_front2back, rgb2gray
+from tapas_gmm_modified.dataset.scene import SceneDataset
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.misc import DataNamingConfig, load_scene_data
+from tapas_gmm_modified.utils.observation import (
+    ObservationConfig,
+    tensorclass_from_tensordict,
+)
+from tapas_gmm_modified.viz.operations import channel_front2back, rgb2gray
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt

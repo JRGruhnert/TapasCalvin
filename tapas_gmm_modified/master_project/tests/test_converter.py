@@ -1,20 +1,19 @@
 import numpy as np
 import pytest
 
-from tapas_gmm.master_project.converter import (
+from tapas_gmm_modified.master_project.converter import (
     Converter,
     QuaternionConverter,
     ScalarConverter,
     TransformConverter,
 )
-from tapas_gmm.master_project.definitions import (
+from tapas_gmm_modified.master_project.definitions import (
     State,
     StateSpace,
     StateType,
     Task,
 )
-from tapas_gmm.master_project.observation import Observation
-
+from tapas_gmm_modified.master_project.observation import Observation
 
 normalized = True
 

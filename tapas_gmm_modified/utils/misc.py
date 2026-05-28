@@ -14,7 +14,7 @@ import numpy as np
 from loguru import logger
 from omegaconf import DictConfig
 
-from tapas_gmm.utils.logging import indent_logs
+from tapas_gmm_modified.utils.logging import indent_logs
 
 
 @dataclass
@@ -58,7 +58,7 @@ def get_dataset_name(config: DictConfig):
 
 
 def load_scene_data(config: DataNamingConfig):
-    import tapas_gmm.dataset.scene as scene_dataset
+    import tapas_gmm_modified.dataset.scene as scene_dataset
 
     logger.info("Loading dataset(s): ")
 

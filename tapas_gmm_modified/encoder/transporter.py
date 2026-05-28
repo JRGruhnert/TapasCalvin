@@ -4,10 +4,10 @@ import torch
 from omegaconf import DictConfig
 from torch import nn
 
-import tapas_gmm.encoder.models.transporter.transporter as transporter
-import tapas_gmm.encoder.representation_learner as representation_learner
-from tapas_gmm.utils.observation import SampleTypes, SingleCamObservation
-from tapas_gmm.utils.select_gpu import device
+import tapas_gmm_modified.encoder.models.transporter.transporter as transporter
+import tapas_gmm_modified.encoder.representation_learner as representation_learner
+from tapas_gmm_modified.utils.observation import SampleTypes, SingleCamObservation
+from tapas_gmm_modified.utils.select_gpu import device
 
 
 @dataclass

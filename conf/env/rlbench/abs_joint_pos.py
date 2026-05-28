@@ -1,7 +1,7 @@
 from omegaconf import MISSING
 from rlbench.action_modes import ArmActionMode
 
-from tapas_gmm.env.rlbench import RLBenchEnvironmentConfig
+from tapas_gmm_modified.env.rlbench import RLBenchEnvironmentConfig
 
 rlbench_env_config = RLBenchEnvironmentConfig(
     task=MISSING,

@@ -5,7 +5,7 @@ from conf.behavior_cloning.diffusion.default import (
     bc_training,
     policy,
 )
-from tapas_gmm.behavior_cloning import Config, DataLoaderConfig
+from tapas_gmm_modified.behavior_cloning import Config, DataLoaderConfig
 
 data_loader = DataLoaderConfig(
     train_split=1.0,

@@ -7,10 +7,10 @@ from conf.behavior_cloning.keypoints.cup import (
 )
 from conf.encoder.vit_keypoints.nofilter import vit_keypoints_predictor_config
 from conf.observation.wrist_nocrop import observation_config
-from tapas_gmm.behavior_cloning import Config
-from tapas_gmm.policy.encoder import EncoderPolicyConfig
-from tapas_gmm.utils.config import SET_PROGRAMMATICALLY
-from tapas_gmm.utils.misc import DataNamingConfig
+from tapas_gmm_modified.behavior_cloning import Config
+from tapas_gmm_modified.policy.encoder import EncoderPolicyConfig
+from tapas_gmm_modified.utils.config import SET_PROGRAMMATICALLY
+from tapas_gmm_modified.utils.misc import DataNamingConfig
 
 encoder_naming_config = DataNamingConfig(
     task=None,  # If None, values are taken from data_naming_config

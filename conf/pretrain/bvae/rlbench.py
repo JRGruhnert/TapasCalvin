@@ -1,8 +1,8 @@
 from conf._machine import data_naming_config
 from conf.encoder.bvae.default import bvae_config
 from conf.pretrain.default import observation_config, training_config
-from tapas_gmm.pretrain import Config
-from tapas_gmm.utils.data_loading import DataLoaderConfig
+from tapas_gmm_modified.pretrain import Config
+from tapas_gmm_modified.utils.data_loading import DataLoaderConfig
 
 dataloader_config = DataLoaderConfig(
     train_split=0.7,

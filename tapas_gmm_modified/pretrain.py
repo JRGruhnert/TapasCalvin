@@ -10,28 +10,28 @@ from omegaconf import MISSING, DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
 # import config as default_config
-import tapas_gmm.utils.logging  # noqa
+import tapas_gmm_modified.utils.logging  # noqa
 import wandb
-from tapas_gmm.dataset.dc import DCDataConfig, DenseCorrespondenceDataset
-from tapas_gmm.encoder import encoder_switch
-from tapas_gmm.encoder.representation_learner import RepresentationLearner
-from tapas_gmm.policy.encoder import EncoderConfig
-from tapas_gmm.utils.argparse import parse_and_build_config
-from tapas_gmm.utils.config import SET_PROGRAMMATICALLY, save_config_along_path
-from tapas_gmm.utils.data_loading import (
+from tapas_gmm_modified.dataset.dc import DCDataConfig, DenseCorrespondenceDataset
+from tapas_gmm_modified.encoder import encoder_switch
+from tapas_gmm_modified.encoder.representation_learner import RepresentationLearner
+from tapas_gmm_modified.policy.encoder import EncoderConfig
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.config import SET_PROGRAMMATICALLY, save_config_along_path
+from tapas_gmm_modified.utils.data_loading import (
     DataLoaderConfig,
     InfiniteDataIterator,
     build_data_iterators,
 )
-from tapas_gmm.utils.misc import (
+from tapas_gmm_modified.utils.misc import (
     DataNamingConfig,
     load_scene_data,
     pretrain_checkpoint_name,
 )
-from tapas_gmm.utils.observation import ObservationConfig
-from tapas_gmm.utils.random import configure_seeds
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.utils.version import get_git_revision_hash
+from tapas_gmm_modified.utils.observation import ObservationConfig
+from tapas_gmm_modified.utils.random import configure_seeds
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.utils.version import get_git_revision_hash
 
 # warnings.filterwarnings("error")  # For getting stack trace on warnings.
 

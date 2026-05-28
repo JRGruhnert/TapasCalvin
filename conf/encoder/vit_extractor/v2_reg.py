@@ -1,4 +1,4 @@
-from tapas_gmm.encoder.vit_extractor import (
+from tapas_gmm_modified.encoder.vit_extractor import (
     VitFeatureEncoderConfig,
     VitFeatureModelConfig,
 )

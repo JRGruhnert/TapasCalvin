@@ -4,8 +4,8 @@ from typing import Dict
 import torch
 from torch import nn
 
-from tapas_gmm.encoder.models.monet.networks import VAE, AttentionNet
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.encoder.models.monet.networks import VAE, AttentionNet
+from tapas_gmm_modified.utils.select_gpu import device
 
 
 @dataclass

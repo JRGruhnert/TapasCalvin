@@ -4,9 +4,9 @@ import torch.nn.functional as F
 from torch_geometric.data import Batch, HeteroData
 from torch_geometric.nn import global_max_pool, global_mean_pool
 from torch_geometric.nn import GATv2Conv, LayerNorm, GINConv, GINEConv
-from tapas_gmm.master_project.observation import Observation
-from tapas_gmm.master_project.networks.base import GnnBase
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.master_project.observation import Observation
+from tapas_gmm_modified.master_project.networks.base import GnnBase
+from tapas_gmm_modified.utils.select_gpu import device
 
 
 class Gnn(GnnBase):

@@ -6,11 +6,11 @@ import torch
 from loguru import logger
 from omegaconf import DictConfig
 
-import tapas_gmm.encoder.keypoints as keypoints
-import tapas_gmm.encoder.models.keypoints.keypoints as keypoints_model
-import tapas_gmm.encoder.models.keypoints.model_based_vision as model_based_vision
-import tapas_gmm.encoder.representation_learner as representation_learner
-from tapas_gmm.utils.geometry_torch import (
+import tapas_gmm_modified.encoder.keypoints as keypoints
+import tapas_gmm_modified.encoder.models.keypoints.keypoints as keypoints_model
+import tapas_gmm_modified.encoder.models.keypoints.model_based_vision as model_based_vision
+import tapas_gmm_modified.encoder.representation_learner as representation_learner
+from tapas_gmm_modified.utils.geometry_torch import (
     append_depth_to_uv,
     batched_project_onto_cam,
     batched_rigid_transform,
@@ -21,13 +21,16 @@ from tapas_gmm.utils.geometry_torch import (
     invert_intrinsics,
     quaternion_to_matrix,
 )
-from tapas_gmm.utils.observation import SampleTypes
+from tapas_gmm_modified.utils.observation import SampleTypes
 
-# from tapas_gmm.utils.debug import nan_hook, summarize_tensor
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.utils.torch import eye_like
-from tapas_gmm.viz.image_single import image_with_points_overlay_uv_list
-from tapas_gmm.viz.surface import depth_map_with_points_overlay_uv_list, scatter3d
+# from tapas_gmm_modified.utils.debug import nan_hook, summarize_tensor
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.utils.torch import eye_like
+from tapas_gmm_modified.viz.image_single import image_with_points_overlay_uv_list
+from tapas_gmm_modified.viz.surface import (
+    depth_map_with_points_overlay_uv_list,
+    scatter3d,
+)
 
 # import viz.keypoint_selector
 
@@ -319,7 +322,9 @@ class GTKeypointsPredictor(keypoints.KeypointsPredictor):
             )
 
         if ref_selection is ReferenceSelectionTypes.MANUAL:
-            from tapas_gmm.viz.keypoint_selector import ManualKeypointSelectorConfig
+            from tapas_gmm_modified.viz.keypoint_selector import (
+                ManualKeypointSelectorConfig,
+            )
 
             assert type(ref_selector_config) is ManualKeypointSelectorConfig
 

@@ -1,3 +1,3 @@
-from tapas_gmm.encoder.transporter import TransporterConfig
+from tapas_gmm_modified.encoder.transporter import TransporterConfig
 
 transporter_config = TransporterConfig()

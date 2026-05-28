@@ -10,9 +10,12 @@ from conf.behavior_cloning.diffusion.default import (
     scheduler,
     training,
 )
-from tapas_gmm.behavior_cloning import Config
-from tapas_gmm.encoder.encoder import ObservationEncoderConfig
-from tapas_gmm.policy.diffusion import ConditionalUnet1DConfig, DiffusionPolicyConfig
+from tapas_gmm_modified.behavior_cloning import Config
+from tapas_gmm_modified.encoder.encoder import ObservationEncoderConfig
+from tapas_gmm_modified.policy.diffusion import (
+    ConditionalUnet1DConfig,
+    DiffusionPolicyConfig,
+)
 
 obs_dim = 7 + 14
 

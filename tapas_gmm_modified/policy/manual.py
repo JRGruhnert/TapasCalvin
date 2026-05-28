@@ -1,9 +1,9 @@
 from loguru import logger
 import numpy as np
 
-from tapas_gmm.env.environment import BaseEnvironment
-from tapas_gmm.utils.human_feedback import correct_action
-from tapas_gmm.utils.observation import SceneObservation
+from tapas_gmm_modified.env.environment import BaseEnvironment
+from tapas_gmm_modified.utils.human_feedback import correct_action
+from tapas_gmm_modified.utils.observation import SceneObservation
 
 
 class ManualPolicy:

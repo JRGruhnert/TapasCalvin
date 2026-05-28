@@ -9,27 +9,30 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf, SCMode
 from tqdm.auto import tqdm
 
-import tapas_gmm.utils.logging  # noqa
-from tapas_gmm.dataset.bc import BCDataConfig, BCDataset
-from tapas_gmm.encoder.keypoints import PriorTypes
-from tapas_gmm.policy.encoder import EncoderPseudoPolicy, PseudoEncoderPolicyConfig
-from tapas_gmm.utils.argparse import parse_and_build_config
-from tapas_gmm.utils.config import SET_PROGRAMMATICALLY, value_not_set
-from tapas_gmm.utils.data_loading import DataLoaderConfig, build_data_loaders
-from tapas_gmm.utils.franka import reconstruct_actions_obs
-from tapas_gmm.utils.logging import indent_logs
-from tapas_gmm.utils.misc import (
+import tapas_gmm_modified.utils.logging  # noqa
+from tapas_gmm_modified.dataset.bc import BCDataConfig, BCDataset
+from tapas_gmm_modified.encoder.keypoints import PriorTypes
+from tapas_gmm_modified.policy.encoder import (
+    EncoderPseudoPolicy,
+    PseudoEncoderPolicyConfig,
+)
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.config import SET_PROGRAMMATICALLY, value_not_set
+from tapas_gmm_modified.utils.data_loading import DataLoaderConfig, build_data_loaders
+from tapas_gmm_modified.utils.franka import reconstruct_actions_obs
+from tapas_gmm_modified.utils.logging import indent_logs
+from tapas_gmm_modified.utils.misc import (
     DataNamingConfig,
     apply_machine_config,
     import_config_file,
     load_scene_data,
     pretrain_checkpoint_name,
 )
-from tapas_gmm.utils.observation import MaskTypes, ObservationConfig, collate
+from tapas_gmm_modified.utils.observation import MaskTypes, ObservationConfig, collate
 
 # lovely_tensors.monkey_patch()
 
-# from tapas_gmm.viz.image_single import figure_emb_with_points_overlay
+# from tapas_gmm_modified.viz.image_single import figure_emb_with_points_overlay
 
 bc_data_config = BCDataConfig(
     fragment_length=-1, force_load_raw=True, mask_type=MaskTypes.GT

@@ -20,29 +20,29 @@ def to_nt(network_str):
 
 def import_network(network_type):
     if network_type is NetworkType.GNN_TEST:
-        from tapas_gmm.master_project.networks.gnn.gnn3 import Gnn as Network
+        from tapas_gmm_modified.master_project.networks.gnn.gnn3 import Gnn as Network
     elif network_type is NetworkType.GNN_V1:
-        from tapas_gmm.master_project.networks.gnn.gnn1 import Gnn as Network
+        from tapas_gmm_modified.master_project.networks.gnn.gnn1 import Gnn as Network
     elif network_type is NetworkType.GNN_V2:
-        from tapas_gmm.master_project.networks.gnn.gnn2 import Gnn as Network
+        from tapas_gmm_modified.master_project.networks.gnn.gnn2 import Gnn as Network
     elif network_type is NetworkType.GNN_V3:
-        from tapas_gmm.master_project.networks.gnn.gnn3 import Gnn as Network
+        from tapas_gmm_modified.master_project.networks.gnn.gnn3 import Gnn as Network
     elif network_type is NetworkType.GNN_V4:
-        from tapas_gmm.master_project.networks.gnn.gnn4 import Gnn as Network
+        from tapas_gmm_modified.master_project.networks.gnn.gnn4 import Gnn as Network
     elif network_type is NetworkType.GNN_V5:
-        from tapas_gmm.master_project.networks.gnn.gnn5 import Gnn as Network
+        from tapas_gmm_modified.master_project.networks.gnn.gnn5 import Gnn as Network
     elif network_type is NetworkType.GNN_V6:
-        from tapas_gmm.master_project.networks.gnn.gnn6 import Gnn as Network
+        from tapas_gmm_modified.master_project.networks.gnn.gnn6 import Gnn as Network
     elif network_type is NetworkType.BASELINE_TEST:
-        from tapas_gmm.master_project.networks.baseline.baseline1 import (
+        from tapas_gmm_modified.master_project.networks.baseline.baseline1 import (
             Baseline as Network,
         )
     elif network_type is NetworkType.BASELINE_V1:
-        from tapas_gmm.master_project.networks.baseline.baseline1 import (
+        from tapas_gmm_modified.master_project.networks.baseline.baseline1 import (
             Baseline as Network,
         )
     elif network_type is NetworkType.BASELINE_V2:
-        from tapas_gmm.master_project.networks.baseline.baseline1 import (
+        from tapas_gmm_modified.master_project.networks.baseline.baseline1 import (
             Baseline as Network,
         )
     else:

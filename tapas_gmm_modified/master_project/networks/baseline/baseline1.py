@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-from tapas_gmm.master_project.networks.base import BaselineBase
-from tapas_gmm.master_project.observation import Observation
-from tapas_gmm.utils.select_gpu import device
+from tapas_gmm_modified.master_project.networks.base import BaselineBase
+from tapas_gmm_modified.master_project.observation import Observation
+from tapas_gmm_modified.utils.select_gpu import device
 
 
 class Baseline(BaselineBase):

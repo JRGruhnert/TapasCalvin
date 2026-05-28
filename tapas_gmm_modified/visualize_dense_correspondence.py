@@ -5,23 +5,23 @@ from typing import Any
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf, SCMode
 
-import tapas_gmm.utils.logging  # noqa
-from tapas_gmm.dataset.dc import DCDataConfig, DenseCorrespondenceDataset
-from tapas_gmm.encoder import KeypointsPredictor, VitFeatureEncoder
+import tapas_gmm_modified.utils.logging  # noqa
+from tapas_gmm_modified.dataset.dc import DCDataConfig, DenseCorrespondenceDataset
+from tapas_gmm_modified.encoder import KeypointsPredictor, VitFeatureEncoder
 
-# from tapas_gmm.encoder.keypoints import KeypointsPredictorConfig
-# from tapas_gmm.encoder.vit_extractor import VitFeatureEncoderConfig
-from tapas_gmm.utils.argparse import parse_and_build_config
-from tapas_gmm.utils.config import value_not_set
-from tapas_gmm.utils.misc import (
+# from tapas_gmm_modified.encoder.keypoints import KeypointsPredictorConfig
+# from tapas_gmm_modified.encoder.vit_extractor import VitFeatureEncoderConfig
+from tapas_gmm_modified.utils.argparse import parse_and_build_config
+from tapas_gmm_modified.utils.config import value_not_set
+from tapas_gmm_modified.utils.misc import (
     DataNamingConfig,
     load_scene_data,
     pretrain_checkpoint_name,
 )
-from tapas_gmm.utils.observation import ObservationConfig
-from tapas_gmm.utils.random import configure_seeds
-from tapas_gmm.utils.select_gpu import device
-from tapas_gmm.viz.live_heatmap_visualization import (
+from tapas_gmm_modified.utils.observation import ObservationConfig
+from tapas_gmm_modified.utils.random import configure_seeds
+from tapas_gmm_modified.utils.select_gpu import device
+from tapas_gmm_modified.viz.live_heatmap_visualization import (
     HeatmapVisualization,
     HeatmapVisualizationConfig,
 )

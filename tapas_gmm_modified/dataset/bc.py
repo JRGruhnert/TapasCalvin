@@ -6,8 +6,8 @@ from loguru import logger
 from omegaconf import MISSING, OmegaConf
 from torch.utils.data import Dataset
 
-from tapas_gmm.utils.logging import log_constructor
-from tapas_gmm.utils.observation import MaskTypes, SceneObservation, collate
+from tapas_gmm_modified.utils.logging import log_constructor
+from tapas_gmm_modified.utils.observation import MaskTypes, SceneObservation, collate
 
 
 @dataclass
@@ -63,14 +63,14 @@ class BCDataset(Dataset):
 
         if self.pre_encoding_name:
             logger.info(
-                "Loading attr {} from encoding {} from tapas_gmm.encoder named {}.",
+                "Loading attr {} from encoding {} from tapas_gmm_modified.encoder named {}.",
                 self.pre_encoding_attr,
                 self.pre_encoding_name,
                 self.encoder_name,
             )
         elif self.load_pre_embedding:
             logger.info(
-                "Loading embedding {} from tapas_gmm.encoder named {}.",
+                "Loading embedding {} from tapas_gmm_modified.encoder named {}.",
                 self.load_pre_embedding,
                 self.encoder_name,
             )
