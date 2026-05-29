@@ -8,7 +8,7 @@ import torch
 from loguru import logger
 
 
-from calvin_env_modified.envs.observation import CalvinObservation
+from calvin_env_modified.envs.observation import CalvinEnvObservation
 from calvin_env_modified.envs.calvin_env import get_env_from_cfg, CalvinEnvironment
 from tapas_gmm.env import Environment
 from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
@@ -74,16 +74,16 @@ class Calvin(BaseEnvironment):
 
     def reset(
         self, scene_obs=None, settle_time=20
-    ) -> tuple[CalvinObservation, float, bool, dict]:
+    ) -> tuple[CalvinEnvObservation, float, bool, dict]:
         return self.env.reset(scene_obs=scene_obs, settle_time=settle_time)
 
-    def reset_to_demo(self, path: str) -> CalvinObservation:
+    def reset_to_demo(self, path: str) -> CalvinEnvObservation:
         raise NotImplementedError("Not implemented yet")
 
     def update_prediction_marker(self, points: list):
         self.env.update_prediction_marker(points)
 
-    def step(self, action: np.ndarray, render: bool, info: dict = None) -> tuple[CalvinObservation, float, bool, dict]:  # type: ignore
+    def step(self, action: np.ndarray, render: bool, info: dict = None) -> tuple[CalvinEnvObservation, float, bool, dict]:  # type: ignore
         """
         Postprocess the action and execute it in the environment.
         Simple wrapper around _step, that provides the kwargs for
@@ -96,7 +96,7 @@ class Calvin(BaseEnvironment):
 
         Returns
         -------
-        tuple[CalvinObservation, float, bool, dict]
+        tuple[CalvinEnvObservation, float, bool, dict]
             The observation, reward, done flag and info dict.
         """
 
@@ -117,7 +117,7 @@ class Calvin(BaseEnvironment):
         scale_action: bool = True,
         policy_info: dict = None,
         render: bool = True,
-    ) -> tuple[CalvinObservation, float, bool, dict]:  # type: ignore
+    ) -> tuple[CalvinEnvObservation, float, bool, dict]:  # type: ignore
         """
         Postprocess the action and execute it in the environment.
         Catches invalid actions and executes a zero action instead.
@@ -137,7 +137,7 @@ class Calvin(BaseEnvironment):
 
         Returns
         -------
-        CalvinObservation, float, bool, dict
+        CalvinEnvObservation, float, bool, dict
             The observation, reward, done flag and info dict.
 
         Raises
@@ -180,7 +180,7 @@ class Calvin(BaseEnvironment):
 
     @staticmethod
     def compute_ee_delta(
-        current_obs: CalvinObservation, next_obs: CalvinObservation
+        current_obs: CalvinEnvObservation, next_obs: CalvinEnvObservation
     ) -> np.ndarray:
         """
         Computes the relative end effector pose change between two observations.
