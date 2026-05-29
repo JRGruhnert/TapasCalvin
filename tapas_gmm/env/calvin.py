@@ -8,8 +8,8 @@ import torch
 from loguru import logger
 
 
-from calvin_env.envs.observation import CalvinObservation
-from calvin_env.envs.calvin_env import get_env_from_cfg, CalvinEnvironment
+from calvin_env_modified.envs.observation import CalvinObservation
+from calvin_env_modified.envs.calvin_env import get_env_from_cfg, CalvinEnvironment
 from tapas_gmm.env import Environment
 from tapas_gmm.env.environment import BaseEnvironment, BaseEnvironmentConfig
 from tapas_gmm.utils.geometry_np import (
