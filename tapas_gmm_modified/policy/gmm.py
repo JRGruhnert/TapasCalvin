@@ -36,8 +36,6 @@ from tapas_gmm_modified.utils.geometry_np import (
 from tapas_gmm_modified.utils.observation import SceneObservation
 from tapas_gmm_modified.utils.robot_trajectory import RobotTrajectory, TrajectoryPoint
 from tapas_gmm_modified.utils.select_gpu import device
-from tapas_gmm_modified.utils.topp import TOPP  # , SapienScene
-from tapas_gmm_modified.viz.gmm import plot_traj_topp
 
 zero_pos = np.array([0, 0, 0])
 zero_quat = np.array([1, 0, 0, 0])
@@ -58,7 +56,6 @@ class GMMPolicyConfig(PolicyConfig):
 
     batch_predict_in_t_models: bool = True
     batch_t_max: float = 1
-    topp_in_t_models: bool = True
     return_full_batch: bool = False
 
     time_scale: float = 1  # 0.25
@@ -66,8 +63,6 @@ class GMMPolicyConfig(PolicyConfig):
     quat_lag_thresh: float | None = 0.1
     pos_change_thresh: float | None = 0.002
     quat_change_thresh: float | None = 0.002
-
-    topp_supersampling: float = 0.15
 
     dbg_prediction: bool = False
 
@@ -128,7 +123,6 @@ class GMMPolicy(Policy):
         self._last_prediction = None
         self._last_pose = None
 
-        self._env = None
         self._pin_model = None
 
         self._t_curr = None
@@ -161,12 +155,11 @@ class GMMPolicy(Policy):
     def kp_indeces(self) -> list[int] | None:
         return self.model._demos.meta_data["kp_indeces"]
 
-    def reset_episode(self, env: BaseEnvironment | None = None) -> None:
+    def reset_episode(self) -> None:
         self._t_curr = np.array([0.0])
 
         self.model.reset_episode()
 
-        self._env = env
 
         if self.config.batch_predict_in_t_models:
             self._prediction_batch = None
@@ -198,7 +191,6 @@ class GMMPolicy(Policy):
                 self._prediction_batch = self._create_prediction_batch(
                     obs=obs, frame_trans=frame_trans, frame_quats=frame_quats
                 )
-                self._env.publish_path(self._prediction_batch)
 
                 if self.config.return_full_batch:
                     info["done"] = True
@@ -261,7 +253,6 @@ class GMMPolicy(Policy):
                 viz_encoding = None
 
             frame_trans, frame_quats = self.get_frames(obs)
-            self._env.publish_frames(frame_trans, frame_quats)
         else:
             viz_encoding = None
 
@@ -397,48 +388,8 @@ class GMMPolicy(Policy):
                 per_segment=False,
             )
 
-        if self.config.topp_in_t_models:
-            assert (
-                not self._model_contains_action_dim
-            ), "TOPP not implemented for delta models or TXDX models."
-            # NOTE: for delta models would need to first reconstruct the full trajectory
-            # for XDX models: prediction is stacked state and action and only teased
-            # apart in the postprocessing step and then do the reconstruction if we
-            # were to use the DX part.
-            initial_qpos = obs.joint_pos.numpy()
-            # Add gripper state HACK
-            initial_qpos = np.concatenate((initial_qpos, np.array([0.04, 0.04])))
 
-            # print(initial_qpos, self._env._arm_controller.articulation.get_qpos())
-            # if hasattr(self._env, "_arm_controller"):  # sanity check
-            #     assert np.allclose(
-            #         initial_qpos, self._env._arm_controller.articulation.get_qpos()
-            #     )
-
-            # TODO: make use of RobotTrajectory class to pass the trajectory
-            topp_traj, topp_info = self._topp(
-                ee_poses_wgripper=np.stack(prediction_raw),
-                initial_qpos=initial_qpos,
-                supersampling=self.config.topp_supersampling,
-            )
-
-            if self.config.dbg_prediction:
-                plot_traj_topp(
-                    np.stack(prediction_raw),
-                    topp_traj.ee,
-                    frame_origs,
-                    topp_info["split_idcs"],
-                )
-
-            if not topp_traj:
-                logger.warning("TOPP failed. Returning raw trajectory.")
-                return raw_traj
-
-            # return ee_poses_topp
-            # return [x for x in topp_info["qposes_topp"]]
-            return topp_traj
-        else:
-            return raw_traj
+        return raw_traj
 
     def _predict_and_step(
         self,
@@ -692,156 +643,6 @@ class GMMPolicy(Policy):
 
         return np.concatenate([pred_f_b, pred_f_A])
 
-    def _topp(
-        self,
-        ee_poses_wgripper: np.ndarray,
-        initial_qpos: np.ndarray,
-        supersampling: float = 0.15,
-        repeat_segment_final_pose: int = 10,
-        # gripper_delta_thresh: float = 0.5,
-    ) -> tuple[RobotTrajectory, dict]:
-        """
-        Use TOPP(RA) to smooth the trajectory.
-        """
-        if self._model_contains_gripper_action:
-            ee_poses = ee_poses_wgripper[:, :-1]
-            gripper_states = ee_poses_wgripper[:, -1:]
-        else:
-            ee_poses = ee_poses_wgripper
-            gripper_states = np.zeros((ee_poses.shape[0], 1))
-
-        pos_only = ee_poses.shape[1] == 3
-
-        try:
-            qposes = self._eeposes_to_qposes(initial_qpos, ee_poses)
-        except ValueError as e:
-            logger.warning("Failed to find IK solution for trajectory. Skipping.")
-            return [], {}
-
-        # import matplotlib.pyplot as plt
-        # for i in range(7):
-        #     plt.plot(qposes[:, i])
-        # plt.show()
-
-        # Get indeces where gripper state changes -> does not work well for small dt
-        # split_idcs = (
-        #     np.argwhere(
-        #         np.abs(np.diff(gripper_states.squeeze(1), axis=0))
-        #         > gripper_delta_thresh
-        #     ).squeeze(1)
-        #     + 1
-        # )
-
-        # NOTE: using the activation of the segment gmms to estimate segment borders
-        # would be most elegant, but using the relative duration of the segments
-        # is a decent approximation.
-        # split_idcs = np.cumsum([int(s.relative_duration * len(qposes)) for s in self.model._demos_segments][:-1])
-        split_idcs = np.cumsum(
-            [
-                int(s.mean_traj_len / self._time_scale)
-                for s in self.model._demos_segments
-            ]
-        )[:-1]
-
-        # TODO TODO TODO: does not quite work yet.
-
-        info = {"split_idcs": split_idcs}
-
-        # # Get indeces where gripper state crosses zero, ie changes sign
-        # split_idcs = np.where(np.diff(np.sign(gripper_states.squeeze(1))))[0]
-        # Split trajectory into overlapping segments (split idx is in both)
-        qposes_segments = overlapping_split(qposes, split_idcs)
-        gripper_segments = overlapping_split(gripper_states, split_idcs)
-
-        planner = TOPP(
-            urdf_path=self._env._urdf_path,
-            srdf_path=self._env._srdf_path,
-            move_group=self._env._move_group,
-        )
-
-        traj_segments = []
-
-        for poses, gripper in tqdm(
-            zip(qposes_segments, gripper_segments), desc="Segment TOPP"
-        ):
-            seg = planner.plan_segment(
-                poses=poses,
-                gripper=gripper,
-                supersampling=supersampling,
-                repeat_segment_final_pose=repeat_segment_final_pose,
-                time_scale=self._time_scale,
-            )
-            traj_segments.append(seg)
-
-        # trajectory = traj_segments[0]
-
-        trajectory = RobotTrajectory.concatenate(traj_segments)
-
-        # Convert qposes back to end-effector poses and add gripper state
-        trajectory.ee = self._qposes_to_eeposes(trajectory.q, trajectory.gripper)
-
-        if pos_only:
-            trajectory.ee = np.stack(
-                [np.concatenate((a[:3], np.zeros(4), a[3:])) for a in trajectory.ee]
-            )
-
-        return trajectory, info
-
-    def _qposes_to_eeposes(
-        self, qposes_topp: np.ndarray, gripper_topp: np.ndarray
-    ) -> np.ndarray:
-        actions_topp = []
-
-        # RLBench does not support virtual computation of the robot state
-        # So need to step in the scene and restore the state
-        with RestoreEnvState(self._env), RestoreActionMode(self._env):
-            for qpos, gr in tqdm(
-                zip(qposes_topp, gripper_topp),
-                desc="Forward kinematics",
-                total=qposes_topp.shape[0],
-            ):
-                # Add dummy gripper state for forward kinematics
-                pose = self._env.get_forward_kinematics(
-                    np.concatenate((qpos, np.zeros(2)))
-                )
-
-                actions_topp.append(np.concatenate([pose, gr]))
-
-        return np.stack(actions_topp)
-
-    def _eeposes_to_qposes(
-        self, initial_qpos: np.ndarray, ee_poses: np.ndarray
-    ) -> np.ndarray:
-        """
-        Get joint positions for a given end-effector trajectory.
-        """
-        qposes = []
-
-        # robot_pose = self._env._get_robot_base_pose()
-        # logger.info(f"robot_pose: {robot_pose}")
-        # sapien_scene = SapienScene(robot_pose)
-
-        # See _qposes_to_eeposes for info on context manager
-        with RestoreEnvState(self._env):
-            for target_pose in tqdm(ee_poses, desc="Inverse kinematics"):
-                ref_q = initial_qpos if len(qposes) == 0 else qposes[-1]
-
-                try:
-                    qpos = self._env.get_inverse_kinematics(target_pose, ref_q)
-                    # qpos = sapien_scene.get_inverse_kinematics(target_pose, ref_q)
-                    assert len(qpos.shape) == 1
-                    logger.info(f"Found IK solution for target pose {target_pose}")
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to find IK solution for target pose {target_pose}"
-                    )
-                    raise e
-
-                qposes.append(qpos)
-
-        qposes_stack = np.stack(qposes)[:, :7]
-
-        return qposes_stack
 
     def from_disk(self, chekpoint_path: str) -> None:
         self.model.from_disk(
