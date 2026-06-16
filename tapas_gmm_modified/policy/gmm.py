@@ -237,7 +237,6 @@ class GMMPolicy(Policy):
             action[-1] = self._binary_gripper_action(action[-1])
 
         info["segment"] = self.model._online_active_segment
-        p#rint(f"Action: {action}")
         return action, info
 
     def _get_frame_trans(self, obs):
