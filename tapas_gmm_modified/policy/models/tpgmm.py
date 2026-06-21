@@ -4219,59 +4219,6 @@ class AutoTPGMM(TPGMM):
         self.segment_frames = ckpt.segment_frames
         self.segment_frame_views = ckpt.segment_frame_views
 
-    @property
-    def frame_mapping(self) -> list[tuple[str, str]]:
-        """
-        Get the mapping of frame names to their indices in the model.
-        Returns a dictionary with frame names as keys and their indices as values.
-        """
-        if self._demos is None:
-            raise RuntimeError("Model not fitted yet.")
-
-        return self._demos.frame_map
-
-    @property
-    def start_values(self) -> dict[str, torch.Tensor]:
-        """
-        Get the start values of the model. Returns a dictionary with frame names as keys
-        and the start values as values.
-        """
-        if self._demos is None:
-            raise RuntimeError("Model not fitted yet.")
-
-        if not hasattr(self._demos, "start_values"):
-            raise RuntimeError("Demos version is too old.")
-
-        return self._demos.start_values
-
-    @property
-    def end_values(self) -> dict[str, torch.Tensor]:
-        """
-        Get the end values of the model. Returns a dictionary with frame names as keys
-        and the end values as values.
-        """
-        if self._demos is None:
-            raise RuntimeError("Model not fitted yet.")
-
-        if not hasattr(self._demos, "end_values"):
-            raise RuntimeError("Demos version is too old.")
-
-        return self._demos.end_values
-
-    @property
-    def end_object_scalars(self) -> dict[str, torch.Tensor]:
-        """
-        Get the end states of the model. Returns a dictionary with frame names as keys
-        and the end states as values.
-        """
-        if self._demos is None:
-            raise RuntimeError("Model not fitted yet.")
-
-        if not hasattr(self._demos, "end_states"):
-            raise RuntimeError("Demos version is too old.")
-
-        return self._demos.end_object_scalars
-
 
 def _get_rbd_manifolds_per_frame(position_only: bool, add_action_dim: bool) -> int:
     manifolds_per_frame = 1 if position_only else 2

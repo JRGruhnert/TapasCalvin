@@ -274,69 +274,29 @@ class Demos:
                     f"frame_{i}": v for i, v in enumerate(t.object_poses.swapdims(0, 1))
                 }
 
-        self._frame_map: list[tuple[str, str]] = []
-        self._frame_map.append(("ee_position", "ee_rotation"))
-        for obj_name in trajectories[0].object_poses.keys():
-            self._frame_map.append((f"{obj_name}_position", f"{obj_name}_rotation"))
-
-        # Get initial object poses from all trajectories and concatenate them
-        start_positions = {
-            f"{obj_name}_position": torch.stack(
-                [o.object_poses[obj_name][0][..., :3] for o in trajectories]
-            )
-            for obj_name in trajectories[0].object_poses.keys()
-        }
-        start_positions["ee_position"] = torch.stack(
-            [o.ee_pose[0][..., :3] for o in trajectories]
-        )
-        start_rotations = {
-            f"{obj_name}_rotation": torch.stack(
-                [o.object_poses[obj_name][0][..., 3:] for o in trajectories]
-            )
-            for obj_name in trajectories[0].object_poses.keys()
-        }
-        start_rotations["ee_rotation"] = torch.stack(
-            [o.ee_pose[0][..., 3:] for o in trajectories]
-        )
-        start_scalars = {
-            f"{obj_name}_scalar": torch.stack(
-                [o.object_states[obj_name][0] for o in trajectories]
-            )
-            for obj_name in trajectories[0].object_states.keys()
-        }
-        start_scalars["ee_scalar"] = torch.stack(
-            [o.gripper_state[0] for o in trajectories]
-        )
-        end_positions = {
-            f"{obj_name}_position": torch.stack(
-                [o.object_poses[obj_name][-1][..., :3] for o in trajectories]
-            )
-            for obj_name in trajectories[0].object_poses.keys()
-        }
-        end_positions["ee_position"] = torch.stack(
-            [o.ee_pose[-1][..., :3] for o in trajectories]
-        )
-        end_rotations = {
-            f"{obj_name}_rotation": torch.stack(
-                [o.object_poses[obj_name][-1][..., 3:] for o in trajectories]
-            )
-            for obj_name in trajectories[0].object_poses.keys()
-        }
-        end_rotations["ee_rotation"] = torch.stack(
-            [o.ee_pose[-1][..., 3:] for o in trajectories]
-        )
-        end_scalars = {
-            f"{obj_name}_scalar": torch.stack(
-                [o.object_states[obj_name][-1] for o in trajectories]
-            )
-            for obj_name in trajectories[0].object_states.keys()
-        }
-        end_scalars["ee_scalar"] = torch.stack(
-            [o.gripper_state[-1] for o in trajectories]
-        )
-
-        self._start_values = {**start_positions, **start_rotations, **start_scalars}
-        self._end_values = {**end_positions, **end_rotations, **end_scalars}
+        ## ========================================
+        assert trajectories[0].object_poses.keys() == trajectories[0].object_states.keys()
+        self._idx_key_list: list[str] = ["ee"] + list(trajectories[0].object_poses.keys())
+        self._start_pos: dict[str, torch.Tensor] = {}
+        self._start_rot: dict[str, torch.Tensor] = {}
+        self._start_state: dict[str, torch.Tensor] = {}
+        self._end_pos: dict[str, torch.Tensor] = {}
+        self._end_rot: dict[str, torch.Tensor] = {}
+        self._end_state: dict[str, torch.Tensor] = {}
+        for k in trajectories[0].object_poses.keys():
+            self._start_pos[k] = torch.stack([o.object_poses[k][0][..., :3] for o in trajectories])
+            self._start_rot[k] = torch.stack([o.object_poses[k][0][..., 3:] for o in trajectories])
+            self._start_state[k] = torch.stack([o.object_states[k][0] for o in trajectories])
+            self._end_pos[k] = torch.stack([o.object_poses[k][-1][..., :3] for o in trajectories])
+            self._end_rot[k] = torch.stack([o.object_poses[k][-1][..., 3:] for o in trajectories])
+            self._end_state[k] = torch.stack([o.object_states[k][-1] for o in trajectories])
+        self._start_pos["ee"] = torch.stack([o.ee_pose[0][..., :3] for o in trajectories])
+        self._start_rot["ee"] = torch.stack([o.ee_pose[0][..., 3:] for o in trajectories])
+        self._start_state["ee"] = torch.stack([o.gripper_state[0] for o in trajectories])
+        self._end_pos["ee"] = torch.stack([o.ee_pose[-1][..., :3] for o in trajectories])
+        self._end_rot["ee"] = torch.stack([o.ee_pose[-1][..., 3:] for o in trajectories])
+        self._end_state["ee"] = torch.stack([o.gripper_state[-1] for o in trajectories])
+        ## ≡≡≡≡≡≡≡≡≡≡≡≡≡=
 
         # Add the EE frame as the first frame. As this will be the obervation
         # we remove it later. However, it needs the same transformations, so
@@ -681,26 +641,33 @@ class Demos:
             self.gripper_states, indeces, dim=0
         )
 
-    @property
-    def frame_map(self) -> list[tuple[str, str]]:
-        """
-        Get the mapping from frame index to frame name.
-        """
-        return self._frame_map
+     @property
+    def idx_key_list(self) -> list[str]:
+        return self._idx_key_list
 
     @property
-    def start_values(self) -> dict[str, torch.Tensor]:
-        """
-        Get the initial object poses.
-        """
-        return self._start_values
+    def start_pos(self) -> dict[str, torch.Tensor]:
+        return self._start_pos
 
     @property
-    def end_values(self) -> dict[str, torch.Tensor]:
-        """
-        Get the final object poses.
-        """
-        return self._end_values
+    def start_rot(self) -> dict[str, torch.Tensor]:
+        return self._start_rot
+
+    @property
+    def start_state(self) -> dict[str, torch.Tensor]:
+        return self._start_state
+
+    @property
+    def end_pos(self) -> dict[str, torch.Tensor]:
+        return self._end_pos
+
+    @property
+    def end_rot(self) -> dict[str, torch.Tensor]:
+        return self._end_rot
+
+    @property
+    def end_state(self) -> dict[str, torch.Tensor]:
+        return self._end_state
 
     @property
     def _n_gripper_states(self):
