@@ -641,7 +641,7 @@ class Demos:
             self.gripper_states, indeces, dim=0
         )
 
-     @property
+    @property
     def idx_key_list(self) -> list[str]:
         return self._idx_key_list
 
